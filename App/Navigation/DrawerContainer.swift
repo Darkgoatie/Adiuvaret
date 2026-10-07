@@ -19,6 +19,7 @@ struct DrawerContainer<Content: View, Drawer: View>: View {
             let offset = max(-width, min(0, (isOpen ? 0 : -width) + drag))
             ZStack(alignment: .leading) {
                 content
+                    .frame(width: geo.size.width, height: geo.size.height)
                     .accessibilityHidden(isOpen)
                     .disabled(isOpen)
                 if offset > -width {
