@@ -12,11 +12,14 @@ struct ChatView: View {
             header
             if let banner = service.banner { BannerView(banner: banner).padding(.horizontal, Spacing.l).padding(.vertical, Spacing.s) }
             thread
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             Composer(text: $draft, focused: $focused, isGenerating: service.isGenerating,
                      quickActions: service.items.isEmpty ? [] : quick,
                      send: { let t = draft; draft = ""; Task { await service.send(t) } },
                      stop: service.stop)
         }
+        .onAppear { if CommandLine.arguments.contains("-focus") { focused = true } }
         .background(DS.Colors.background)
     }
 
