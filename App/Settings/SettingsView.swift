@@ -15,7 +15,7 @@ struct SettingsView: View {
                 .frame(minHeight: 44)
                 .accessibilityIdentifier("settings.actionsOff")
             } footer: {
-                Text("When this is on, I can still talk and read what you share, but I won't create or change anything until you turn it back off.")
+                Text("When this is on, I can still talk, but I won't use your calendar, reminders or any other tool until you turn it back off.")
                     .font(DS.Typography.caption)
             }
             Section {
