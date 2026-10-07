@@ -16,11 +16,16 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
+            if CommandLine.arguments.contains("-nodrawer") {
+                ChatView(service: DemoChatService(scenario: scenario), openDrawer: {})
+                    .toolbar(.hidden, for: .navigationBar)
+            } else {
             DrawerContainer(isOpen: $drawerOpen) {
                 ChatView(service: DemoChatService(scenario: scenario), openDrawer: { drawerOpen = true })
                     .id(chatID)
             } drawer: {
                 DrawerView(chats: chats, pendingApprovals: 1) { route in handle(route) }
+            }
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Route.self) { route in destination(route) }
