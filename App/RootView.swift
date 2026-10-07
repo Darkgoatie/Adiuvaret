@@ -1,20 +1,22 @@
 import SwiftUI
 import DesignSystem
+import Persistence
 
 struct RootView: View {
     @State private var drawerOpen = false
     @State private var path: [Route] = []
-    @State private var store = ChatStore(first: RootView.makeService(.empty)) { RootView.makeService(.empty) }
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var store = ChatStore(persistence: Self.demoLaunch ? nil : try? PersistenceStore()) { RootView.makeService(.empty) }
 
     var body: some View {
         NavigationStack(path: $path) {
             Group {
             if CommandLine.arguments.contains("-nodrawer") {
-                ChatView(service: store.current, openDrawer: {}).id(store.currentID)
+                ChatView(service: store.current, openDrawer: {}, turnFinished: {}).id(store.currentID)
                     .toolbar(.hidden, for: .navigationBar)
             } else {
             DrawerContainer(isOpen: $drawerOpen) {
-                ChatView(service: store.current, openDrawer: { drawerOpen = true })
+                ChatView(service: store.current, openDrawer: { drawerOpen = true }, turnFinished: { store.persistCurrent() })
                     .id(store.currentID)
             } drawer: {
                 DrawerView(chats: store.summaries, pendingApprovals: 1,
@@ -27,6 +29,8 @@ struct RootView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Route.self) { route in destination(route) }
         }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { store.persistAll() } }
+        .onChange(of: drawerOpen) { _, open in if open { store.persistCurrent() } }
         .onOpenURL { url in if let r = Self.route(from: url) { handle(r) } }
         .onAppear {
             if CommandLine.arguments.contains("-demo") { store.replaceCurrent(with: Self.makeService(.conversation)) }
@@ -35,6 +39,8 @@ struct RootView: View {
             if CommandLine.arguments.contains("-demoDrawer") { drawerOpen = true }
         }
     }
+
+    static var demoLaunch: Bool { CommandLine.arguments.contains { $0.hasPrefix("-demo") } }
 
     /// Real model by default; demo data only when a -demo launch flag is present.
     static func makeService(_ scenario: DemoChatService.Scenario) -> any ChatService {

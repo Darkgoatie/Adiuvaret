@@ -20,7 +20,13 @@ final class LiveChatService: ChatService {
     @ObservationIgnored private var lastPrompt = ""
     @ObservationIgnored private let engine = PolicyEngine(tools: LiveDescriptors.all)
 
-    init() { refreshAvailability() }
+    @ObservationIgnored var onChange: (() -> Void)?
+
+    init(restoring items: [ThreadItem] = [], title: String? = nil) {
+        self.items = items
+        if let title { self.title = title }
+        refreshAvailability()
+    }
 
     func refreshAvailability() {
         switch SystemLanguageModel.default.availability {
@@ -45,6 +51,8 @@ final class LiveChatService: ChatService {
                                             LiveCreateReminderTool(gate: gate, ctx: ctx, reporter: bridge)],
                                     instructions: instructions)
     }
+
+    func setTitle(_ t: String) { title = t }
 
     func send(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

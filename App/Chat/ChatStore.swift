@@ -1,7 +1,8 @@
 import Foundation
 import Observation
+import Persistence
 
-/// Keeps every chat of this session alive so the drawer can reopen them. Chats are not saved across launches yet.
+/// All chats of the app. Live chats are saved on device with SwiftData and restored at launch.
 @MainActor @Observable
 final class ChatStore {
     struct Entry: Identifiable {
@@ -11,13 +12,21 @@ final class ChatStore {
         var pinned = false
     }
 
-    private(set) var entries: [Entry]
-    private(set) var currentID: UUID
+    private(set) var entries: [Entry] = []
+    private(set) var currentID = UUID()
     @ObservationIgnored private let make: () -> any ChatService
+    @ObservationIgnored private let persistence: PersistenceStore?
 
-    init(first: any ChatService, make: @escaping () -> any ChatService) {
-        let e = Entry(id: UUID(), service: first, created: Date())
-        entries = [e]; currentID = e.id; self.make = make
+    /// `persistence` is nil in demo launches so sample data never overwrites real chats.
+    init(persistence: PersistenceStore?, make: @escaping () -> any ChatService) {
+        self.persistence = persistence; self.make = make
+        for snap in persistence?.loadChats() ?? [] {
+            let items = snap.items.compactMap(ThreadItemCoding.item)
+            entries.append(Entry(id: snap.id, service: LiveChatService(restoring: items, title: snap.title), created: snap.created, pinned: snap.pinned))
+        }
+        let blank = Entry(id: UUID(), service: make(), created: Date())
+        entries.append(blank)
+        currentID = blank.id
     }
 
     var current: any ChatService { entries.first { $0.id == currentID }?.service ?? entries[0].service }
@@ -29,25 +38,39 @@ final class ChatStore {
 
     /// Reuses the open chat when it is still empty so blank chats do not pile up.
     func newChat() {
+        persistCurrent()
         if current.items.isEmpty { return }
         let e = Entry(id: UUID(), service: make(), created: Date())
         entries.append(e); currentID = e.id
     }
 
-    func select(_ id: UUID) { if entries.contains(where: { $0.id == id }) { currentID = id } }
+    func select(_ id: UUID) {
+        persistCurrent()
+        if entries.contains(where: { $0.id == id }) { currentID = id }
+    }
 
     func togglePin(_ id: UUID) {
-        if let i = entries.firstIndex(where: { $0.id == id }) { entries[i].pinned.toggle() }
+        if let i = entries.firstIndex(where: { $0.id == id }) { entries[i].pinned.toggle(); persist(entries[i]) }
     }
 
     func delete(_ id: UUID) {
-        current.stop()
+        entries.first { $0.id == id }?.service.stop()
         entries.removeAll { $0.id == id }
+        persistence?.delete(id: id)
         if entries.isEmpty {
             let e = Entry(id: UUID(), service: make(), created: Date()); entries = [e]; currentID = e.id
         } else if !entries.contains(where: { $0.id == currentID }) {
             currentID = entries[entries.count - 1].id
         }
+    }
+
+    func persistCurrent() { if let e = entries.first(where: { $0.id == currentID }) { persist(e) } }
+    func persistAll() { entries.forEach(persist) }
+
+    private func persist(_ e: Entry) {
+        guard let persistence, e.service is LiveChatService, !e.service.items.isEmpty else { return }
+        persistence.save(ChatSnapshot(id: e.id, title: e.service.title, created: e.created, pinned: e.pinned,
+                                      items: e.service.items.compactMap(ThreadItemCoding.snapshot)))
     }
 
     /// Chats that have at least one message, newest first.

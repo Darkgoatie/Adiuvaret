@@ -6,6 +6,7 @@ struct ChatView: View {
     @State private var draft = ""
     @FocusState private var focused: Bool
     let openDrawer: () -> Void
+    var turnFinished: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,7 +17,7 @@ struct ChatView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Composer(text: $draft, focused: $focused, isGenerating: service.isGenerating,
                      quickActions: service.items.isEmpty ? [] : quick,
-                     send: { let t = draft; draft = ""; Task { await service.send(t) } },
+                     send: { let t = draft; draft = ""; Task { await service.send(t); turnFinished() } },
                      stop: service.stop)
         }
         .onAppear { if CommandLine.arguments.contains("-focus") { focused = true } }
@@ -52,7 +53,7 @@ struct ChatView: View {
 
     @ViewBuilder private var thread: some View {
         if service.items.isEmpty {
-            ScrollView { EmptyChat(pick: { t in Task { await service.send(t) } }).padding(.top, Spacing.xl) }
+            ScrollView { EmptyChat(pick: { t in Task { await service.send(t); turnFinished() } }).padding(.top, Spacing.xl) }
         } else {
             ScrollViewReader { proxy in
                 ScrollView {
