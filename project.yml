@@ -1,0 +1,27 @@
+name: Adiuvaret
+options:
+  bundleIdPrefix: com.halit
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  AdiuvaretPackages:
+    path: Packages
+targets:
+  Adiuvaret:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: AdiuvaretPackages
+        product: AdiuvaretCore
+      - package: AdiuvaretPackages
+        product: PolicyEngine
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Adiuvaret
+        TARGETED_DEVICE_FAMILY: "1"

@@ -1,0 +1,12 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "checking" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Checking Apple Intelligence..." } } } },
+    "apple_intelligence_ready" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence is ready." } } } },
+    "apple_intelligence_device_not_eligible" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This iPhone can't run Apple Intelligence." } } } },
+    "apple_intelligence_not_enabled" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Turn on Apple Intelligence in Settings." } } } },
+    "apple_intelligence_model_not_ready" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence is still downloading." } } } },
+    "apple_intelligence_unavailable" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Apple Intelligence isn't available." } } } }
+  },
+  "version" : "1.0"
+}
