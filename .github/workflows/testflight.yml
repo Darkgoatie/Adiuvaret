@@ -53,9 +53,9 @@ jobs:
 
       - name: Archive
         run: |
-          pip3 install --quiet pyjwt cryptography
+          python3 -m venv /tmp/venv && /tmp/venv/bin/pip install --quiet pyjwt cryptography
           export MARKETING_VERSION=$(grep -m1 MARKETING_VERSION project.yml | sed 's/.*"\(.*\)".*/\1/')
-          BUILD=$(python3 scripts/next_build_number.py)
+          BUILD=$(/tmp/venv/bin/python scripts/next_build_number.py)
           echo "Version $MARKETING_VERSION build $BUILD"
           echo "Build number $BUILD"
           xcodebuild -project Adiuvaret.xcodeproj -scheme Adiuvaret -destination 'generic/platform=iOS' \
