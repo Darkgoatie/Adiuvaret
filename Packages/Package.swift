@@ -11,6 +11,7 @@ let package = Package(
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
         .library(name: "Persistence", targets: ["Persistence"]),
         .library(name: "ToolKit", targets: ["ToolKit"]),
+        .library(name: "Diagnostics", targets: ["Diagnostics"]),
     ],
     targets: [
         .target(name: "AdiuvaretCore", path: "AdiuvaretCore/Sources"),
@@ -18,6 +19,8 @@ let package = Package(
         .target(name: "DesignSystem", path: "DesignSystem/Sources/DesignSystem", resources: [.copy("Resources/Fonts"), .process("Localizable.xcstrings")]),
         .target(name: "Persistence", path: "Persistence/Sources"),
         .target(name: "ToolKit", path: "ToolKit/Sources"),
+        .target(name: "Diagnostics", path: "Diagnostics/Sources"),
+        .testTarget(name: "DiagnosticsTests", dependencies: ["Diagnostics"], path: "Diagnostics/Tests"),
         .testTarget(name: "ToolKitTests", dependencies: ["ToolKit"], path: "ToolKit/Tests"),
         .testTarget(name: "PersistenceTests", dependencies: ["Persistence"], path: "Persistence/Tests"),
         .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"], path: "DesignSystem/Tests/DesignSystemTests"),

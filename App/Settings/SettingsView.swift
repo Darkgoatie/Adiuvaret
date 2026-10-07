@@ -27,6 +27,7 @@ struct SettingsView: View {
                 }
             }
             Section("Testing") {
+                NavigationLink("Diagnostics") { DiagnosticsView() }
                 NavigationLink("Spike") { SpikeView() }
                 NavigationLink("Design") { DesignGallery() }
             }

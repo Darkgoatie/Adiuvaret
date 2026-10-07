@@ -5,6 +5,7 @@ import DesignSystem
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
+import Diagnostics
 
 @MainActor @Observable
 final class LiveChatService: ChatService {
@@ -120,7 +121,10 @@ final class LiveChatService: ChatService {
         let routeID = UUID()
         let previousPrompt = prior.reversed().compactMap { item -> String? in if case .user(_, let t) = item { return t } else { return nil } }.first
         items.append(.tool(id: routeID, phase: .running, title: String(localized: "Choosing the right tool…"), details: []))
-        let chosen = await ToolRouter.choose(prompt: prompt, previous: previousPrompt)
+        let clock = ContinuousClock()
+        let turnStart = clock.now
+        let (chosen, routeNote) = await ToolRouter.chooseWithNote(prompt: prompt, previous: previousPrompt)
+        DiagnosticsLog.shared.record("route", "tools=[\(chosen.map(\.id).joined(separator: ","))] \(routeNote) \((clock.now - turnStart).milliseconds) ms")
         let ids = chosen.map(\.id)
         if let i = items.firstIndex(where: { $0.id == routeID }) {
             if chosen.isEmpty { items.remove(at: i) }
@@ -136,18 +140,25 @@ final class LiveChatService: ChatService {
                 var started = false
                 do {
                     for try await partial in Self.stream(session, prompt, reasoning: useReasoning) {
-                        if !started { items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true }
+                        if !started {
+                            DiagnosticsLog.shared.record("first token", "\((clock.now - turnStart).milliseconds) ms since send, reasoning=\(useReasoning && Self.reasoningCompiled)")
+                            items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true
+                        }
                         else { replace(replyID, with: .assistant(id: replyID, text: partial.content, streaming: true)) }
                     }
+                    DiagnosticsLog.shared.record("reply done", "\((clock.now - turnStart).milliseconds) ms total")
                     finishStreaming(replyID)
                     return
                 } catch is CancellationError {
+                    DiagnosticsLog.shared.record("cancelled")
                     finishStreaming(replyID)
                     return
                 } catch {
+                    DiagnosticsLog.shared.record("model error", "\(type(of: error)): \(String(describing: error)) started=\(started) reasoning=\(useReasoning && Self.reasoningCompiled)")
                     // If the request with a reasoning level fails before any text, retry once on a fresh session without it.
                     if useReasoning, Self.reasoningCompiled, !started, !Self.isLimit(error) {
                         useReasoning = false
+                        DiagnosticsLog.shared.record("fallback", "reasoning off for this chat, retrying")
                         self.session = makeSession(history: prior, toolIDs: toolIDs)
                         continue
                     }

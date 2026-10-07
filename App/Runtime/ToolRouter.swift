@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 import ToolKit
+import Diagnostics
 
 @Generable
 struct ToolRoute {
@@ -27,8 +28,14 @@ enum ToolRouter {
 
     /// Returns the tools to give the reply, best match first, with their requirements. Empty means answer without tools.
     static func choose(prompt: String, previous: String?, catalog: ToolCatalog = .standard) async -> [CatalogEntry] {
+        await chooseWithNote(prompt: prompt, previous: previous, catalog: catalog).0
+    }
+
+    /// Same as `choose`, plus a short note for diagnostics: what the router decided and whether it failed.
+    static func chooseWithNote(prompt: String, previous: String?, catalog: ToolCatalog = .standard) async -> ([CatalogEntry], String) {
         var needsTool = true
         var words = ""
+        var note = "router ok"
         do {
             let session = LanguageModelSession(instructions: instructions(catalog))
             var text = ""
@@ -38,10 +45,10 @@ enum ToolRouter {
             needsTool = route.needsTool
             words = route.searchWords
         } catch {
-            // Router failed: fall back to searching the message alone.
+            note = "router failed (\(type(of: error))): \(String(String(describing: error).prefix(120)))"
         }
-        guard needsTool else { return [] }
+        guard needsTool else { return ([], note + " needsTool=false") }
         let hits = catalog.search(primary: words, secondary: prompt)
-        return catalog.withRequirements(hits.map(\.entry))
+        return (catalog.withRequirements(hits.map(\.entry)), note + " needsTool=true words=\(words.split(separator: " ").count) hits=\(hits.count)")
     }
 }

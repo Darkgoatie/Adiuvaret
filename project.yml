@@ -22,6 +22,8 @@ targets:
         product: Persistence
       - package: AdiuvaretPackages
         product: ToolKit
+      - package: AdiuvaretPackages
+        product: Diagnostics
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
