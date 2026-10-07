@@ -11,6 +11,8 @@ on:
 env:
   KEY_ID: A4C267SY9T
   ISSUER_ID: 66854a67-a093-43c2-a3c2-d3910dbbdbd9
+  ASC_APP_ID: "6820034520"
+  FIRST_BUILD: "11"
 
 jobs:
   build:
@@ -51,7 +53,10 @@ jobs:
 
       - name: Archive
         run: |
-          BUILD=$((100 + GITHUB_RUN_NUMBER))
+          pip3 install --quiet pyjwt cryptography
+          export MARKETING_VERSION=$(grep -m1 MARKETING_VERSION project.yml | sed 's/.*"\(.*\)".*/\1/')
+          BUILD=$(python3 scripts/next_build_number.py)
+          echo "Version $MARKETING_VERSION build $BUILD"
           echo "Build number $BUILD"
           xcodebuild -project Adiuvaret.xcodeproj -scheme Adiuvaret -destination 'generic/platform=iOS' \
             -configuration Release -archivePath build/Adiuvaret.xcarchive \
