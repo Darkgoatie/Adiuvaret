@@ -18,6 +18,8 @@ targets:
         product: PolicyEngine
       - package: AdiuvaretPackages
         product: DesignSystem
+      - package: AdiuvaretPackages
+        product: Persistence
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
