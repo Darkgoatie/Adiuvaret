@@ -22,3 +22,6 @@ Repo skeleton and spec only. No code. Brief copied to docs/BRIEF.md.
 - ASC app 6820034520, bundle ID resource F2JM3XBZA2. Internal group "Internal" (all builds), tester haliterenozkir@gmail.com.
 - Ship: `bash scripts/archive.sh` on VM, bump CURRENT_PROJECT_VERSION, then `xcrun altool --upload-app --type ios -f build/ipa/Adiuvaret.ipa --apiKey A4C267SY9T --apiIssuer <issuer>`.
 - 0.1.0 (1) VALID, IN_BETA_TESTING on 2026-10-07.
+
+## Device test pending (task 5, 6)
+TestFlight 0.1.0 (2) is live. Steps on the iPhone: open Spike. (1) 'Measure context and tools', then Share report. (2) Send 'What's on my calendar today?', expect calendar permission, events listed. (3) Send 'Remind me to call mom in 30 minutes', expect an Approve/Deny alert; Deny must create nothing; Approve must create the reminder. Paste or share the report back to record numbers in VERIFIED_FACTS.
