@@ -20,6 +20,7 @@ final class LiveChatService: ChatService {
     @ObservationIgnored private var pending: [UUID: CheckedContinuation<ApprovalResponse, Never>] = [:]
     @ObservationIgnored private var undos: [UUID: UndoAction] = [:]
     @ObservationIgnored private let handles = EventHandles()
+    @ObservationIgnored private var useReasoning = true
     @ObservationIgnored private var lastPrompt = ""
     @ObservationIgnored private let engine = LiveEngine.shared
 
@@ -113,29 +114,35 @@ final class LiveChatService: ChatService {
     private func run(_ prompt: String) async {
         isGenerating = true
         ctx.beginTask()
-        if session == nil {
-            var prior = items
-            if case .user? = prior.last { prior.removeLast() }
-            session = makeSession(history: prior)
-        }
+        var prior = items
+        if case .user? = prior.last { prior.removeLast() }
+        if session == nil { session = makeSession(history: prior) }
         let replyID = UUID()
         let work = Task { @MainActor in
-            guard let session else { return }
-            var started = false
-            do {
-                for try await partial in Self.stream(session, prompt) {
-                    if !started { items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true }
-                    else { replace(replyID, with: .assistant(id: replyID, text: partial.content, streaming: true)) }
+            while let session {
+                var started = false
+                do {
+                    for try await partial in Self.stream(session, prompt, reasoning: useReasoning) {
+                        if !started { items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true }
+                        else { replace(replyID, with: .assistant(id: replyID, text: partial.content, streaming: true)) }
+                    }
+                    finishStreaming(replyID)
+                    return
+                } catch is CancellationError {
+                    finishStreaming(replyID)
+                    return
+                } catch {
+                    // If the request with a reasoning level fails before any text, retry once on a fresh session without it.
+                    if useReasoning, Self.reasoningCompiled, !started, !Self.isLimit(error) {
+                        useReasoning = false
+                        self.session = makeSession(history: prior)
+                        continue
+                    }
+                    finishStreaming(replyID)
+                    if case LanguageModelSession.GenerationError.exceededContextWindowSize = error { self.session = nil }
+                    items.append(.error(id: UUID(), text: Self.message(for: error)))
+                    return
                 }
-                if let i = items.firstIndex(where: { $0.id == replyID }), case .assistant(_, let t, _) = items[i] {
-                    items[i] = .assistant(id: replyID, text: t, streaming: false)
-                }
-            } catch is CancellationError {
-                finishStreaming(replyID)
-            } catch {
-                finishStreaming(replyID)
-                if case LanguageModelSession.GenerationError.exceededContextWindowSize = error { self.session = nil }
-                items.append(.error(id: UUID(), text: Self.message(for: error)))
             }
         }
         task = work
@@ -143,11 +150,26 @@ final class LiveChatService: ChatService {
         isGenerating = false
     }
 
+    private static func isLimit(_ error: Error) -> Bool {
+        switch error {
+        case LanguageModelSession.GenerationError.exceededContextWindowSize, LanguageModelSession.GenerationError.guardrailViolation,
+             LanguageModelSession.GenerationError.refusal, LanguageModelSession.GenerationError.rateLimited: true
+        default: false
+        }
+    }
+
+    static var reasoningCompiled: Bool {
+        #if REASONING_API
+        if #available(iOS 27, *) { return true }
+        #endif
+        return false
+    }
+
     /// Asks for the deepest reasoning the on-device model offers. The API exists from iOS 27, so it is
     /// compiled only when the build sets REASONING_API (the Xcode 27 pipeline) and used only on iOS 27 or later.
-    private static func stream(_ session: LanguageModelSession, _ prompt: String) -> LanguageModelSession.ResponseStream<String> {
+    private static func stream(_ session: LanguageModelSession, _ prompt: String, reasoning: Bool) -> LanguageModelSession.ResponseStream<String> {
         #if REASONING_API
-        if #available(iOS 27, *) {
+        if reasoning, #available(iOS 27, *) {
             return session.streamResponse(to: prompt, contextOptions: ContextOptions(reasoningLevel: .deep))
         }
         #endif
@@ -168,7 +190,7 @@ final class LiveChatService: ChatService {
         case LanguageModelSession.GenerationError.rateLimited:
             String(localized: "I'm being asked too often right now. Try again in a moment.")
         default:
-            String(localized: "I couldn't finish that.")
+            String(localized: "I couldn't finish that.") + "\n" + String(String(describing: error).prefix(200))
         }
     }
 
