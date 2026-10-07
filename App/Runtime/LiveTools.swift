@@ -3,6 +3,7 @@ import EventKit
 import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
+import ToolKit
 
 /// Per-task state the policy engine needs. A new task id is issued for every user message.
 final class TaskContext: @unchecked Sendable {
@@ -23,13 +24,24 @@ final class TaskContext: @unchecked Sendable {
 protocol ToolReporter: Sendable {
     func toolStarted(_ id: UUID, title: String) async
     func toolFinished(_ id: UUID, title: String, details: [String], failed: Bool) async
-    func reminderCreated(id: String, title: String, due: Date) async
+    func actionDone(title: String, detail: String, undo: UndoAction?) async
+}
+
+/// How to take back a finished action.
+enum UndoAction: Sendable {
+    case removeReminder(id: String)
+    case removeEvent(id: String)
+    case restoreEvent(id: String, start: Date, end: Date)
 }
 
 enum LiveDescriptors {
     static let readCalendar = ToolDescriptor(name: "readCalendar", summary: "Lists calendar events for a day.", permission: .readOnly, outputSensitivity: .personal)
     static let createReminder = ToolDescriptor(name: "createReminder", summary: "Creates a reminder.", permission: .reversibleWrite, outputSensitivity: .personal)
-    static let all = [readCalendar, createReminder]
+    static let findFreeTime = ToolDescriptor(name: "findFreeTime", summary: "Finds free time slots.", permission: .readOnly, outputSensitivity: .personal)
+    static let createEvent = ToolDescriptor(name: "createEvent", summary: "Creates a calendar event.", permission: .reversibleWrite, outputSensitivity: .personal)
+    static let moveEvent = ToolDescriptor(name: "moveEvent", summary: "Moves a calendar event.", permission: .reversibleWrite, outputSensitivity: .personal)
+    static let deleteEvent = ToolDescriptor(name: "deleteEvent", summary: "Deletes a calendar event.", permission: .irreversible, outputSensitivity: .personal)
+    static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder]
 }
 
 enum CalendarRange {
@@ -37,47 +49,29 @@ enum CalendarRange {
         let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian); f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"; return f
     }()
-
-    /// Resolves a yyyy-MM-dd string (empty means today) plus a day count to a half-open range.
-    static func resolve(startDate: String, days: Int, now: Date = Date(), calendar cal: Calendar = .current) -> (start: Date, end: Date)? {
-        let trimmed = startDate.trimmingCharacters(in: .whitespaces)
-        var base = cal.startOfDay(for: now)
-        if !trimmed.isEmpty {
-            guard let d = iso.date(from: trimmed) else { return nil }
-            let c = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: d)
-            guard let local = cal.date(from: c) else { return nil }
-            base = cal.startOfDay(for: local)
-        }
-        guard let end = cal.date(byAdding: .day, value: min(max(days, 1), 31), to: base) else { return nil }
-        return (base, end)
-    }
 }
 
 struct LiveCalendarExecutor: ToolExecutor {
+    let handles: EventHandles
+
     func execute(_ call: ToolCall) async throws -> String {
         let args = try JSONSerialization.jsonObject(with: Data(call.argumentsJSON.utf8)) as? [String: Any] ?? [:]
         let startText = (args["startDate"] as? String) ?? ""
         let days = (args["days"] as? Int) ?? 1
-        guard let range = CalendarRange.resolve(startDate: startText, days: days) else {
+        let search = (args["search"] as? String) ?? ""
+        guard let range = CalendarMath.range(startDate: startText, days: days) else {
             return "Invalid date '\(startText)'. Use yyyy-MM-dd."
         }
         let store = EKEventStore()
         guard try await store.requestFullAccessToEvents() else { return "Calendar access denied." }
         let cal = Calendar.current
-        let all = store.events(matching: store.predicateForEvents(withStart: range.start, end: range.end, calendars: nil))
-            .sorted { $0.startDate < $1.startDate }
+        let slots = CalendarStore.slots(store, start: range.start, end: range.end, handles: handles)
+        let all = CalendarMath.filter(slots, query: search)
         let lastDay = cal.date(byAdding: .day, value: -1, to: range.end) ?? range.end
-        let header = "Checked \(CalendarRange.iso.string(from: range.start)) to \(CalendarRange.iso.string(from: lastDay)) in \(store.sources.count) accounts."
+        let header = "Checked \(CalendarMath.dayString(range.start)) to \(CalendarMath.dayString(lastDay)) in \(store.sources.count) accounts" + (search.isEmpty ? "." : " for '\(search)'.")
         if all.isEmpty { return "No events. " + header }
         let shown = all.prefix(40)
-        let day = DateFormatter(); day.dateFormat = "EEE d MMM"
-        let hm = DateFormatter(); hm.dateFormat = "HH:mm"
-        var lines = shown.map { e -> String in
-            let when = e.isAllDay ? "all day" : "\(hm.string(from: e.startDate))-\(hm.string(from: e.endDate))"
-            let title = String((e.title ?? "Untitled").prefix(60))
-            let where_ = e.calendar.map { " [\($0.title)]" } ?? ""
-            return "\(day.string(from: e.startDate)) \(when) \(title)\(where_)"
-        }
+        var lines = shown.map(CalendarStore.line)
         if all.count > shown.count { lines.append("(\(all.count - shown.count) more not shown)") }
         return ([header] + lines).joined(separator: "\n")
     }
@@ -98,7 +92,8 @@ struct LiveReminderExecutor: ToolExecutor {
         let due = Date().addingTimeInterval(Double(minutes) * 60)
         r.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: due)
         try store.save(r, commit: true)
-        await reporter.reminderCreated(id: r.calendarItemIdentifier, title: title, due: due)
+        let shown = DateFormatter(); shown.dateStyle = .medium; shown.timeStyle = .short
+        await reporter.actionDone(title: String(localized: "Added \(title) to Reminders"), detail: shown.string(from: due), undo: .removeReminder(id: r.calendarItemIdentifier))
         let f = DateFormatter(); f.dateFormat = "HH:mm"
         return "Created reminder \(title) due \(f.string(from: due))."
     }
@@ -126,19 +121,23 @@ struct LiveReadCalendarTool: Tool {
         var startDate: String
         @Guide(description: "Number of days to read from startDate, 1 to 31. Use 7 for a week.")
         var days: Int
+        @Guide(description: "Optional words to look for in event titles or calendar names. Empty lists everything.")
+        var search: String
     }
 
     func call(arguments: Arguments) async throws -> String {
         let id = UUID()
         await reporter.toolStarted(id, title: String(localized: "Checking your calendar…"))
-        let payload: [String: Any] = ["startDate": arguments.startDate, "days": arguments.days]
+        let payload: [String: Any] = ["startDate": arguments.startDate, "days": arguments.days, "search": arguments.search]
         let json = String(decoding: try JSONSerialization.data(withJSONObject: payload), as: UTF8.self)
         let outcome = await gate.run(ToolCall(toolName: name, argumentsJSON: json), in: ctx.callContext())
         switch outcome {
         case .executed(let out):
             ctx.markUntrusted()
             let all = out.split(separator: "\n").map(String.init)
-            let lines = all.filter { !$0.hasPrefix("Checked") && !$0.hasPrefix("No events") && !$0.hasPrefix("(") }
+            let lines = all.filter { !$0.hasPrefix("Checked") && !$0.hasPrefix("No events") && !$0.hasPrefix("(") }.map { l in
+                l.split(separator: " ", maxSplits: 1).dropFirst().first.map(String.init) ?? l
+            }
             let count = lines.count
             let title = lines.isEmpty ? String(localized: "Looked at calendar · no events")
                                       : String(localized: "Looked at calendar · \(count) events")

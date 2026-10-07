@@ -20,6 +20,8 @@ targets:
         product: DesignSystem
       - package: AdiuvaretPackages
         product: Persistence
+      - package: AdiuvaretPackages
+        product: ToolKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
