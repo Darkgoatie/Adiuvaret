@@ -1,0 +1,76 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload to TestFlight
+        type: boolean
+        default: true
+
+env:
+  KEY_ID: A4C267SY9T
+  ISSUER_ID: 66854a67-a093-43c2-a3c2-d3910dbbdbd9
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 27
+        run: |
+          ls /Applications | grep -i '^Xcode' || true
+          X=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$X" ] || X=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Using $X"
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i "iOS "
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Write App Store Connect key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          [ -n "$ASC_KEY_P8" ] || { echo "Secret ASC_KEY_P8 is not set"; exit 1; }
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s\n' "$ASC_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Package tests
+        run: |
+          cd Packages
+          xcodebuild test -scheme AdiuvaretPackages-Package -destination 'platform=macOS' 2>&1 | tail -15
+
+      - name: Archive
+        run: |
+          BUILD=$((100 + GITHUB_RUN_NUMBER))
+          echo "Build number $BUILD"
+          xcodebuild -project Adiuvaret.xcodeproj -scheme Adiuvaret -destination 'generic/platform=iOS' \
+            -configuration Release -archivePath build/Adiuvaret.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CURRENT_PROJECT_VERSION=$BUILD archive | tail -5
+
+      - name: Export and sign
+        run: |
+          P8=$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          xcodebuild -exportArchive -archivePath build/Adiuvaret.xcarchive -exportOptionsPlist signing/ExportOptions.plist \
+            -exportPath build/ipa -allowProvisioningUpdates \
+            -authenticationKeyPath "$P8" -authenticationKeyID $KEY_ID -authenticationKeyIssuerID $ISSUER_ID | tail -5
+          ls -l build/ipa
+
+      - name: Upload to TestFlight
+        if: ${{ inputs.upload }}
+        run: |
+          xcrun altool --upload-app --type ios -f build/ipa/Adiuvaret.ipa \
+            --apiKey $KEY_ID --apiIssuer $ISSUER_ID 2>&1 | tail -3
+
+      - name: Remove key
+        if: always()
+        run: rm -f ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
