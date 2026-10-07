@@ -23,7 +23,7 @@ struct DesignGallery: View {
                 .padding(Spacing.l)
                 .background(DS.Colors.surface, in: RoundedRectangle(cornerRadius: Radius.l))
                 HStack(spacing: Spacing.s) {
-                    ForEach(["background", "surface", "accent", "accentText", "danger", "warning"], id: \.self) { n in
+                    ForEach(["background", "surface", "accent", "accentText"], id: \.self) { n in
                         RoundedRectangle(cornerRadius: Radius.s).fill(swatch(n)).frame(height: 44)
                             .overlay(RoundedRectangle(cornerRadius: Radius.s).stroke(DS.Colors.separator))
                     }
@@ -42,8 +42,7 @@ struct DesignGallery: View {
         case "surface": DS.Colors.surface
         case "accent": DS.Colors.accent
         case "accentText": DS.Colors.accentText
-        case "danger": DS.Colors.danger
-        default: DS.Colors.warning
+        default: DS.Colors.accentText
         }
     }
 }
