@@ -53,6 +53,12 @@ final class ChatStore {
         if let i = entries.firstIndex(where: { $0.id == id }) { entries[i].pinned.toggle(); persist(entries[i]) }
     }
 
+    func rename(_ id: UUID, to title: String) {
+        guard let e = entries.first(where: { $0.id == id }) else { return }
+        e.service.setTitle(title)
+        persist(e)
+    }
+
     func delete(_ id: UUID) {
         entries.first { $0.id == id }?.service.stop()
         entries.removeAll { $0.id == id }

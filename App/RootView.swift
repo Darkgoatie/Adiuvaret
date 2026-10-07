@@ -22,7 +22,8 @@ struct RootView: View {
                 DrawerView(chats: store.summaries, pendingApprovals: 1,
                            select: { route in handle(route) },
                            pin: { store.togglePin($0) },
-                           delete: { store.delete($0) })
+                           delete: { store.delete($0) },
+                           rename: { store.rename($0, to: $1) })
             }
             }
             }

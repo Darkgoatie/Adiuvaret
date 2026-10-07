@@ -43,4 +43,5 @@ enum ChatBanner: Equatable {
     func deny(_ id: UUID)
     func undo(_ id: UUID)
     func retry() async
+    func setTitle(_ t: String)
 }

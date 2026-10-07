@@ -7,7 +7,10 @@ struct DrawerView: View {
     let select: (Route) -> Void
     let pin: (UUID) -> Void
     let delete: (UUID) -> Void
+    let rename: (UUID, String) -> Void
     @State private var query = ""
+    @State private var renaming: ChatSummary?
+    @State private var newName = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,6 +35,11 @@ struct DrawerView: View {
                                 .swipeActions { Button("Delete", systemImage: "trash", role: .destructive) { delete(c.id) } }
                                 .swipeActions(edge: .leading) { Button(section.id == ChatSummary.Group.pinned.rawValue ? "Unpin" : "Pin", systemImage: "pin") { pin(c.id) }.tint(DS.Colors.accent) }
                                 .listRowBackground(Color.clear)
+                                .contextMenu {
+                                    Button("Rename", systemImage: "pencil") { newName = c.title; renaming = c }
+                                    Button(section.id == ChatSummary.Group.pinned.rawValue ? "Unpin" : "Pin", systemImage: "pin") { pin(c.id) }
+                                    Button("Delete", systemImage: "trash", role: .destructive) { delete(c.id) }
+                                }
                                 .listRowSeparator(.hidden)
                         }
                     } header: { Text(verbatim: section.title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
@@ -40,6 +48,11 @@ struct DrawerView: View {
             .listStyle(.plain).listSectionSeparator(.hidden).scrollContentBackground(.hidden).environment(\.defaultMinListRowHeight, 44)
 
             footer
+        }
+        .alert("Rename chat", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("Name", text: $newName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { if let c = renaming { rename(c.id, newName) } }
         }
     }
 

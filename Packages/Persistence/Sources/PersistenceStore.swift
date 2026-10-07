@@ -25,6 +25,11 @@ public final class PersistenceStore {
     private let container: ModelContainer
     private var context: ModelContext { container.mainContext }
 
+    /// Opens (or creates) a store at a specific file. Used by tests; the app uses the default location.
+    public init(url: URL) throws {
+        container = try ModelContainer(for: ChatRecord.self, ItemRecord.self, configurations: ModelConfiguration(url: url))
+    }
+
     public init(inMemory: Bool = false) throws {
         let config = ModelConfiguration(isStoredInMemoryOnly: inMemory)
         container = try ModelContainer(for: ChatRecord.self, ItemRecord.self, configurations: config)

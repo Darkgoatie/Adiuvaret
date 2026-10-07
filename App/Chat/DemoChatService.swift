@@ -58,6 +58,8 @@ final class DemoChatService: ChatService {
         isGenerating = false
     }
 
+    func setTitle(_ t: String) {}
+
     func stop() { task?.cancel() }
 
     func approve(_ id: UUID) {
