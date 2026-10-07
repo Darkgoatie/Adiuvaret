@@ -1,6 +1,6 @@
 # Adiuvaret spec
 
-Core model: Adiuvaret is an agent harness on iPhone where every model (Apple FM, MLX, cloud) is a swappable brain behind one provider protocol, and every tool call from any of them passes through a provider-independent policy engine before it executes. (unconfirmed)
+Core model: Adiuvaret is an agent harness on iPhone where every model (Apple FM, MLX, cloud) is a swappable brain behind one provider protocol, and every tool call from any of them passes through a provider-independent policy engine before it executes. (confirmed by user 2026-10-07)
 
 ## Goal
 Private, on-device-first personal assistant for iPhone: chat, calendar/reminders/contacts/in-app notes actions, memory, scheduled briefings. Full product brief: docs/BRIEF.md (authoritative for product scope).
@@ -11,8 +11,9 @@ Local server tier, Mac companion, MCP client, HTTP connector builder, shell/file
 ## Constraints
 - Swift 6 strict concurrency, SwiftUI, SPM local packages per docs/BRIEF.md section 4. Min iOS = lowest with FoundationModels (to verify, expected 26.0).
 - Dependencies flow down; AdiuvaretCore depends on nothing; PolicyEngine depends on no provider.
-- Build and device testing happen on the Mac (halit@192.168.0.102); this Windows repo is the source of truth, synced via git.
-- Apple Intelligence requires a supported device (iPhone 15 Pro or newer). Real-device spikes need one.
+- Builds and signing run in the WSL2 QEMU macOS VM (~/ultimate-macOS-KVM, SSH via hostfwd localhost:2222), per user 2026-10-07. Repo: github.com/Darkgoatie/Adiuvaret (private).
+- Risk: the VM is x86_64. Apple Intelligence and FoundationModels need Apple silicon, so FM cannot run in its simulator; FM spikes must run on the iPhone via USB passthrough (usbipd) into the VM, or the plan changes.
+- Test device: iPhone 18 Pro, Apple Intelligence available. Bundle ID com.halit.adiuvaret, same team as the other apps.
 
 ## Glossary
 - Tier: 0 Apple FM, 1 MLX, 2 reserved (local server), 3 cloud.
@@ -27,10 +28,10 @@ Local server tier, Mac companion, MCP client, HTTP connector builder, shell/file
 - docs/decisions/: one file per technical decision (indexed in docs/spec/DECISIONS.md).
 
 ## Open questions
-- [ ] Confirm the core model sentence above. (user)
-- [ ] Which physical iPhone is available for Phase 0 device spikes (model, iOS version, Apple Intelligence enabled)? (user)
-- [ ] Apple Developer account / team ID and bundle ID com.halit.adiuvaret OK? (user)
-- [ ] Git remote: private GitHub repo or local only? (user)
+- [x] Confirm the core model sentence above. (user)
+- [x] Which physical iPhone is available for Phase 0 device spikes (model, iOS version, Apple Intelligence enabled)? (user)
+- [x] Apple Developer account / team ID and bundle ID com.halit.adiuvaret OK? (user)
+- [x] Git remote: private GitHub repo or local only? (user)
 - [ ] GRDB vs SwiftData. (agent, decision doc; leaning GRDB for encryption via SQLCipher and sync-ready schema)
 - [ ] Embeddings: NLEmbedding vs bundled small model. (agent, after spike)
 
