@@ -32,19 +32,43 @@ enum LiveDescriptors {
     static let all = [readCalendar, createReminder]
 }
 
+enum CalendarRange {
+    static let iso: DateFormatter = {
+        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian); f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"; return f
+    }()
+
+    /// Resolves a yyyy-MM-dd string (empty means today) plus a day count to a half-open range.
+    static func resolve(startDate: String, days: Int, now: Date = Date(), calendar cal: Calendar = .current) -> (start: Date, end: Date)? {
+        let trimmed = startDate.trimmingCharacters(in: .whitespaces)
+        var base = cal.startOfDay(for: now)
+        if !trimmed.isEmpty {
+            guard let d = iso.date(from: trimmed) else { return nil }
+            let c = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: d)
+            guard let local = cal.date(from: c) else { return nil }
+            base = cal.startOfDay(for: local)
+        }
+        guard let end = cal.date(byAdding: .day, value: min(max(days, 1), 31), to: base) else { return nil }
+        return (base, end)
+    }
+}
+
 struct LiveCalendarExecutor: ToolExecutor {
     func execute(_ call: ToolCall) async throws -> String {
         let args = try JSONSerialization.jsonObject(with: Data(call.argumentsJSON.utf8)) as? [String: Any] ?? [:]
-        let offset = (args["dayOffset"] as? Int) ?? 0
-        let days = min(max((args["days"] as? Int) ?? 1, 1), 14)
+        let startText = (args["startDate"] as? String) ?? ""
+        let days = (args["days"] as? Int) ?? 1
+        guard let range = CalendarRange.resolve(startDate: startText, days: days) else {
+            return "Invalid date '\(startText)'. Use yyyy-MM-dd."
+        }
         let store = EKEventStore()
         guard try await store.requestFullAccessToEvents() else { return "Calendar access denied." }
         let cal = Calendar.current
-        let start = cal.date(byAdding: .day, value: offset, to: cal.startOfDay(for: Date()))!
-        let end = cal.date(byAdding: .day, value: days, to: start)!
-        let all = store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: nil))
+        let all = store.events(matching: store.predicateForEvents(withStart: range.start, end: range.end, calendars: nil))
             .sorted { $0.startDate < $1.startDate }
-        if all.isEmpty { return "No events." }
+        let lastDay = cal.date(byAdding: .day, value: -1, to: range.end) ?? range.end
+        let header = "Checked \(CalendarRange.iso.string(from: range.start)) to \(CalendarRange.iso.string(from: lastDay)) in \(store.sources.count) accounts."
+        if all.isEmpty { return "No events. " + header }
         let shown = all.prefix(40)
         let day = DateFormatter(); day.dateFormat = "EEE d MMM"
         let hm = DateFormatter(); hm.dateFormat = "HH:mm"
@@ -55,7 +79,7 @@ struct LiveCalendarExecutor: ToolExecutor {
             return "\(day.string(from: e.startDate)) \(when) \(title)\(where_)"
         }
         if all.count > shown.count { lines.append("(\(all.count - shown.count) more not shown)") }
-        return lines.joined(separator: "\n")
+        return ([header] + lines).joined(separator: "\n")
     }
 }
 
@@ -98,22 +122,24 @@ struct LiveReadCalendarTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "First day to read: 0 is today, 1 is tomorrow, -1 is yesterday")
-        var dayOffset: Int
-        @Guide(description: "How many days to read starting at dayOffset, 1 to 14. Use 7 for a week.")
+        @Guide(description: "First day to read as yyyy-MM-dd, for example 2026-10-20. Empty means today.")
+        var startDate: String
+        @Guide(description: "Number of days to read from startDate, 1 to 31. Use 7 for a week.")
         var days: Int
     }
 
     func call(arguments: Arguments) async throws -> String {
         let id = UUID()
         await reporter.toolStarted(id, title: String(localized: "Checking your calendar…"))
-        let json = "{\"dayOffset\":\(arguments.dayOffset),\"days\":\(arguments.days)}"
+        let payload: [String: Any] = ["startDate": arguments.startDate, "days": arguments.days]
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: payload), as: UTF8.self)
         let outcome = await gate.run(ToolCall(toolName: name, argumentsJSON: json), in: ctx.callContext())
         switch outcome {
         case .executed(let out):
             ctx.markUntrusted()
-            let lines = out == "No events." ? [] : out.split(separator: "\n").map(String.init)
-            let count = lines.filter { !$0.hasPrefix("(") }.count
+            let all = out.split(separator: "\n").map(String.init)
+            let lines = all.filter { !$0.hasPrefix("Checked") && !$0.hasPrefix("No events") && !$0.hasPrefix("(") }
+            let count = lines.count
             let title = lines.isEmpty ? String(localized: "Looked at calendar · no events")
                                       : String(localized: "Looked at calendar · \(count) events")
             await reporter.toolFinished(id, title: title, details: lines, failed: false)
