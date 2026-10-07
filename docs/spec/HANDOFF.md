@@ -17,3 +17,8 @@ Repo skeleton and spec only. No code. Brief copied to docs/BRIEF.md.
 
 ## Next
 - task 2 (after user confirms spec), task 3 can run in parallel (docs only).
+
+## TestFlight
+- ASC app 6820034520, bundle ID resource F2JM3XBZA2. Internal group "Internal" (all builds), tester haliterenozkir@gmail.com.
+- Ship: `bash scripts/archive.sh` on VM, bump CURRENT_PROJECT_VERSION, then `xcrun altool --upload-app --type ios -f build/ipa/Adiuvaret.ipa --apiKey A4C267SY9T --apiIssuer <issuer>`.
+- 0.1.0 (1) VALID, IN_BETA_TESTING on 2026-10-07.
