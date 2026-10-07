@@ -8,10 +8,13 @@ let package = Package(
     products: [
         .library(name: "AdiuvaretCore", targets: ["AdiuvaretCore"]),
         .library(name: "PolicyEngine", targets: ["PolicyEngine"]),
+        .library(name: "DesignSystem", targets: ["DesignSystem"]),
     ],
     targets: [
         .target(name: "AdiuvaretCore", path: "AdiuvaretCore/Sources"),
         .target(name: "PolicyEngine", dependencies: ["AdiuvaretCore"], path: "PolicyEngine/Sources"),
+        .target(name: "DesignSystem", path: "DesignSystem/Sources/DesignSystem", resources: [.copy("Resources/Fonts")]),
+        .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"], path: "DesignSystem/Tests/DesignSystemTests"),
         .testTarget(name: "PolicyEngineTests", dependencies: ["PolicyEngine"], path: "PolicyEngine/Tests"),
     ],
     swiftLanguageModes: [.v6]

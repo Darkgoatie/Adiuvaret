@@ -10,6 +10,7 @@ struct RootView: View {
                 Text("Adiuvaret").font(.largeTitle)
                 Text(status).font(.body).foregroundStyle(.secondary)
                 NavigationLink("Spike") { SpikeView() }
+                NavigationLink("Design") { DesignGallery() }
             }
             .padding()
         }

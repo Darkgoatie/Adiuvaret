@@ -16,6 +16,8 @@ targets:
         product: AdiuvaretCore
       - package: AdiuvaretPackages
         product: PolicyEngine
+      - package: AdiuvaretPackages
+        product: DesignSystem
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
