@@ -72,10 +72,7 @@ struct RootView: View {
         case .advanced:
             SubMenu(title: String(localized: "Advanced"), items: SubItem.advanced)
         case .settings:
-            SubMenu(title: String(localized: "Settings"), items: SubItem.settings) {
-                NavigationLink("Spike") { SpikeView() }
-                NavigationLink("Design") { DesignGallery() }
-            }
+            SettingsView()
         case .newChat, .chat: EmptyView()
         }
     }
