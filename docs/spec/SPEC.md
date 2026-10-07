@@ -53,3 +53,5 @@ No code yet. Filled after task 2.
 | Smoke time (swift test + sim build) | 66 s warm | scripts/smoke.sh |
 | ERROR lines, standard run | 0 | scripts/smoke.sh |
 | FM time to first token | | |
+
+- Typography: see docs/decisions/002-typography.md. Impeccable skill required before any UI work.
