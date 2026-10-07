@@ -5,11 +5,14 @@ struct RootView: View {
     @State private var status: LocalizedStringKey = "checking"
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text("Adiuvaret").font(.largeTitle)
-            Text(status).font(.body).foregroundStyle(.secondary)
+        NavigationStack {
+            VStack(spacing: 12) {
+                Text("Adiuvaret").font(.largeTitle)
+                Text(status).font(.body).foregroundStyle(.secondary)
+                NavigationLink("Spike") { SpikeView() }
+            }
+            .padding()
         }
-        .padding()
         .task { status = Self.describe(SystemLanguageModel.default.availability) }
     }
 
