@@ -8,3 +8,4 @@ Append only. Newest at the bottom. Detail for each lives in docs/decisions/NNN-*
 | 2 | 2026-10-07 | Fonts: Google Sans + Google Sans Flex app-wide, Archivo Black only for chat title above chat bar | User choice; all OFL, bundled | - |
 | 3 | 2026-10-07 | Phase 1 uses local models only (no cloud) | User choice; cloud stays Phase 3 | - |
 | 4 | 2026-10-07 | Adopt UI Build Brief; M5 deferred under local-only | User brief | - |
+| 5 | 2026-10-07 | Learnable user-taught skills proposed (data only, policy-gated); scope pending | User request | - |
