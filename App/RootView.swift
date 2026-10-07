@@ -16,6 +16,7 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
+            Group {
             if CommandLine.arguments.contains("-nodrawer") {
                 ChatView(service: DemoChatService(scenario: scenario), openDrawer: {})
                     .toolbar(.hidden, for: .navigationBar)
@@ -25,6 +26,7 @@ struct RootView: View {
                     .id(chatID)
             } drawer: {
                 DrawerView(chats: chats, pendingApprovals: 1) { route in handle(route) }
+            }
             }
             }
             .toolbar(.hidden, for: .navigationBar)
