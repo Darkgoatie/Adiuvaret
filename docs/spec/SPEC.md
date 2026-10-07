@@ -55,3 +55,4 @@ No code yet. Filled after task 2.
 | FM time to first token | | |
 
 - Typography: see docs/decisions/002-typography.md. Impeccable skill required before any UI work.
+- Phase 1: local models only, no cloud code paths shipped (docs/decisions/003-phase1-local-only.md).
