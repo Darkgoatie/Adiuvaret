@@ -49,7 +49,7 @@ Local server tier, Mac companion, MCP client, HTTP connector builder, shell/file
 No code yet. Filled after task 2.
 | Metric | Value | Command |
 |---|---|---|
-| Tests passing | | scripts/smoke.sh |
-| Build time | | |
-| ERROR lines, standard run | | |
+| Tests passing | 13/13 (PolicyEngine) | scripts/smoke.sh on VM |
+| Smoke time (swift test + sim build) | 66 s warm | scripts/smoke.sh |
+| ERROR lines, standard run | 0 | scripts/smoke.sh |
 | FM time to first token | | |
