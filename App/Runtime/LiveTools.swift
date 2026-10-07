@@ -36,17 +36,26 @@ struct LiveCalendarExecutor: ToolExecutor {
     func execute(_ call: ToolCall) async throws -> String {
         let args = try JSONSerialization.jsonObject(with: Data(call.argumentsJSON.utf8)) as? [String: Any] ?? [:]
         let offset = (args["dayOffset"] as? Int) ?? 0
+        let days = min(max((args["days"] as? Int) ?? 1, 1), 14)
         let store = EKEventStore()
         guard try await store.requestFullAccessToEvents() else { return "Calendar access denied." }
         let cal = Calendar.current
-        let day = cal.date(byAdding: .day, value: offset, to: cal.startOfDay(for: Date()))!
-        let end = cal.date(byAdding: .day, value: 1, to: day)!
-        let events = store.events(matching: store.predicateForEvents(withStart: day, end: end, calendars: nil))
+        let start = cal.date(byAdding: .day, value: offset, to: cal.startOfDay(for: Date()))!
+        let end = cal.date(byAdding: .day, value: days, to: start)!
+        let all = store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: nil))
             .sorted { $0.startDate < $1.startDate }
-            .prefix(10)
-        if events.isEmpty { return "No events." }
-        let f = DateFormatter(); f.dateFormat = "HH:mm"
-        return events.map { "\(f.string(from: $0.startDate)) \(String(($0.title ?? "Untitled").prefix(60)))" }.joined(separator: "\n")
+        if all.isEmpty { return "No events." }
+        let shown = all.prefix(40)
+        let day = DateFormatter(); day.dateFormat = "EEE d MMM"
+        let hm = DateFormatter(); hm.dateFormat = "HH:mm"
+        var lines = shown.map { e -> String in
+            let when = e.isAllDay ? "all day" : "\(hm.string(from: e.startDate))-\(hm.string(from: e.endDate))"
+            let title = String((e.title ?? "Untitled").prefix(60))
+            let where_ = e.calendar.map { " [\($0.title)]" } ?? ""
+            return "\(day.string(from: e.startDate)) \(when) \(title)\(where_)"
+        }
+        if all.count > shown.count { lines.append("(\(all.count - shown.count) more not shown)") }
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -89,21 +98,24 @@ struct LiveReadCalendarTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "0 is today, 1 is tomorrow, -1 is yesterday")
+        @Guide(description: "First day to read: 0 is today, 1 is tomorrow, -1 is yesterday")
         var dayOffset: Int
+        @Guide(description: "How many days to read starting at dayOffset, 1 to 14. Use 7 for a week.")
+        var days: Int
     }
 
     func call(arguments: Arguments) async throws -> String {
         let id = UUID()
         await reporter.toolStarted(id, title: String(localized: "Checking your calendar…"))
-        let json = "{\"dayOffset\":\(arguments.dayOffset)}"
+        let json = "{\"dayOffset\":\(arguments.dayOffset),\"days\":\(arguments.days)}"
         let outcome = await gate.run(ToolCall(toolName: name, argumentsJSON: json), in: ctx.callContext())
         switch outcome {
         case .executed(let out):
             ctx.markUntrusted()
             let lines = out == "No events." ? [] : out.split(separator: "\n").map(String.init)
+            let count = lines.filter { !$0.hasPrefix("(") }.count
             let title = lines.isEmpty ? String(localized: "Looked at calendar · no events")
-                                      : String(localized: "Looked at calendar · \(lines.count) events")
+                                      : String(localized: "Looked at calendar · \(count) events")
             await reporter.toolFinished(id, title: title, details: lines, failed: false)
             return out
         case .blocked(let r):
