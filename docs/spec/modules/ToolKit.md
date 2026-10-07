@@ -3,6 +3,9 @@
 ## Responsibility
 Pure logic for tool skills, testable without a device: calendar date ranges, search filter, conflict check, free-time slots. Works on `EventSlot` values, never on EventKit objects.
 
+## Tool catalog
+`ToolCatalog.standard` (StandardCatalog.swift) lists every tool: id, title, category, description, keywords, examples, requires. `search(primary:secondary:)` scores entries (keywords 3, examples 1.5, title and id 2, description 1; router words count double) and returns the best matches, or nothing for unrelated chat. `withRequirements` adds dependencies (move and delete need readCalendar) and caps the list at 4. Adding a tool = one catalog entry + one executor and Tool in the app; the example tests fail if an entry cannot be found by its own examples.
+
 ## Not responsible for
 Reading or writing EventKit (App/Runtime/CalendarSkills.swift), approvals (PolicyEngine), or what the model says.
 

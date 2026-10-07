@@ -22,5 +22,8 @@ Impeccable before UI. Apple docs only for local-model work (docs/apple/). Native
 - Task 34: ToolKit package + skills: readCalendar with search, findFreeTime, createEvent, moveEvent, deleteEvent. Event handles e1, e2. Undo for create and move; delete confirmed, no Undo.
 - 35 tests pass on the VM (policy 13, design 3+4, persistence 5, toolkit 10); app compiles.
 
+## Tool routing (task 37)
+Catalog in Packages/ToolKit, router in App/Runtime/ToolRouter.swift, session rebuilt per tool set in LiveChatService. 52 package tests pass; app compiles. Open: extra latency per message, router accuracy on device, approval cards for future write tools.
+
 ## Next
 Wait for the user to say build, then device results. After that: 21 (activity log), 19 (memory), 22 (integrations), 35 (reasoning, needs iOS version), 36 (needs user).
