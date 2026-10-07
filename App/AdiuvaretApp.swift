@@ -6,6 +6,12 @@ struct AdiuvaretApp: App {
     init() { DesignSystemFonts.register() }
 
     var body: some Scene {
-        WindowGroup { RootView() }
+        WindowGroup {
+            if CommandLine.arguments.contains("-gallery") {
+                NavigationStack { DesignGallery() }
+            } else {
+                RootView()
+            }
+        }
     }
 }
