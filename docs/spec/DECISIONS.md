@@ -11,3 +11,4 @@ Append only. Newest at the bottom. Detail for each lives in docs/decisions/NNN-*
 | 5 | 2026-10-07 | Learnable user-taught skills proposed (data only, policy-gated); scope pending | User request | - |
 | 6 | 2026-10-07 | Design direction: plain native iOS, green accent, warm neutrals | User choice after direction roll | - |
 | 7 | 2026-10-07 | Storage: SwiftData (Apple native) for all in-app data, in Packages/Persistence | User request; replaces GRDB leaning | - |
+| 8 | 2026-10-07 | Chat requests use ReasoningLevel.deep on iOS 27+ behind REASONING_API | User request | - |

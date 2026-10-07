@@ -123,7 +123,7 @@ final class LiveChatService: ChatService {
             guard let session else { return }
             var started = false
             do {
-                for try await partial in session.streamResponse(to: prompt) {
+                for try await partial in Self.stream(session, prompt) {
                     if !started { items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true }
                     else { replace(replyID, with: .assistant(id: replyID, text: partial.content, streaming: true)) }
                 }
@@ -141,6 +141,17 @@ final class LiveChatService: ChatService {
         task = work
         await work.value
         isGenerating = false
+    }
+
+    /// Asks for the deepest reasoning the on-device model offers. The API exists from iOS 27, so it is
+    /// compiled only when the build sets REASONING_API (the Xcode 27 pipeline) and used only on iOS 27 or later.
+    private static func stream(_ session: LanguageModelSession, _ prompt: String) -> LanguageModelSession.ResponseStream<String> {
+        #if REASONING_API
+        if #available(iOS 27, *) {
+            return session.streamResponse(to: prompt, contextOptions: ContextOptions(reasoningLevel: .deep))
+        }
+        #endif
+        return session.streamResponse(to: prompt)
     }
 
     private func finishStreaming(_ id: UUID) {

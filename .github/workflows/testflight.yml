@@ -60,7 +60,8 @@ jobs:
           echo "Build number $BUILD"
           xcodebuild -project Adiuvaret.xcodeproj -scheme Adiuvaret -destination 'generic/platform=iOS' \
             -configuration Release -archivePath build/Adiuvaret.xcarchive \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CURRENT_PROJECT_VERSION=$BUILD archive | tail -5
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CURRENT_PROJECT_VERSION=$BUILD \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) REASONING_API' archive | tail -5
 
       - name: Export and sign
         run: |
