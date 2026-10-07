@@ -5,7 +5,7 @@ struct RootView: View {
     @State private var drawerOpen = false
     @State private var path: [Route] = []
     @State private var chatID = UUID()
-    @State private var scenario: DemoChatService.Scenario = .empty
+    @State private var service: any ChatService = Self.makeService(.empty)
 
     private let chats: [ChatSummary] = [
         .init(id: UUID(), title: "Dentist planning", group: .pinned),
@@ -18,11 +18,11 @@ struct RootView: View {
         NavigationStack(path: $path) {
             Group {
             if CommandLine.arguments.contains("-nodrawer") {
-                ChatView(service: DemoChatService(scenario: scenario), openDrawer: {})
+                ChatView(service: service, openDrawer: {}).id(chatID)
                     .toolbar(.hidden, for: .navigationBar)
             } else {
             DrawerContainer(isOpen: $drawerOpen) {
-                ChatView(service: DemoChatService(scenario: scenario), openDrawer: { drawerOpen = true })
+                ChatView(service: service, openDrawer: { drawerOpen = true })
                     .id(chatID)
             } drawer: {
                 DrawerView(chats: chats, pendingApprovals: 1) { route in handle(route) }
@@ -34,18 +34,25 @@ struct RootView: View {
         }
         .onOpenURL { url in if let r = Self.route(from: url) { handle(r) } }
         .onAppear {
-            if CommandLine.arguments.contains("-demo") { scenario = .conversation; chatID = UUID() }
-            if CommandLine.arguments.contains("-demoKill") { scenario = .killSwitch; chatID = UUID() }
-            if CommandLine.arguments.contains("-demoUnavailable") { scenario = .unavailable; chatID = UUID() }
+            if CommandLine.arguments.contains("-demo") { service = Self.makeService(.conversation); chatID = UUID() }
+            if CommandLine.arguments.contains("-demoKill") { service = Self.makeService(.killSwitch); chatID = UUID() }
+            if CommandLine.arguments.contains("-demoUnavailable") { service = Self.makeService(.unavailable); chatID = UUID() }
             if CommandLine.arguments.contains("-demoDrawer") { drawerOpen = true }
         }
+    }
+
+    /// Real model by default; demo data only when a -demo launch flag is present.
+    static func makeService(_ scenario: DemoChatService.Scenario) -> any ChatService {
+        let demo = CommandLine.arguments.contains { $0.hasPrefix("-demo") }
+        if demo || scenario != .empty { return DemoChatService(scenario: scenario) }
+        return LiveChatService()
     }
 
     private func handle(_ route: Route) {
         drawerOpen = false
         switch route {
-        case .newChat: scenario = .empty; chatID = UUID(); path = []
-        case .chat: scenario = .conversation; chatID = UUID(); path = []
+        case .newChat: service = Self.makeService(.empty); chatID = UUID(); path = []
+        case .chat: service = Self.makeService(.conversation); chatID = UUID(); path = []
         default: path = [route]
         }
     }

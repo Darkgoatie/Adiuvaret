@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import DesignSystem
 
 struct ChatSummary: Identifiable, Hashable {
@@ -31,7 +32,7 @@ enum ChatBanner: Equatable {
 }
 
 /// Everything the chat screen needs. The demo implementation and the real runtime both conform.
-@MainActor protocol ChatService: AnyObject {
+@MainActor protocol ChatService: AnyObject, Observable {
     var items: [ThreadItem] { get }
     var isGenerating: Bool { get }
     var banner: ChatBanner? { get }

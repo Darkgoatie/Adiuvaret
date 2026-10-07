@@ -2,7 +2,7 @@ import SwiftUI
 import DesignSystem
 
 struct ChatView: View {
-    @State var service: DemoChatService
+    let service: any ChatService
     @State private var draft = ""
     @FocusState private var focused: Bool
     let openDrawer: () -> Void
@@ -76,7 +76,7 @@ struct ChatView: View {
 
 private struct ItemView: View {
     let item: ThreadItem
-    let service: DemoChatService
+    let service: any ChatService
 
     var body: some View {
         switch item {
