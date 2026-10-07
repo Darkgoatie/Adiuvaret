@@ -7,7 +7,7 @@ Phase 0 (3-10), then Stage 1 (12-29, local models only). Tasks 7 and 8 deferred 
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | Repo skeleton, docs, spec | - | docs/, Packages/, App/ | - | User has seen SPEC.md and TASKS.md | | S | done | 1 | 379d62c | |
 | 2 | Xcode project + empty packages build on Mac; smoke script | App, all | App/, Packages/, scripts/smoke.sh | 1 | `scripts/smoke.sh` builds for iOS sim and runs 1 test, 0 errors, time recorded in SPEC baseline | | M | done | 1 | see git log | |
-| 3 | Verify platform facts (min iOS, FM API surface, availability API, context size, BG rules, MLX package names, memory entitlement) from Apple docs/sources | docs | docs/VERIFIED_FACTS.md | 1 | Each fact has date + source URL | | M | pending | 0 | | |
+| 3 | Verify platform facts (min iOS, FM API surface, availability API, context size, BG rules, MLX package names, memory entitlement) from Apple docs/sources | docs | docs/VERIFIED_FACTS.md | 1 | Each fact has date + source URL | | M | done | 1 | see git log | |
 | 4 | Spike: FM availability check + unavailable path | spikes | spikes/fm-availability/ | 2,3 | On device and on unsupported sim, screen shows correct availability reason | | S | done | 1 | see git log | |
 | 5 | Spike: FM session with 2 EventKit tools (read events, create reminder) wrapped by a stub policy gate | spikes | spikes/fm-eventkit/ | 4 | On device: "what's on today" lists real events; "remind me X" hits the gate and only writes after Approve; logged latency + TTFT | | M | done | 1 | see git log | |
 | 6 | Spike: measure FM context limit and how many tools fit before failure | spikes | spikes/fm-eventkit/ | 5 | Table of tool count vs success and token count at overflow error in VERIFIED_FACTS | | M | pending | 0 | | |
