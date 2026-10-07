@@ -57,4 +57,4 @@ No code yet. Filled after task 2.
 - Typography: see docs/decisions/002-typography.md. Impeccable skill required before any UI work.
 - Phase 1: local models only, no cloud code paths shipped (docs/decisions/003-phase1-local-only.md).
 - Apple's official docs are the source of truth for the on-device model: offline copies in docs/apple/ (README there). Read the relevant page before writing FoundationModels code.
-- Context window is 4096 tokens per session. This forces: 3-5 tools max per request, short tool descriptions, rolling summaries, new session when full, small memory injection.
+- Context window: Apple's article says 4096 but the iPhone 18 Pro reports 8192 (read contextSize at runtime; design for 4096 as the floor). This forces: 3-5 tools max per request, short tool descriptions, rolling summaries, new session when full, small memory injection.
