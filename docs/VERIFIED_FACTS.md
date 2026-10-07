@@ -23,3 +23,4 @@
 | Model use limits | Apple says the model is weak at basic math, code generation and logical reasoning; suited to summarize, extract, classify, rewrite | https://developer.apple.com/documentation/foundationmodels/generating-content-and-performing-tasks-with-foundation-models | 2026-10-07 |
 | Background execution of FM, BGTaskScheduler limits | UNVERIFIED: Apple page blocked for fetch; measure in task 9 | - | open |
 | MLX Swift package names, iPhone memory entitlement | deferred with MLX (decision 003) | - | deferred |
+| Policy gate on device | Deny at the approval alert created no reminder; Approve created it (user-confirmed on iPhone 18 Pro) | user report on build 0.1.0 (2) | 2026-10-07 |
