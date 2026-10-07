@@ -41,7 +41,8 @@ enum LiveDescriptors {
     static let createEvent = ToolDescriptor(name: "createEvent", summary: "Creates a calendar event.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let moveEvent = ToolDescriptor(name: "moveEvent", summary: "Moves a calendar event.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let deleteEvent = ToolDescriptor(name: "deleteEvent", summary: "Deletes a calendar event.", permission: .irreversible, outputSensitivity: .personal)
-    static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder]
+    static let listReminders = ToolDescriptor(name: "listReminders", summary: "Lists open reminders.", permission: .readOnly, outputSensitivity: .personal)
+    static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders]
 }
 
 enum CalendarRange {
