@@ -23,14 +23,14 @@ struct DrawerContainer<Content: View, Drawer: View>: View {
                     .disabled(isOpen)
                 if offset > -width {
                     Color.black.opacity(0.35 * (1 + Double(offset / width)))
-                        .ignoresSafeArea()
+                        .ignoresSafeArea(.container)
                         .onTapGesture { close() }
                         .accessibilityHidden(true)
                 }
                 drawer
                     .frame(width: width)
                     .frame(maxHeight: .infinity)
-                    .background(DS.Colors.background.ignoresSafeArea())
+                    .background(DS.Colors.background.ignoresSafeArea(.container))
                     .offset(x: offset)
                     .accessibilityAddTraits(.isModal)
                     .accessibilityHidden(!isOpen)
