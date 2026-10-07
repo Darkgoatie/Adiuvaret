@@ -16,5 +16,11 @@ Impeccable before UI. Apple docs only for local-model work (docs/apple/). Native
 - iPhone iOS version (decides task 35). Decision 005 scope (task 36).
 - Known gaps: kill switch and Open in Reminders not wired; no TTFT logging; Pro locked rows undecided.
 
+## Built since build 13 (not yet on TestFlight)
+- Task 33: model context restored from saved chats (last 12 messages), chat rename (long-press), store reopen test.
+- Task 23: global kill switch (AppSettings + shared PolicyEngine), Settings screen toggle, banner in every chat.
+- Task 34: ToolKit package + skills: readCalendar with search, findFreeTime, createEvent, moveEvent, deleteEvent. Event handles e1, e2. Undo for create and move; delete confirmed, no Undo.
+- 35 tests pass on the VM (policy 13, design 3+4, persistence 5, toolkit 10); app compiles.
+
 ## Next
-33, then kill switch (task 23), 34, 21, 19.
+Wait for the user to say build, then device results. After that: 21 (activity log), 19 (memory), 22 (integrations), 35 (reasoning, needs iOS version), 36 (needs user).
