@@ -23,6 +23,15 @@ struct DrawerView: View {
             .padding(Spacing.l)
 
             List {
+                Section {
+                    ForEach(DrawerDestination.allCases) { d in
+                        Button { select(d.route) } label: {
+                            Label { Text(verbatim: d.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary) } icon: { Image(systemName: d.symbol).foregroundStyle(DS.Colors.textSecondary) }
+                                .frame(minHeight: 44, alignment: .leading)
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                }
                 ForEach(filtered) { section in
                     Section {
                         ForEach(section.chats) { c in
@@ -33,17 +42,8 @@ struct DrawerView: View {
                         }
                     } header: { Text(verbatim: section.title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
                 }
-                Section {
-                    ForEach(DrawerDestination.allCases) { d in
-                        Button { select(d.route) } label: {
-                            Label { Text(verbatim: d.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary) } icon: { Image(systemName: d.symbol).foregroundStyle(DS.Colors.textSecondary) }
-                                .frame(minHeight: 44, alignment: .leading)
-                        }
-                        .listRowBackground(Color.clear)
-                    }
-                }
             }
-            .listStyle(.plain).scrollContentBackground(.hidden)
+            .listStyle(.plain).scrollContentBackground(.hidden).environment(\.defaultMinListRowHeight, 44)
 
             footer
         }

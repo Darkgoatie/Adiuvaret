@@ -10,7 +10,7 @@ struct ChatView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            if let banner = service.banner { BannerView(banner: banner).padding(.horizontal, Spacing.l).padding(.bottom, Spacing.s) }
+            if let banner = service.banner { BannerView(banner: banner).padding(.horizontal, Spacing.l).padding(.vertical, Spacing.s) }
             thread
             Composer(text: $draft, focused: $focused, isGenerating: service.isGenerating,
                      quickActions: service.items.isEmpty ? [] : quick,
@@ -26,7 +26,7 @@ struct ChatView: View {
 
     private var header: some View {
         HStack(spacing: Spacing.s) {
-            Button(action: openDrawer) { Image(systemName: "line.3.horizontal").font(.title3).frame(width: 44, height: 44) }
+            Button(action: openDrawer) { Image(systemName: "line.3.horizontal").imageScale(.large).frame(width: 44, height: 44) }
                 .accessibilityLabel(Text("Menu")).accessibilityIdentifier("chat.menu")
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: service.title).font(DS.Typography.chatTitle).foregroundStyle(DS.Colors.textPrimary).lineLimit(2)
@@ -38,11 +38,13 @@ struct ChatView: View {
                 Button("Pin", systemImage: "pin") {}
                 Button("Export", systemImage: "square.and.arrow.up") {}
                 Button("Delete", systemImage: "trash", role: .destructive) {}
-            } label: { Image(systemName: "ellipsis").font(.title3).frame(width: 44, height: 44) }
+            } label: { Image(systemName: "ellipsis").imageScale(.large).frame(width: 44, height: 44) }
                 .accessibilityLabel(Text("More"))
         }
         .foregroundStyle(DS.Colors.textPrimary)
         .padding(.horizontal, Spacing.s)
+        .padding(.bottom, Spacing.xs)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
     }
 
     @ViewBuilder private var thread: some View {
@@ -59,7 +61,8 @@ struct ChatView: View {
                     .padding(.horizontal, Spacing.l).padding(.vertical, Spacing.m)
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .defaultScrollAnchor(.bottom)
+                .defaultScrollAnchor(.bottom, for: .initialOffset)
+                .defaultScrollAnchor(.bottom, for: .sizeChanges)
                 .onChange(of: service.items.count) { _, _ in
                     if let last = service.items.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
                 }
@@ -144,7 +147,7 @@ struct Composer: View {
                 Menu {
                     Button("Attach clipboard", systemImage: "doc.on.clipboard") {}
                     Button("Start a note", systemImage: "note.text.badge.plus") {}
-                } label: { Image(systemName: "plus").font(.title3).frame(width: 44, height: 44).background(DS.Colors.surfaceRaised, in: RoundedRectangle(cornerRadius: Radius.m)) }
+                } label: { Image(systemName: "plus").imageScale(.large).foregroundStyle(DS.Colors.textPrimary).frame(width: 44, height: 44).background(DS.Colors.surfaceRaised, in: RoundedRectangle(cornerRadius: Radius.m)) }
                     .accessibilityLabel(Text("Add"))
                 TextField(String(localized: "Message Adiuvaret"), text: $text, axis: .vertical)
                     .font(DS.Typography.body).lineLimit(1...6).focused(focused)
@@ -153,7 +156,7 @@ struct Composer: View {
                     .overlay(RoundedRectangle(cornerRadius: Radius.l).stroke(DS.Colors.separator, lineWidth: 0.5))
                     .accessibilityIdentifier("composer.field")
                 Button(action: isGenerating ? stop : send) {
-                    Image(systemName: isGenerating ? "stop.fill" : "arrow.up").font(.headline).frame(width: 44, height: 44)
+                    Image(systemName: isGenerating ? "stop.fill" : "arrow.up").imageScale(.large).fontWeight(.semibold).frame(width: 44, height: 44)
                         .foregroundStyle(DS.Colors.onAccent).background(DS.Colors.accent, in: RoundedRectangle(cornerRadius: Radius.m))
                 }
                 .disabled(!isGenerating && text.trimmingCharacters(in: .whitespaces).isEmpty)
