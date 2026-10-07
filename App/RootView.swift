@@ -1,29 +1,77 @@
 import SwiftUI
-import FoundationModels
+import DesignSystem
 
 struct RootView: View {
-    @State private var status: LocalizedStringKey = "checking"
+    @State private var drawerOpen = false
+    @State private var path: [Route] = []
+    @State private var chatID = UUID()
+    @State private var scenario: DemoChatService.Scenario = .empty
+
+    private let chats: [ChatSummary] = [
+        .init(id: UUID(), title: "Dentist planning", group: .pinned),
+        .init(id: UUID(), title: "Weekend with Ana", group: .today),
+        .init(id: UUID(), title: "Gym schedule", group: .yesterday),
+        .init(id: UUID(), title: "Mom's birthday", group: .week),
+    ]
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 12) {
-                Text("Adiuvaret").font(.largeTitle)
-                Text(status).font(.body).foregroundStyle(.secondary)
-                NavigationLink("Spike") { SpikeView() }
-                NavigationLink("Design") { DesignGallery() }
+        NavigationStack(path: $path) {
+            DrawerContainer(isOpen: $drawerOpen) {
+                ChatView(service: DemoChatService(scenario: scenario), openDrawer: { drawerOpen = true })
+                    .id(chatID)
+            } drawer: {
+                DrawerView(chats: chats, pendingApprovals: 1) { route in handle(route) }
             }
-            .padding()
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: Route.self) { route in destination(route) }
         }
-        .task { status = Self.describe(SystemLanguageModel.default.availability) }
+        .onOpenURL { url in if let r = Self.route(from: url) { handle(r) } }
+        .onAppear {
+            if CommandLine.arguments.contains("-demo") { scenario = .conversation; chatID = UUID() }
+            if CommandLine.arguments.contains("-demoKill") { scenario = .killSwitch; chatID = UUID() }
+            if CommandLine.arguments.contains("-demoUnavailable") { scenario = .unavailable; chatID = UUID() }
+            if CommandLine.arguments.contains("-demoDrawer") { drawerOpen = true }
+        }
     }
 
-    static func describe(_ a: SystemLanguageModel.Availability) -> LocalizedStringKey {
-        switch a {
-        case .available: "apple_intelligence_ready"
-        case .unavailable(.deviceNotEligible): "apple_intelligence_device_not_eligible"
-        case .unavailable(.appleIntelligenceNotEnabled): "apple_intelligence_not_enabled"
-        case .unavailable(.modelNotReady): "apple_intelligence_model_not_ready"
-        case .unavailable: "apple_intelligence_unavailable"
+    private func handle(_ route: Route) {
+        drawerOpen = false
+        switch route {
+        case .newChat: scenario = .empty; chatID = UUID(); path = []
+        case .chat: scenario = .conversation; chatID = UUID(); path = []
+        default: path = [route]
+        }
+    }
+
+    @ViewBuilder private func destination(_ r: Route) -> some View {
+        switch r {
+        case .memory: PlaceholderScreen(title: String(localized: "What I know about you"), icon: "brain.head.profile")
+        case .notes, .note: PlaceholderScreen(title: String(localized: "Notes and Tasks"), icon: "note.text")
+        case .briefings, .briefing: PlaceholderScreen(title: String(localized: "Briefings and Automations"), icon: "sun.max")
+        case .approvalsInbox: PlaceholderScreen(title: String(localized: "Approvals"), icon: "checkmark.seal")
+        case .activity: PlaceholderScreen(title: String(localized: "Activity log"), icon: "list.bullet.rectangle")
+        case .integrations: PlaceholderScreen(title: String(localized: "Integrations"), icon: "puzzlepiece.extension")
+        case .models: PlaceholderScreen(title: String(localized: "Models"), icon: "cpu")
+        case .privacy: PlaceholderScreen(title: String(localized: "Privacy"), icon: "lock.shield")
+        case .settings:
+            List {
+                NavigationLink("Spike") { SpikeView() }
+                NavigationLink("Design") { DesignGallery() }
+            }.navigationTitle(String(localized: "Settings"))
+        case .newChat, .chat: EmptyView()
+        }
+    }
+
+    /// adiuvaret://new, adiuvaret://approvals, adiuvaret://notes ...
+    static func route(from url: URL) -> Route? {
+        guard url.scheme == "adiuvaret" else { return nil }
+        switch url.host() {
+        case "new": return .newChat
+        case "approvals": return .approvalsInbox
+        case "briefings": return .briefings
+        case "notes": return .notes
+        case "memory": return .memory
+        default: return nil
         }
     }
 }

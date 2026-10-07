@@ -13,7 +13,7 @@ let package = Package(
     targets: [
         .target(name: "AdiuvaretCore", path: "AdiuvaretCore/Sources"),
         .target(name: "PolicyEngine", dependencies: ["AdiuvaretCore"], path: "PolicyEngine/Sources"),
-        .target(name: "DesignSystem", path: "DesignSystem/Sources/DesignSystem", resources: [.copy("Resources/Fonts")]),
+        .target(name: "DesignSystem", path: "DesignSystem/Sources/DesignSystem", resources: [.copy("Resources/Fonts"), .process("Localizable.xcstrings")]),
         .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"], path: "DesignSystem/Tests/DesignSystemTests"),
         .testTarget(name: "PolicyEngineTests", dependencies: ["PolicyEngine"], path: "PolicyEngine/Tests"),
     ],
