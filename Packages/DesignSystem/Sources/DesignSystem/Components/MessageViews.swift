@@ -37,8 +37,7 @@ public struct MessageBubble: View {
     private var assistantText: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack(alignment: .lastTextBaseline, spacing: Spacing.xs) {
-                Text(verbatim: text)
-                    .font(DS.Typography.body)
+                RichText(text)
                     .foregroundStyle(DS.Colors.textPrimary)
                     .textSelection(.enabled)
                 if isStreaming {
