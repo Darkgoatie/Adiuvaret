@@ -6,7 +6,7 @@ Updated: 2026-10-07, after task 1
 Repo skeleton and spec only. No code. Brief copied to docs/BRIEF.md.
 
 ## Blocked
-- macOS VM is running (qemu pid up, hostfwd 2222->22) but SSH times out at banner exchange: Remote Login off, still booting, or key not installed.
+- VM reachable from Windows (ssh -p 2222 halit@localhost): macOS 26.7.1 x86_64, Xcode 26.6, iOS SDK 26.5 with FoundationModels, sim runtime iOS 26.5, 16 CPU/16GB. No signing identities in keychain; devicectl sees no device.
 - FM spikes (4-6, 9) need the iPhone reachable from the x86 VM over USB passthrough; unverified.
 
 ## Next
