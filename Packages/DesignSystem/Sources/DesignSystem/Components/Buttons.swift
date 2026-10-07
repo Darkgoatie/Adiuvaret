@@ -9,10 +9,10 @@ public struct DSButtonStyle: ButtonStyle {
     public init(_ kind: Kind = .secondary) { self.kind = kind }
 
     public func makeBody(configuration: Configuration) -> some View {
-        Body(configuration: configuration, kind: kind)
+        StyledLabel(configuration: configuration, kind: kind)
     }
 
-    private struct Body: View {
+    private struct StyledLabel: View {
         let configuration: Configuration
         let kind: Kind
         @Environment(\.isEnabled) private var enabled
