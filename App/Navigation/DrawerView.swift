@@ -22,17 +22,6 @@ struct DrawerView: View {
             }
             .padding(Spacing.l)
 
-            VStack(spacing: 0) {
-                ForEach(DrawerDestination.allCases) { d in
-                    Button { select(d.route) } label: {
-                        Label { Text(verbatim: d.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary) } icon: { Image(systemName: d.symbol).foregroundStyle(DS.Colors.textSecondary).frame(width: 28) }
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                }
-            }
-            .padding(.horizontal, Spacing.l)
-
             List {
                 ForEach(filtered) { section in
                     Section {
@@ -52,17 +41,31 @@ struct DrawerView: View {
     }
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: Spacing.s) {
+        VStack(alignment: .leading, spacing: 0) {
             Divider()
             if pendingApprovals > 0 {
                 Button { select(.approvalsInbox) } label: {
                     Label { Text(verbatim: String(localized: "\(pendingApprovals) waiting for your approval")).font(DS.Typography.subheadline) } icon: { Image(systemName: "checkmark.seal") }
-                        .frame(minHeight: 44, alignment: .leading)
-                }.foregroundStyle(DS.Colors.accentText)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                }
+                .foregroundStyle(DS.Colors.accentText)
+                .padding(.horizontal, Spacing.l)
             }
-            ModelPrivacyChip(model: String(localized: "Local only"), kind: .onDevice)
+            bottomRow(String(localized: "Advanced"), symbol: "slider.horizontal.3", route: .advanced, id: "drawer.advanced")
+            bottomRow(String(localized: "Settings"), symbol: "gearshape", route: .settings, id: "drawer.settings")
         }
-        .padding(Spacing.l)
+        .padding(.bottom, Spacing.s)
+    }
+
+    private func bottomRow(_ title: String, symbol: String, route: Route, id: String) -> some View {
+        Button { select(route) } label: {
+            Label { Text(verbatim: title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary) }
+                icon: { Image(systemName: symbol).foregroundStyle(DS.Colors.textSecondary).frame(width: 28) }
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .padding(.horizontal, Spacing.l)
+        .accessibilityIdentifier(id)
     }
 
     private struct Section_: Identifiable { let id: Int; let title: String; let chats: [ChatSummary] }

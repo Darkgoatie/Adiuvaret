@@ -67,11 +67,13 @@ struct RootView: View {
         case .integrations: PlaceholderScreen(title: String(localized: "Integrations"), icon: "puzzlepiece.extension")
         case .models: PlaceholderScreen(title: String(localized: "Models"), icon: "cpu")
         case .privacy: PlaceholderScreen(title: String(localized: "Privacy"), icon: "lock.shield")
+        case .advanced:
+            SubMenu(title: String(localized: "Advanced"), items: SubItem.advanced)
         case .settings:
-            List {
+            SubMenu(title: String(localized: "Settings"), items: SubItem.settings) {
                 NavigationLink("Spike") { SpikeView() }
                 NavigationLink("Design") { DesignGallery() }
-            }.navigationTitle(String(localized: "Settings"))
+            }
         case .newChat, .chat: EmptyView()
         }
     }

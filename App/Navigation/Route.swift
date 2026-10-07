@@ -15,48 +15,44 @@ enum Route: Hashable {
     case models
     case privacy
     case settings
+    case advanced
 }
 
-enum DrawerDestination: String, CaseIterable, Identifiable {
-    case briefings, notes, memory, activity, integrations, models, privacy, settings
-    var id: String { rawValue }
+/// Rows of the Advanced and Settings sub-screens. Each opens its own screen.
+enum SubItem: Identifiable {
+    case integrations, models, activity, memory, privacy
+    var id: Self { self }
 
     var title: String {
         switch self {
-        case .briefings: String(localized: "Briefings and Automations")
-        case .notes: String(localized: "Notes and Tasks")
-        case .memory: String(localized: "What I know about you")
-        case .activity: String(localized: "Activity log")
         case .integrations: String(localized: "Integrations")
         case .models: String(localized: "Models")
+        case .activity: String(localized: "Activity log")
+        case .memory: String(localized: "What I know about you")
         case .privacy: String(localized: "Privacy")
-        case .settings: String(localized: "Settings")
         }
     }
 
     var symbol: String {
         switch self {
-        case .briefings: "sun.max"
-        case .notes: "note.text"
-        case .memory: "brain.head.profile"
-        case .activity: "list.bullet.rectangle"
         case .integrations: "puzzlepiece.extension"
         case .models: "cpu"
+        case .activity: "list.bullet.rectangle"
+        case .memory: "brain.head.profile"
         case .privacy: "lock.shield"
-        case .settings: "gearshape"
         }
     }
 
     var route: Route {
         switch self {
-        case .briefings: .briefings
-        case .notes: .notes
-        case .memory: .memory
-        case .activity: .activity
         case .integrations: .integrations
         case .models: .models
+        case .activity: .activity
+        case .memory: .memory
         case .privacy: .privacy
-        case .settings: .settings
         }
     }
+
+    static let advanced: [SubItem] = [.integrations, .models, .activity, .memory]
+    static let settings: [SubItem] = [.privacy]
 }
