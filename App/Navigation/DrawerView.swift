@@ -5,6 +5,8 @@ struct DrawerView: View {
     let chats: [ChatSummary]
     let pendingApprovals: Int
     let select: (Route) -> Void
+    let pin: (UUID) -> Void
+    let delete: (UUID) -> Void
     @State private var query = ""
 
     var body: some View {
@@ -27,14 +29,15 @@ struct DrawerView: View {
                     Section {
                         ForEach(section.chats) { c in
                             Button { select(.chat(c.id)) } label: { Text(verbatim: c.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary).frame(minHeight: 44, alignment: .leading) }
-                                .swipeActions { Button("Delete", systemImage: "trash", role: .destructive) {} }
-                                .swipeActions(edge: .leading) { Button("Pin", systemImage: "pin") {}.tint(DS.Colors.accent) }
+                                .swipeActions { Button("Delete", systemImage: "trash", role: .destructive) { delete(c.id) } }
+                                .swipeActions(edge: .leading) { Button(section.id == ChatSummary.Group.pinned.rawValue ? "Unpin" : "Pin", systemImage: "pin") { pin(c.id) }.tint(DS.Colors.accent) }
                                 .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         }
                     } header: { Text(verbatim: section.title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
                 }
             }
-            .listStyle(.plain).scrollContentBackground(.hidden).environment(\.defaultMinListRowHeight, 44)
+            .listStyle(.plain).listSectionSeparator(.hidden).scrollContentBackground(.hidden).environment(\.defaultMinListRowHeight, 44)
 
             footer
         }

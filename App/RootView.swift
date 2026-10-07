@@ -4,28 +4,23 @@ import DesignSystem
 struct RootView: View {
     @State private var drawerOpen = false
     @State private var path: [Route] = []
-    @State private var chatID = UUID()
-    @State private var service: any ChatService = Self.makeService(.empty)
-
-    private let chats: [ChatSummary] = [
-        .init(id: UUID(), title: "Dentist planning", group: .pinned),
-        .init(id: UUID(), title: "Weekend with Ana", group: .today),
-        .init(id: UUID(), title: "Gym schedule", group: .yesterday),
-        .init(id: UUID(), title: "Mom's birthday", group: .week),
-    ]
+    @State private var store = ChatStore(first: RootView.makeService(.empty)) { RootView.makeService(.empty) }
 
     var body: some View {
         NavigationStack(path: $path) {
             Group {
             if CommandLine.arguments.contains("-nodrawer") {
-                ChatView(service: service, openDrawer: {}).id(chatID)
+                ChatView(service: store.current, openDrawer: {}).id(store.currentID)
                     .toolbar(.hidden, for: .navigationBar)
             } else {
             DrawerContainer(isOpen: $drawerOpen) {
-                ChatView(service: service, openDrawer: { drawerOpen = true })
-                    .id(chatID)
+                ChatView(service: store.current, openDrawer: { drawerOpen = true })
+                    .id(store.currentID)
             } drawer: {
-                DrawerView(chats: chats, pendingApprovals: 1) { route in handle(route) }
+                DrawerView(chats: store.summaries, pendingApprovals: 1,
+                           select: { route in handle(route) },
+                           pin: { store.togglePin($0) },
+                           delete: { store.delete($0) })
             }
             }
             }
@@ -34,9 +29,9 @@ struct RootView: View {
         }
         .onOpenURL { url in if let r = Self.route(from: url) { handle(r) } }
         .onAppear {
-            if CommandLine.arguments.contains("-demo") { service = Self.makeService(.conversation); chatID = UUID() }
-            if CommandLine.arguments.contains("-demoKill") { service = Self.makeService(.killSwitch); chatID = UUID() }
-            if CommandLine.arguments.contains("-demoUnavailable") { service = Self.makeService(.unavailable); chatID = UUID() }
+            if CommandLine.arguments.contains("-demo") { store.replaceCurrent(with: Self.makeService(.conversation)) }
+            if CommandLine.arguments.contains("-demoKill") { store.replaceCurrent(with: Self.makeService(.killSwitch)) }
+            if CommandLine.arguments.contains("-demoUnavailable") { store.replaceCurrent(with: Self.makeService(.unavailable)) }
             if CommandLine.arguments.contains("-demoDrawer") { drawerOpen = true }
         }
     }
@@ -51,8 +46,8 @@ struct RootView: View {
     private func handle(_ route: Route) {
         drawerOpen = false
         switch route {
-        case .newChat: service = Self.makeService(.empty); chatID = UUID(); path = []
-        case .chat: service = Self.makeService(.conversation); chatID = UUID(); path = []
+        case .newChat: store.newChat(); path = []
+        case .chat(let id): store.select(id); path = []
         default: path = [route]
         }
     }
