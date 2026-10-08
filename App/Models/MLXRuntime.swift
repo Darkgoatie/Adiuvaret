@@ -6,6 +6,7 @@ import MLXVLM
 import MLXLMCommon
 import HuggingFace
 import Tokenizers
+import Diagnostics
 
 /// Downloads and loads the MLX models, one at a time. Files live in Application Support, which iOS does not purge.
 actor MLXRuntime {
@@ -46,16 +47,59 @@ actor MLXRuntime {
         loaded = nil
         loading?.task.cancel()
         let bridge = HubBridge(upstream: hub)
-        let task = Task { try await loadModelContainer(from: bridge, using: TransformersLoader(), id: id) }
+        // A downloaded model loads straight from its folder. Going through the Hub again with the name "main"
+        // makes the library ask the network which files exist, which can stall when the connection is poor.
+        let folder = localSnapshot(for: id)
+        DiagnosticsLog.shared.record("model load", "start \(id) local=\(folder != nil) \(folder.map(Self.describe) ?? "no local folder")")
+        let task = Task { () -> ModelContainer in
+            if let folder { return try await loadModelContainer(from: folder, using: TransformersLoader()) }
+            return try await loadModelContainer(from: bridge, using: TransformersLoader(), id: id)
+        }
         loading = (id, task)
         do {
-            let container = try await task.value
+            let container = try await Self.withTimeout(seconds: Self.loadTimeout, task: task)
             if loading?.id == id { loading = nil; loaded = (id, container) }
             return container
         } catch {
+            task.cancel()
             if loading?.id == id { loading = nil }
             throw error
         }
+    }
+
+    /// Longest a model may take to load before the app gives up and shows it as unavailable.
+    static let loadTimeout = 150
+
+    private static func withTimeout(seconds: Int, task: Task<ModelContainer, Error>) async throws -> ModelContainer {
+        try await withThrowingTaskGroup(of: ModelContainer.self) { group in
+            group.addTask { try await task.value }
+            group.addTask {
+                try await Task.sleep(for: .seconds(seconds))
+                throw MLXRuntimeError.timedOut(seconds)
+            }
+            defer { group.cancelAll() }
+            guard let first = try await group.next() else { throw MLXRuntimeError.timedOut(seconds) }
+            return first
+        }
+    }
+
+    /// The downloaded folder for `id`, or nil when the model was never fully downloaded.
+    func localSnapshot(for id: String) -> URL? {
+        guard let repo = HuggingFace.Repo.ID(rawValue: id),
+              let commit = cache.resolveRevision(repo: repo, kind: .model, ref: "main"),
+              let folder = try? cache.snapshotPath(repo: repo, kind: .model, commitHash: commit),
+              FileManager.default.fileExists(atPath: folder.appendingPathComponent("config.json").path)
+        else { return nil }
+        return folder
+    }
+
+    /// File names and sizes in the folder, for the diagnostics log. Contains no personal data.
+    private static func describe(_ folder: URL) -> String {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        return names.sorted().map { name in
+            let size = (try? FileManager.default.attributesOfItem(atPath: folder.appendingPathComponent(name).path)[.size] as? Int) ?? 0
+            return "\(name):\(size / 1_000_000)MB"
+        }.joined(separator: ",")
     }
 
     func unload() {
@@ -74,8 +118,12 @@ actor MLXRuntime {
 
 private enum MLXRuntimeError: LocalizedError {
     case badRepository(String)
+    case timedOut(Int)
     var errorDescription: String? {
-        switch self { case .badRepository(let id): "Invalid model name \(id)." }
+        switch self {
+        case .badRepository(let id): "Invalid model name \(id)."
+        case .timedOut(let s): "Loading took longer than \(s) seconds."
+        }
     }
 }
 
