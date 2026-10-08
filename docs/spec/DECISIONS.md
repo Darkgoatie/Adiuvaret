@@ -13,3 +13,4 @@ Append only. Newest at the bottom. Detail for each lives in docs/decisions/NNN-*
 | 7 | 2026-10-07 | Storage: SwiftData (Apple native) for all in-app data, in Packages/Persistence | User request; replaces GRDB leaning | - |
 | 8 | 2026-10-07 | Chat requests use ReasoningLevel.deep on iOS 27+ behind REASONING_API | User request | - |
 | 9 | 2026-10-07 | Tool catalog + per-message routing; reply session gets only the matched tools | User request | - |
+| 10 | 2026-10-07 | Learning model adapted from Hermes: bounded facts, searched skill playbooks, FTS5 chat search, 8192-token budget (proposed) | User request | - |
