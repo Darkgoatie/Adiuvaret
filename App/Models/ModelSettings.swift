@@ -75,6 +75,18 @@ final class ModelSettings {
         loadStates[id] = .loading
         let started = ContinuousClock.now
         Task { [weak self] in
+            if let problem = await MLXRuntime.shared.verify(id) {
+                // Files are missing, so the model cannot work. Take it off the installed list so it can be downloaded again.
+                guard let self else { return }
+                self.installed.remove(id)
+                self.defaults.set(Array(self.installed), forKey: "models.installed")
+                self.loadStates[id] = nil
+                self.states[id] = .failed(problem + " " + String(localized: "Download it again."))
+                DiagnosticsLog.shared.record("model repair", "\(id): \(problem)")
+                Task { await MLXRuntime.shared.remove(id) }
+                if self.activeID == id { self.select(ModelCatalog.appleID) }
+                return
+            }
             do {
                 try await MLXRuntime.shared.load(id)
                 guard let self, self.loadStates[id] == .loading else { return }

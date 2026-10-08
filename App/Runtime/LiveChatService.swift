@@ -23,7 +23,7 @@ final class LiveChatService: ChatService {
     @ObservationIgnored private var pending: [UUID: CheckedContinuation<ApprovalResponse, Never>] = [:]
     @ObservationIgnored private var undos: [UUID: UndoAction] = [:]
     @ObservationIgnored private let handles = EventHandles()
-    @ObservationIgnored private var useReasoning = true
+    @ObservationIgnored private var useReasoning = !UserDefaults.standard.bool(forKey: "reasoning.unsupported")
     @ObservationIgnored private var toolIDs: [String] = []
     @ObservationIgnored private var lastPrompt = ""
     @ObservationIgnored private let engine = LiveEngine.shared
@@ -167,6 +167,7 @@ final class LiveChatService: ChatService {
                     // If the request with a reasoning level fails before any text, retry once on a fresh session without it.
                     if useReasoning, Self.reasoningCompiled, !started, !Self.isLimit(error) {
                         useReasoning = false
+                        if String(describing: error).contains("does not support reasoning") { UserDefaults.standard.set(true, forKey: Self.reasoningUnsupportedKey) }
                         DiagnosticsLog.shared.record("fallback", "reasoning off for this chat, retrying")
                         self.session = makeSession(history: prior, toolIDs: toolIDs)
                         continue
@@ -190,6 +191,8 @@ final class LiveChatService: ChatService {
         default: false
         }
     }
+
+    private static let reasoningUnsupportedKey = "reasoning.unsupported"
 
     static var reasoningCompiled: Bool {
         #if REASONING_API
