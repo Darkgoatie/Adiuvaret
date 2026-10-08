@@ -12,6 +12,7 @@ actor MLXRuntime {
     static let shared = MLXRuntime()
 
     private var loaded: (id: String, container: ModelContainer)?
+    private var loading: (id: String, task: Task<ModelContainer, Error>)?
     private let cache: HubCache
     private let hub: HubClient
 
@@ -36,18 +37,36 @@ actor MLXRuntime {
             progressHandler: { progress($0.fractionCompleted) })
     }
 
+    /// Loads `id` into memory if it is not already. A second request for the same model waits for the first.
+    func load(_ id: String) async throws { _ = try await container(for: id) }
+
     func container(for id: String) async throws -> ModelContainer {
         if let loaded, loaded.id == id { return loaded.container }
+        if let loading, loading.id == id { return try await loading.task.value }
         loaded = nil
-        let container = try await loadModelContainer(from: HubBridge(upstream: hub), using: TransformersLoader(), id: id)
-        loaded = (id, container)
-        return container
+        loading?.task.cancel()
+        let bridge = HubBridge(upstream: hub)
+        let task = Task { try await loadModelContainer(from: bridge, using: TransformersLoader(), id: id) }
+        loading = (id, task)
+        do {
+            let container = try await task.value
+            if loading?.id == id { loading = nil; loaded = (id, container) }
+            return container
+        } catch {
+            if loading?.id == id { loading = nil }
+            throw error
+        }
     }
 
-    func unload() { loaded = nil }
+    func unload() {
+        loading?.task.cancel()
+        loading = nil
+        loaded = nil
+    }
 
     func remove(_ id: String) {
         if loaded?.id == id { loaded = nil }
+        if loading?.id == id { loading?.task.cancel(); loading = nil }
         guard let repo = HuggingFace.Repo.ID(rawValue: id) else { return }
         try? FileManager.default.removeItem(at: cache.repoDirectory(repo: repo, kind: .model))
     }
@@ -110,6 +129,7 @@ actor MLXRuntime {
     func download(_ id: String, progress: @escaping @Sendable (Double) -> Void) async throws {
         throw NSError(domain: "Adiuvaret", code: 1, userInfo: [NSLocalizedDescriptionKey: "This build has no MLX support."])
     }
+    func load(_ id: String) async throws { throw NSError(domain: "Adiuvaret", code: 1, userInfo: [NSLocalizedDescriptionKey: "This build has no MLX support."]) }
     func unload() {}
     func remove(_ id: String) {}
 }

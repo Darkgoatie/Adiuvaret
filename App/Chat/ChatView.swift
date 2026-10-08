@@ -66,6 +66,7 @@ struct ChatView: View {
         } label: {
             HStack(spacing: Spacing.xs) {
                 ModelPrivacyChip(model: service.modelName, kind: service.modelID == "apple" ? .onDevice : .localModel, prominent: false)
+                ModelStatusDot(state: ModelSettings.shared.loadState(service.modelID))
                 Image(systemName: "chevron.down").imageScale(.small).foregroundStyle(DS.Colors.textSecondary)
             }
             .frame(minHeight: 28)
@@ -73,6 +74,7 @@ struct ChatView: View {
         .disabled(service.isGenerating)
         .accessibilityLabel(Text("Model: \(service.modelName)")).accessibilityHint(Text("Choose a different model"))
         .accessibilityIdentifier("chat.model")
+        .task(id: service.modelID) { ModelSettings.shared.preload(service.modelID) }
     }
 
     @ViewBuilder private var thread: some View {

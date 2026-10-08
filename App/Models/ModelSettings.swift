@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import os
+import FoundationModels
 import ModelLibrary
 import Diagnostics
 
@@ -15,7 +16,16 @@ final class ModelSettings {
         case failed(String)
     }
 
+    /// Whether a model is ready for chat. Apple's model has no loading step, so its state follows availability.
+    enum LoadState: Equatable {
+        case idle
+        case loading
+        case loaded
+        case unavailable(String)
+    }
+
     private(set) var installed: Set<String>
+    private(set) var loadStates: [String: LoadState] = [:]
     private(set) var states: [String: DownloadState] = [:]
     private(set) var activeID: String
 
@@ -35,6 +45,51 @@ final class ModelSettings {
 
     func state(_ id: String) -> DownloadState { states[id] ?? .idle }
 
+    func loadState(_ id: String) -> LoadState {
+        if id == ModelCatalog.appleID {
+            switch SystemLanguageModel.default.availability {
+            case .available: return .loaded
+            case .unavailable: return .unavailable(String(localized: "Apple Intelligence isn't available."))
+            }
+        }
+        return loadStates[id] ?? .idle
+    }
+
+    /// Loads a downloaded model into memory now, so the first message does not wait. Safe to call repeatedly.
+    func preload(_ id: String) {
+        guard id != ModelCatalog.appleID else { return }
+        switch loadStates[id] {
+        case .loading, .loaded: return
+        default: break
+        }
+        guard installed.contains(id), let model = ModelCatalog.model(id) else {
+            loadStates[id] = .unavailable(String(localized: "Not downloaded."))
+            return
+        }
+        // A model that cannot fit would be stopped by iOS, and a saved chat would then crash the app at every launch.
+        guard fit(model) != .tooBig else {
+            loadStates[id] = .unavailable(String(localized: "Too large for this iPhone's memory."))
+            DiagnosticsLog.shared.record("model load", "skipped, too large: \(id)")
+            return
+        }
+        loadStates[id] = .loading
+        let started = ContinuousClock.now
+        Task { [weak self] in
+            do {
+                try await MLXRuntime.shared.load(id)
+                guard let self, self.loadStates[id] == .loading else { return }
+                for (other, state) in self.loadStates where other != id && state == .loaded { self.loadStates[other] = .idle }
+                self.loadStates[id] = .loaded
+                DiagnosticsLog.shared.record("model preload", "\((ContinuousClock.now - started).milliseconds) ms, model=\(id)")
+            } catch {
+                guard let self, self.loadStates[id] == .loading else { return }
+                let text = String(String(describing: error).prefix(120))
+                self.loadStates[id] = .unavailable(text)
+                DiagnosticsLog.shared.record("model preload", "failed \(id): \(text)")
+            }
+        }
+    }
+
     func fit(_ model: LocalModel) -> ModelFit { ModelFit.evaluate(weightsBytes: model.sizeBytes, budgetBytes: memoryBudget) }
 
     /// Makes `id` the model for new chats. Unknown or missing models fall back to Apple.
@@ -42,14 +97,19 @@ final class ModelSettings {
         activeID = ModelCatalog.resolve(active: id, installed: installed)
         defaults.set(activeID, forKey: "models.active")
         DiagnosticsLog.shared.record("model select", activeID)
-        if activeID == ModelCatalog.appleID { Task { await MLXRuntime.shared.unload() } }
+        if activeID == ModelCatalog.appleID {
+            for (id, state) in loadStates where state == .loaded || state == .loading { loadStates[id] = .idle }
+            Task { await MLXRuntime.shared.unload() }
+        } else {
+            preload(activeID)
+        }
     }
 
     /// A chat service for `modelID` (default: the active model), seeded with earlier messages.
     func makeService(modelID: String? = nil, items: [ThreadItem] = [], title: String? = nil) -> any ChatService {
         let id = ModelCatalog.resolve(active: modelID ?? activeID, installed: installed)
         #if canImport(MLXLLM)
-        if id != ModelCatalog.appleID { return MLXChatService(restoring: items, title: title, modelID: id) }
+        if id != ModelCatalog.appleID { preload(id); return MLXChatService(restoring: items, title: title, modelID: id) }
         #endif
         return LiveChatService(restoring: items, title: title)
     }
@@ -83,6 +143,7 @@ final class ModelSettings {
         tasks[id]?.cancel()
         installed.remove(id)
         states[id] = .idle
+        loadStates[id] = nil
         defaults.set(Array(installed), forKey: "models.installed")
         if activeID == id { select(ModelCatalog.appleID) }
         DiagnosticsLog.shared.record("model delete", id)
