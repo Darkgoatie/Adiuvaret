@@ -3,6 +3,8 @@ import DesignSystem
 
 struct DrawerView: View {
     let chats: [ChatSummary]
+    var activeID: UUID? = nil
+    var isOpen = true
     let pendingApprovals: Int
     let select: (Route) -> Void
     let pin: (UUID) -> Void
@@ -11,6 +13,7 @@ struct DrawerView: View {
     @State private var query = ""
     @State private var renaming: ChatSummary?
     @State private var newName = ""
+    @State private var flash = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -31,7 +34,7 @@ struct DrawerView: View {
                 ForEach(filtered) { section in
                     Section {
                         ForEach(section.chats) { c in
-                            Button { select(.chat(c.id)) } label: { Text(verbatim: c.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary).frame(minHeight: 44, alignment: .leading) }
+                            Button { select(.chat(c.id)) } label: { row(c) }
                                 .swipeActions { Button("Delete", systemImage: "trash", role: .destructive) { delete(c.id) } }
                                 .swipeActions(edge: .leading) { Button(section.id == ChatSummary.Group.pinned.rawValue ? "Unpin" : "Pin", systemImage: "pin") { pin(c.id) }.tint(DS.Colors.accent) }
                                 .listRowBackground(Color.clear)
@@ -45,15 +48,42 @@ struct DrawerView: View {
                     } header: { Text(verbatim: section.title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
                 }
             }
-            .listStyle(.plain).listSectionSeparator(.hidden).scrollContentBackground(.hidden).environment(\.defaultMinListRowHeight, 44)
+            .listStyle(.plain).listSectionSeparator(.hidden).scrollContentBackground(.hidden).environment(\.defaultMinListRowHeight, Self.rowHeight)
 
             footer
+        }
+        .onChange(of: isOpen) { _, open in
+            guard open, activeID != nil else { return }
+            withAnimation(.easeIn(duration: 0.15)) { flash = true }
+            Task {
+                try? await Task.sleep(for: .milliseconds(1200))
+                withAnimation(.easeOut(duration: 0.5)) { flash = false }
+            }
         }
         .alert("Rename chat", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Name", text: $newName)
             Button("Cancel", role: .cancel) {}
             Button("Save") { if let c = renaming { rename(c.id, newName) } }
         }
+    }
+
+    /// History rows are 34 pt, down from 44.
+    private static let rowHeight: CGFloat = 34
+
+    /// One history row. The open chat gets a short vertical bar on its left edge, and a soft highlight for a moment after the drawer opens.
+    private func row(_ c: ChatSummary) -> some View {
+        let active = c.id == activeID
+        return HStack(spacing: Spacing.s) {
+            Capsule()
+                .fill(active ? DS.Colors.accent : Color.clear)
+                .frame(width: 3, height: 18)
+            Text(verbatim: c.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary).lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: Self.rowHeight, alignment: .leading)
+        .background(DS.Colors.accent.opacity(active && flash ? 0.18 : 0), in: RoundedRectangle(cornerRadius: Radius.s))
+        .contentShape(Rectangle())
+        .accessibilityAddTraits(active ? .isSelected : [])
     }
 
     private var footer: some View {

@@ -19,7 +19,7 @@ struct RootView: View {
                 ChatView(service: store.current, openDrawer: { drawerOpen = true }, turnFinished: { store.persistCurrent() })
                     .id(store.currentID)
             } drawer: {
-                DrawerView(chats: store.summaries, pendingApprovals: 1,
+                DrawerView(chats: store.summaries, activeID: store.currentID, isOpen: drawerOpen, pendingApprovals: 1,
                            select: { route in handle(route) },
                            pin: { store.togglePin($0) },
                            delete: { store.delete($0) },
