@@ -1,6 +1,6 @@
 # 010 How Adiuvaret learns (adapted from the Hermes agent design)
 
-Status: proposed, waiting for the user's answers (see Open questions). Supersedes the scope of task 36 and extends task 19.
+Status: accepted 2026-10-07 with the user's answers below. Supersedes the scope of task 36 and extends task 19.
 
 ## What is kept from Hermes
 
@@ -44,7 +44,7 @@ The skill and tool indexes are never in the prompt. The router step (decision 00
 
 Facts:
   1. After a turn that contained a stated personal fact, a guided-generation step proposes at most one fact.
-  2. The app shows a card: "Remember: <fact>" with Keep and Skip. Nothing is saved without Keep.
+  2. The fact is saved automatically and a toast shows "Remembered: <fact>" with Undo (user answer 1). The Memory screen can edit or delete it later.
   3. Duplicates are dropped (MemoryMath.isDuplicate). Memory screen lists, edits and deletes facts.
   4. A remember tool also exists so the user can say "remember that ..." directly. It is a reversible write: approval card plus Undo.
 
@@ -58,7 +58,7 @@ Skills:
 
 ## Safety rules
 
-  - No learned text is saved silently. Keep, Skip and Undo are always visible.
+  - Every automatic save shows a toast with Undo and appears in the Memory screen. Skills are only saved after the user taps Save.
   - Learned text is placed after the fixed rules and labelled as user data. It is never treated as instructions that
     can override them.
   - Content read from the calendar, reminders or other apps is never saved as a fact or skill automatically.
@@ -74,8 +74,8 @@ Skills:
   40  Skills: store, match, offer-to-save from a successful run (replaces the scope of 36)
   41  Past-chat search: FTS5 index and searchPastChats tool
 
-## Open questions
+## Answers (2026-10-07)
 
-  1. Facts: always ask with Keep or Skip (recommended), or save automatically with an Undo toast?
-  2. Skills in Stage 1 or later? They add a second kind of stored text to the prompt; memory alone is smaller to verify.
-  3. Past-chat search: index assistant messages as well as the user's, or only the user's?
+  1. Facts are saved automatically, with an Undo toast.
+  2. Skills are built now, together with memory (tasks 39 and 40 run in one pass). They still need a tap on Save, because a skill changes how requests are handled.
+  3. Past-chat search indexes the user's messages and the assistant's replies.
