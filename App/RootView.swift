@@ -32,6 +32,7 @@ struct RootView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Route.self) { route in destination(route) }
         }
+        .overlay { WebPanel() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { store.persistAll() } }
         .onChange(of: drawerOpen) { _, open in if open { store.persistCurrent() } }
         .onOpenURL { url in if let r = Self.route(from: url) { handle(r) } }

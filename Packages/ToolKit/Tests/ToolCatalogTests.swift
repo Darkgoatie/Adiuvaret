@@ -45,7 +45,7 @@ import Testing
     }
 
     @Test func categoriesKeepOrder() {
-        #expect(catalog.categories == ["Calendar", "Reminders"])
+        #expect(catalog.categories == ["Calendar", "Reminders", "Web"])
     }
 
     @Test func tokensSplitCamelCaseAndDropNoise() {
@@ -67,5 +67,19 @@ import Testing
 
     @Test func everyRequirementExists() {
         for e in catalog.entries { for r in e.requires { #expect(catalog.entry(r) != nil, "\(e.id) requires missing \(r)") } }
+    }
+
+    @Test func anyWebHitBringsTheWholeBrowserKit() {
+        for id in ["openWebsite", "lookAtPage", "actOnPage"] {
+            let ids = catalog.withRequirements([catalog.entry(id)!]).map(\.id)
+            #expect(Set(ids) == ["openWebsite", "lookAtPage", "actOnPage"], "\(id) -> \(ids)")
+        }
+    }
+
+    @Test func calendarChatDoesNotTriggerTheBrowser() {
+        for text in ["What's on my calendar tomorrow?", "Remind me to call mom in 30 minutes", "Find me an hour free on Friday", "Cancel my 3pm meeting"] {
+            let ids = catalog.search(primary: "", secondary: text).map(\.entry.id)
+            #expect(!ids.contains("openWebsite") && !ids.contains("lookAtPage") && !ids.contains("actOnPage"), "\(text) -> \(ids)")
+        }
     }
 }

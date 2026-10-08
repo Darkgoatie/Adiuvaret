@@ -42,7 +42,15 @@ enum LiveDescriptors {
     static let moveEvent = ToolDescriptor(name: "moveEvent", summary: "Moves a calendar event.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let deleteEvent = ToolDescriptor(name: "deleteEvent", summary: "Deletes a calendar event.", permission: .irreversible, outputSensitivity: .personal)
     static let listReminders = ToolDescriptor(name: "listReminders", summary: "Lists open reminders.", permission: .readOnly, outputSensitivity: .personal)
-    static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders]
+    static let openWebsite = ToolDescriptor(name: "openWebsite", summary: "Opens a website.", permission: .readOnly, outputSensitivity: .personal)
+    static let lookAtPage = ToolDescriptor(name: "lookAtPage", summary: "Reads the open page.", permission: .readOnly, outputSensitivity: .personal)
+    static let actOnPage = ToolDescriptor(name: "actOnPage", summary: "Clicks or types on the open page.", permission: .readOnly, outputSensitivity: .personal)
+    /// Opening a site the chat has not visited, after untrusted content was read. Always asks.
+    static let openOtherSite = ToolDescriptor(name: "openOtherSite", summary: "Opens a different website.", permission: .reversibleWrite, outputSensitivity: .personal)
+    /// A click that could buy, send, delete or sign in. Always asks and cannot be undone.
+    static let actOnPageRisky = ToolDescriptor(name: "actOnPageRisky", summary: "Does something on a page that cannot be undone.", permission: .irreversible, outputSensitivity: .personal)
+    static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
+                      openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky]
 }
 
 enum CalendarRange {

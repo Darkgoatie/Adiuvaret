@@ -6,6 +6,9 @@ Pure logic for tool skills, testable without a device: calendar date ranges, sea
 ## Tool catalog
 `ToolCatalog.standard` (StandardCatalog.swift) lists every tool: id, title, category, description, keywords, examples, requires. `search(primary:secondary:)` scores entries (keywords 3, examples 1.5, title and id 2, description 1; router words count double) and returns the best matches, or nothing for unrelated chat. `withRequirements` adds dependencies (move and delete need readCalendar) and caps the list at 4. Adding a tool = one catalog entry + one executor and Tool in the app; the example tests fail if an entry cannot be found by its own examples.
 
+## Web rules
+`WebPolicy` (address normalisation, same-site check, risky click words, sensitive fields) and `PageSnapshot` / `SnapshotFormat` (page to short text, capped by a character budget, page text in numbered parts). Pure logic. The browser itself is App/Web and the tools are App/Runtime/WebTools.swift (decision 012).
+
 ## Not responsible for
 Reading or writing EventKit (App/Runtime/CalendarSkills.swift), approvals (PolicyEngine), or what the model says.
 

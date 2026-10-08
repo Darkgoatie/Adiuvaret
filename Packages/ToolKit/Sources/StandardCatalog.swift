@@ -40,5 +40,23 @@ public extension ToolCatalog {
             description: "Lists the user's open reminders and to-dos with their due dates, optionally filtered by words in the title.",
             keywords: ["list", "todo", "task", "pending", "outstanding", "overdue", "checklist"],
             examples: ["What's on my to-do list?", "Show my pending tasks", "Which reminders are overdue?"]),
+        CatalogEntry(
+            id: "openWebsite", title: "Open website", category: "Web",
+            description: "Opens a website or searches the web in the in-app browser, to look something up online, check a price, find news or visit a page. Returns the page's buttons, links and fields.",
+            keywords: ["website", "web", "browse", "browser", "online", "internet", "google", "duckduckgo", "wikipedia", "url", "site", "lookup", "price", "news"],
+            examples: ["Search the web for the best pizza in Istanbul", "Open apple.com", "Look up the price of AirPods online", "Go to wikipedia and find Real Betis"],
+            requires: ["lookAtPage", "actOnPage"]),
+        CatalogEntry(
+            id: "lookAtPage", title: "Look at page", category: "Web",
+            description: "Looks at the open website: lists the numbered buttons, links and fields in view, or reads the page text in parts.",
+            keywords: ["page", "article", "content", "summarize", "summary", "webpage", "text"],
+            examples: ["What does this page say?", "Summarize the article on the page", "Show me what is on this page", "Read the rest of the page"],
+            requires: ["openWebsite", "actOnPage"]),
+        CatalogEntry(
+            id: "actOnPage", title: "Use page", category: "Web",
+            description: "Clicks, types, ticks boxes, chooses options, moves sliders and scrolls on the open website. Never fills passwords, card numbers or codes.",
+            keywords: ["click", "tap", "type", "fill", "textbox", "scroll", "button", "link", "checkbox", "dropdown", "slider", "tick"],
+            examples: ["Click the first result", "Scroll down the page", "Type red shoes in the search box", "Tick the box and press the button"],
+            requires: ["openWebsite", "lookAtPage"]),
     ])
 }

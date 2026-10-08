@@ -20,9 +20,9 @@ enum ToolRouter {
         return """
         You decide which capability a message needs. Capabilities: \(capabilities). \
         Set needsTool to false for greetings, thanks, advice, writing help and general questions. \
-        For anything about the user's own calendar, events, free time or reminders, set needsTool to true and \
+        For anything about the user's own calendar, events, free time or reminders, or that needs a website, a web search, a price or a page, set needsTool to true and \
         write searchWords as three to six words naming what is needed, using verbs like read, find, create, move, delete, list \
-        and nouns like calendar, event, free time, reminder. A short follow-up such as "and the day after?" continues the previous request.
+        and nouns like calendar, event, free time, reminder, website, web search, page. A short follow-up such as "and the day after?" continues the previous request.
         """
     }
 

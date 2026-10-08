@@ -4,6 +4,7 @@ import DesignSystem
 /// The Settings screen: safety switch first, then sub-screens.
 struct SettingsView: View {
     @Bindable private var settings = AppSettings.shared
+    @State private var confirmClear = false
 
     var body: some View {
         List {
@@ -26,6 +27,12 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section {
+                Button(role: .destructive) { confirmClear = true } label: { Text("Clear browsing data").font(DS.Typography.body) }
+                    .frame(minHeight: 44).accessibilityIdentifier("settings.clearWeb")
+            } header: { Text("Browser") } footer: {
+                Text("Signs you out of every website the assistant opened and removes cookies and saved site data.").font(DS.Typography.caption)
+            }
             Section("Testing") {
                 NavigationLink("Diagnostics") { DiagnosticsView() }
                 NavigationLink("Spike") { SpikeView() }
@@ -36,6 +43,9 @@ struct SettingsView: View {
         .background(DS.Colors.background)
         .navigationTitle(String(localized: "Settings"))
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Clear browsing data?", isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Clear", role: .destructive) { Task { await WebSession.shared.clearWebsiteData() } }
+        } message: { Text("You will be signed out of websites.") }
     }
 }
 

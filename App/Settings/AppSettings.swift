@@ -4,7 +4,8 @@ import PolicyEngine
 
 /// The one policy engine every chat shares, so the kill switch applies everywhere at once.
 enum LiveEngine {
-    static let shared = PolicyEngine(tools: LiveDescriptors.all)
+    /// Web tasks take several steps, so the cap is higher than the default of 12. The 8192-token window ends long runs sooner than this.
+    static let shared = PolicyEngine(tools: LiveDescriptors.all, limits: PolicyLimits(maxToolCallsPerTask: 15))
 }
 
 /// User preferences stored on the device.

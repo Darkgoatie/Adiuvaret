@@ -40,6 +40,10 @@ struct ChatView: View {
                 modelMenu
             }
             Spacer(minLength: 0)
+            if WebSession.shared.hasPage {
+                Button { WebSession.shared.panelVisible = true } label: { Image(systemName: "globe").imageScale(.large).frame(width: 44, height: 44) }
+                    .accessibilityLabel(Text("Open the browser")).accessibilityIdentifier("chat.browser")
+            }
             Menu {
                 Button("Chat settings", systemImage: "slider.horizontal.3") {}
                 Button("Pin", systemImage: "pin") {}
