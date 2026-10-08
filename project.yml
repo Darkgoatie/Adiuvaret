@@ -6,6 +6,15 @@ options:
 packages:
   AdiuvaretPackages:
     path: Packages
+  MLXLM:
+    url: https://github.com/ml-explore/mlx-swift-lm
+    minorVersion: 3.32.3
+  SwiftHuggingFace:
+    url: https://github.com/huggingface/swift-huggingface
+    from: 0.9.0
+  SwiftTransformers:
+    url: https://github.com/huggingface/swift-transformers
+    from: 1.3.0
 targets:
   Adiuvaret:
     type: application
@@ -24,6 +33,18 @@ targets:
         product: ToolKit
       - package: AdiuvaretPackages
         product: Diagnostics
+      - package: AdiuvaretPackages
+        product: ModelLibrary
+      - package: MLXLM
+        product: MLXLLM
+      - package: MLXLM
+        product: MLXVLM
+      - package: MLXLM
+        product: MLXLMCommon
+      - package: SwiftHuggingFace
+        product: HuggingFace
+      - package: SwiftTransformers
+        product: Tokenizers
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret

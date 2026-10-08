@@ -9,6 +9,8 @@ final class DemoChatService: ChatService {
     private(set) var banner: ChatBanner?
     private(set) var title = String(localized: "New chat")
     private var task: Task<Void, Never>?
+    let modelID = "apple"
+    let modelName = "Apple"
 
     init(scenario: Scenario = .empty) {
         switch scenario {

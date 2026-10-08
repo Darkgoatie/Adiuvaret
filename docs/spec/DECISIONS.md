@@ -14,3 +14,4 @@ Append only. Newest at the bottom. Detail for each lives in docs/decisions/NNN-*
 | 8 | 2026-10-07 | Chat requests use ReasoningLevel.deep on iOS 27+ behind REASONING_API | User request | - |
 | 9 | 2026-10-07 | Tool catalog + per-message routing; reply session gets only the matched tools | User request | - |
 | 10 | 2026-10-07 | Learning model adapted from Hermes: bounded facts, searched skill playbooks, FTS5 chat search, 8192-token budget (accepted: auto-save facts with Undo, skills now, index both sides) | User request | - |
+| 11 | 2026-10-07 | Local MLX models (8 mlx-community models) downloadable on request; chat only; model switch per chat. Replaces the Phase 3 default of decision 003 | User request | - |

@@ -9,10 +9,11 @@ public final class ChatRecord {
     public var created: Date
     public var updated: Date
     public var pinned: Bool
+    public var modelID: String = "apple"
     @Relationship(deleteRule: .cascade, inverse: \ItemRecord.chat) public var items: [ItemRecord] = []
 
-    public init(id: UUID, title: String, created: Date, updated: Date, pinned: Bool) {
-        self.id = id; self.title = title; self.created = created; self.updated = updated; self.pinned = pinned
+    public init(id: UUID, title: String, created: Date, updated: Date, pinned: Bool, modelID: String = "apple") {
+        self.id = id; self.title = title; self.created = created; self.updated = updated; self.pinned = pinned; self.modelID = modelID
     }
 }
 

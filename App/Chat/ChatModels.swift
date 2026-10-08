@@ -37,6 +37,8 @@ enum ChatBanner: Equatable {
     var isGenerating: Bool { get }
     var banner: ChatBanner? { get }
     var title: String { get }
+    var modelID: String { get }
+    var modelName: String { get }
     func send(_ text: String) async
     func stop()
     func approve(_ id: UUID)

@@ -1,5 +1,6 @@
 import SwiftUI
 import DesignSystem
+import ModelLibrary
 
 struct ChatView: View {
     let service: any ChatService
@@ -7,6 +8,8 @@ struct ChatView: View {
     @FocusState private var focused: Bool
     let openDrawer: () -> Void
     var turnFinished: () -> Void = {}
+    var switchModel: (String) -> Void = { _ in }
+    var openModels: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,7 +37,7 @@ struct ChatView: View {
                 .accessibilityLabel(Text("Menu")).accessibilityIdentifier("chat.menu")
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: service.title).font(DS.Typography.chatTitle).foregroundStyle(DS.Colors.textPrimary).lineLimit(2)
-                ModelPrivacyChip(model: "Apple", kind: .onDevice, prominent: false)
+                modelMenu
             }
             Spacer(minLength: 0)
             Menu {
@@ -49,6 +52,27 @@ struct ChatView: View {
         .padding(.horizontal, Spacing.s)
         .padding(.bottom, Spacing.xs)
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+    }
+
+    private var modelMenu: some View {
+        Menu {
+            ForEach(ModelSettings.shared.choices) { choice in
+                Button { switchModel(choice.id) } label: {
+                    if choice.id == service.modelID { Label(choice.name, systemImage: "checkmark") } else { Text(verbatim: choice.name) }
+                }
+            }
+            Divider()
+            Button("Manage models", systemImage: "cpu", action: openModels)
+        } label: {
+            HStack(spacing: Spacing.xs) {
+                ModelPrivacyChip(model: service.modelName, kind: service.modelID == "apple" ? .onDevice : .localModel, prominent: false)
+                Image(systemName: "chevron.down").imageScale(.small).foregroundStyle(DS.Colors.textSecondary)
+            }
+            .frame(minHeight: 28)
+        }
+        .disabled(service.isGenerating)
+        .accessibilityLabel(Text("Model: \(service.modelName)")).accessibilityHint(Text("Choose a different model"))
+        .accessibilityIdentifier("chat.model")
     }
 
     @ViewBuilder private var thread: some View {

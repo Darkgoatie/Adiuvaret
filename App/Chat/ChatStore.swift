@@ -1,6 +1,8 @@
 import Foundation
 import Observation
 import Persistence
+import ModelLibrary
+import Diagnostics
 
 /// All chats of the app. Live chats are saved on device with SwiftData and restored at launch.
 @MainActor @Observable
@@ -22,7 +24,7 @@ final class ChatStore {
         self.persistence = persistence; self.make = make
         for snap in persistence?.loadChats() ?? [] {
             let items = snap.items.compactMap(ThreadItemCoding.item)
-            entries.append(Entry(id: snap.id, service: LiveChatService(restoring: items, title: snap.title), created: snap.created, pinned: snap.pinned))
+            entries.append(Entry(id: snap.id, service: ModelSettings.shared.makeService(modelID: snap.modelID, items: items, title: snap.title), created: snap.created, pinned: snap.pinned))
         }
         let blank = Entry(id: UUID(), service: make(), created: Date())
         entries.append(blank)
@@ -34,6 +36,17 @@ final class ChatStore {
     func replaceCurrent(with service: any ChatService) {
         guard let i = entries.firstIndex(where: { $0.id == currentID }) else { return }
         entries[i] = Entry(id: currentID, service: service, created: entries[i].created, pinned: entries[i].pinned)
+    }
+
+    /// Moves the open chat to another model. Earlier messages come along. Ignored while a reply is being written.
+    func switchModel(to id: String) {
+        let old = current
+        guard !old.isGenerating else { return }
+        let resolved = ModelCatalog.resolve(active: id, installed: ModelSettings.shared.installed)
+        guard resolved != old.modelID else { return }
+        replaceCurrent(with: ModelSettings.shared.makeService(modelID: resolved, items: old.items, title: old.title))
+        persistCurrent()
+        DiagnosticsLog.shared.record("chat model", resolved)
     }
 
     /// Reuses the open chat when it is still empty so blank chats do not pile up.
@@ -74,9 +87,9 @@ final class ChatStore {
     func persistAll() { entries.forEach(persist) }
 
     private func persist(_ e: Entry) {
-        guard let persistence, e.service is LiveChatService, !e.service.items.isEmpty else { return }
+        guard let persistence, !(e.service is DemoChatService), !e.service.items.isEmpty else { return }
         persistence.save(ChatSnapshot(id: e.id, title: e.service.title, created: e.created, pinned: e.pinned,
-                                      items: e.service.items.compactMap(ThreadItemCoding.snapshot)))
+                                      items: e.service.items.compactMap(ThreadItemCoding.snapshot), modelID: e.service.modelID))
     }
 
     /// Chats that have at least one message, newest first.

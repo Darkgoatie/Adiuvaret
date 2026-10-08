@@ -14,6 +14,8 @@ final class LiveChatService: ChatService {
     private var availabilityBanner: ChatBanner?
     var banner: ChatBanner? { availabilityBanner ?? (AppSettings.shared.actionsOff ? .killSwitch : nil) }
     private(set) var title = String(localized: "New chat")
+    let modelID = "apple"
+    let modelName = "Apple"
 
     @ObservationIgnored private let ctx = TaskContext()
     @ObservationIgnored private var session: LanguageModelSession?

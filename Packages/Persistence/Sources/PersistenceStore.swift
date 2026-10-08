@@ -14,8 +14,9 @@ public struct ChatSnapshot: Sendable, Equatable {
     public let created: Date
     public var pinned: Bool
     public var items: [ItemSnapshot]
-    public init(id: UUID, title: String, created: Date, pinned: Bool, items: [ItemSnapshot]) {
-        self.id = id; self.title = title; self.created = created; self.pinned = pinned; self.items = items
+    public var modelID: String
+    public init(id: UUID, title: String, created: Date, pinned: Bool, items: [ItemSnapshot], modelID: String = "apple") {
+        self.id = id; self.title = title; self.created = created; self.pinned = pinned; self.items = items; self.modelID = modelID
     }
 }
 
@@ -40,16 +41,17 @@ public final class PersistenceStore {
         let all = (try? context.fetch(FetchDescriptor<ChatRecord>(sortBy: [SortDescriptor(\.created)]))) ?? []
         return all.map { c in
             ChatSnapshot(id: c.id, title: c.title, created: c.created, pinned: c.pinned,
-                         items: c.items.sorted { $0.order < $1.order }.map { ItemSnapshot(id: $0.id, kind: $0.kind, payload: $0.payload) })
+                         items: c.items.sorted { $0.order < $1.order }.map { ItemSnapshot(id: $0.id, kind: $0.kind, payload: $0.payload) },
+                         modelID: c.modelID)
         }
     }
 
     public func save(_ chat: ChatSnapshot) {
         let id = chat.id
         let found = try? context.fetch(FetchDescriptor<ChatRecord>(predicate: #Predicate { $0.id == id })).first
-        let record = found ?? ChatRecord(id: chat.id, title: chat.title, created: chat.created, updated: Date(), pinned: chat.pinned)
+        let record = found ?? ChatRecord(id: chat.id, title: chat.title, created: chat.created, updated: Date(), pinned: chat.pinned, modelID: chat.modelID)
         if found == nil { context.insert(record) }
-        record.title = chat.title; record.pinned = chat.pinned; record.updated = Date()
+        record.title = chat.title; record.pinned = chat.pinned; record.modelID = chat.modelID; record.updated = Date()
         for old in record.items { context.delete(old) }
         record.items = []
         for (i, item) in chat.items.enumerated() {

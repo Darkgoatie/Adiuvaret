@@ -1,6 +1,7 @@
 import SwiftUI
 import DesignSystem
 import Persistence
+import ModelLibrary
 
 struct RootView: View {
     @State private var drawerOpen = false
@@ -16,7 +17,8 @@ struct RootView: View {
                     .toolbar(.hidden, for: .navigationBar)
             } else {
             DrawerContainer(isOpen: $drawerOpen) {
-                ChatView(service: store.current, openDrawer: { drawerOpen = true }, turnFinished: { store.persistCurrent() })
+                ChatView(service: store.current, openDrawer: { drawerOpen = true }, turnFinished: { store.persistCurrent() },
+                         switchModel: { id in ModelSettings.shared.select(id); store.switchModel(to: id) }, openModels: { handle(.models) })
                     .id(store.currentID)
             } drawer: {
                 DrawerView(chats: store.summaries, activeID: store.currentID, isOpen: drawerOpen, pendingApprovals: 1,
@@ -47,7 +49,7 @@ struct RootView: View {
     static func makeService(_ scenario: DemoChatService.Scenario) -> any ChatService {
         let demo = CommandLine.arguments.contains { $0.hasPrefix("-demo") }
         if demo || scenario != .empty { return DemoChatService(scenario: scenario) }
-        return LiveChatService()
+        return ModelSettings.shared.makeService()
     }
 
     private func handle(_ route: Route) {
@@ -67,7 +69,7 @@ struct RootView: View {
         case .approvalsInbox: PlaceholderScreen(title: String(localized: "Approvals"), icon: "checkmark.seal")
         case .activity: PlaceholderScreen(title: String(localized: "Activity log"), icon: "list.bullet.rectangle")
         case .integrations: PlaceholderScreen(title: String(localized: "Integrations"), icon: "puzzlepiece.extension")
-        case .models: PlaceholderScreen(title: String(localized: "Models"), icon: "cpu")
+        case .models: ModelsView(use: { id in ModelSettings.shared.select(id); if store.current.items.isEmpty { store.switchModel(to: id) } })
         case .privacy: PlaceholderScreen(title: String(localized: "Privacy"), icon: "lock.shield")
         case .advanced:
             SubMenu(title: String(localized: "Advanced"), items: SubItem.advanced)

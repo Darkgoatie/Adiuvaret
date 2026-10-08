@@ -46,4 +46,14 @@ import Foundation
         s.save(late); s.save(early)
         #expect(s.loadChats().map(\.title) == ["early", "late"])
     }
+
+    @Test func chatRemembersItsModel() throws {
+        let s = try PersistenceStore(inMemory: true)
+        let id = UUID()
+        s.save(ChatSnapshot(id: id, title: "Local", created: Date(), pinned: false,
+                            items: [ItemSnapshot(id: UUID(), kind: "user", payload: Data("hi".utf8))], modelID: "mlx-community/Qwen3-1.7B-4bit"))
+        #expect(s.loadChats().first?.modelID == "mlx-community/Qwen3-1.7B-4bit")
+        s.save(ChatSnapshot(id: id, title: "Local", created: Date(), pinned: false, items: [ItemSnapshot(id: UUID(), kind: "user", payload: Data("hi".utf8))]))
+        #expect(s.loadChats().first?.modelID == "apple")
+    }
 }
