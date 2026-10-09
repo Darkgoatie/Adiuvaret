@@ -8,9 +8,40 @@ import Diagnostics
 // MARK: executors (run after the policy gate has allowed or the user has approved)
 
 struct SearchWebExecutor: ToolExecutor {
+    /// Live forecast for a place, or nil when the place or the service fails, so the normal search can still answer.
+    static func weather(for name: String) async -> String? {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 12
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
+        do {
+            guard let geoURL = Weather.geocodingURL(name) else { return nil }
+            let (geoData, geoResponse) = try await session.data(from: geoURL)
+            guard (geoResponse as? HTTPURLResponse)?.statusCode == 200, let place = Weather.parsePlace(geoData) else {
+                DiagnosticsLog.shared.record("weather", "place not found")
+                return nil
+            }
+            let fahrenheit = Locale.current.measurementSystem == .us
+            guard let url = Weather.forecastURL(place, fahrenheit: fahrenheit) else { return nil }
+            let (data, response) = try await session.data(from: url)
+            guard (response as? HTTPURLResponse)?.statusCode == 200, let text = Weather.render(data, place: place) else {
+                DiagnosticsLog.shared.record("weather", "forecast unavailable")
+                return nil
+            }
+            DiagnosticsLog.shared.record("weather", "ok")
+            return text
+        } catch {
+            DiagnosticsLog.shared.record("weather", "failed: \(String(String(describing: error).prefix(80)))")
+            return nil
+        }
+    }
+
     func execute(_ call: ToolCall) async throws -> String {
         let query = WebSearch.cleanQuery((CalendarStore.args(call)["query"] as? String) ?? "")
         guard let url = WebSearch.url(for: query) else { return "Not done: no search words were given." }
+        if let name = Weather.place(in: query), let report = await Self.weather(for: name) { return report }
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue(WebSearch.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("text/html", forHTTPHeaderField: "Accept")
