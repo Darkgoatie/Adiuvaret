@@ -6,6 +6,7 @@ import MLXLMCommon
 import ModelLibrary
 import Diagnostics
 import AdiuvaretCore
+import PolicyEngine
 import ToolKit
 
 /// Chat with a downloaded MLX model. Chat only for now: calendar and reminder tools stay on the Apple model.
