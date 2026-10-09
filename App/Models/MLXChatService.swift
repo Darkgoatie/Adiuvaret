@@ -82,12 +82,16 @@ final class MLXChatService: ChatService {
                     replace(replyID, ThinkFilter.visible(raw), streaming: false)
                     DiagnosticsLog.shared.record("reply done", "\((clock.now - start).milliseconds) ms, model=\(modelID)")
                 } else {
+                    session = nil
                     items.append(.error(id: UUID(), text: String(localized: "The model didn't write anything. Try asking again.")))
                 }
             } catch is CancellationError {
                 replace(replyID, nil, streaming: false)
+                session = nil
             } catch {
                 replace(replyID, nil, streaming: false)
+                // The session now holds a question with no answer. Start the next turn from the saved messages instead.
+                session = nil
                 DiagnosticsLog.shared.record("model error", "\(type(of: error)): \(String(describing: error)) model=\(modelID)")
                 items.append(.error(id: UUID(), text: String(localized: "I couldn't use \(modelName).") + "\n" + String(String(describing: error).prefix(200))))
             }
@@ -115,16 +119,18 @@ final class MLXChatService: ChatService {
     private func seedHistory() -> [Chat.Message] {
         var prior = items
         if case .user? = prior.last { prior.removeLast() }
-        var turns: [(user: Bool, text: String)] = []
+        var turns: [ChatAlternation.Turn] = []
         for item in prior {
             switch item {
-            case .user(_, let t) where !t.isEmpty: turns.append((true, t))
-            case .assistant(_, let t, false) where !t.isEmpty: turns.append((false, t))
+            case .user(_, let t): turns.append(.init(isUser: true, text: t))
+            case .assistant(_, let t, false): turns.append(.init(isUser: false, text: t))
             default: break
             }
         }
-        while turns.first?.user == false { turns.removeFirst() }
-        let history = turns.suffix(12).map { $0.user ? Chat.Message.user($0.text) : Chat.Message.assistant($0.text) }
+        // The chat template needs user, assistant, user, assistant. A failed reply would otherwise leave two user messages in a row.
+        var kept = ChatAlternation.normalize(turns).suffix(12)
+        while kept.first?.isUser == false { kept.removeFirst() }
+        let history = kept.map { $0.isUser ? Chat.Message.user($0.text) : Chat.Message.assistant($0.text) }
         return [.system(Self.instructions())] + history
     }
 
