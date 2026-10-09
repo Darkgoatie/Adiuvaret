@@ -34,6 +34,9 @@ actor MLXRuntime {
         loading = (id, task)
         do {
             let container = try await Self.withTimeout(seconds: Self.loadTimeout, task: task)
+            // Loading from a folder skips the library's per-model list of stop words. Without them Gemma never ends its turn.
+            let stops: Set<String> = ["<end_of_turn>", "<turn|>", "<|im_end|>", "<|eot_id|>", "<|end|>"]
+            await container.update { $0.configuration.extraEOSTokens.formUnion(stops) }
             if loading?.id == id { loading = nil; loaded = (id, container) }
             return container
         } catch {
