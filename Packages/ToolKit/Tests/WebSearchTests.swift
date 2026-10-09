@@ -17,7 +17,7 @@ import Foundation
         guard r.count == 3 else { return }
         #expect(r[0].host == "www.laliga.com" && r[0].url.scheme == "https")
         #expect(r[0].title.contains("LALIGA") && !r[0].title.contains("<"))
-        #expect(r[0].snippet.contains("Real Betis") && !r[0].snippet.contains("<b>") && !r[0].snippet.contains("&#x27;"), r[0].snippet)
+        #expect(r[0].snippet.contains("Real Betis") && !r[0].snippet.contains("<b>") && !r[0].snippet.contains("&#x27;"), Comment(rawValue: r[0].snippet))
         #expect(r[1].host == "en.realbetisbalompie.es")
         #expect(r.allSatisfy { !$0.snippet.isEmpty })
     }
