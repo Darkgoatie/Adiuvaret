@@ -11,9 +11,12 @@ final class TaskContext: @unchecked Sendable {
     private let lock = NSLock()
     private var taskID = UUID()
     private var untrusted = false
+    private var personal = false
 
-    func beginTask() { lock.lock(); taskID = UUID(); untrusted = false; lock.unlock() }
-    func markUntrusted() { lock.lock(); untrusted = true; lock.unlock() }
+    func beginTask() { lock.lock(); taskID = UUID(); untrusted = false; personal = false; lock.unlock() }
+    /// `personal` is true for calendar and reminder content, false for web pages.
+    func markUntrusted(personal: Bool = true) { lock.lock(); untrusted = true; if personal { self.personal = true }; lock.unlock() }
+    func sawPersonalData() -> Bool { lock.lock(); defer { lock.unlock() }; return personal }
     func callContext() -> CallContext {
         lock.lock(); defer { lock.unlock() }
         return CallContext(taskID: taskID, chatID: chatID, contextContainsUntrusted: untrusted)
@@ -42,6 +45,9 @@ enum LiveDescriptors {
     static let moveEvent = ToolDescriptor(name: "moveEvent", summary: "Moves a calendar event.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let deleteEvent = ToolDescriptor(name: "deleteEvent", summary: "Deletes a calendar event.", permission: .irreversible, outputSensitivity: .personal)
     static let listReminders = ToolDescriptor(name: "listReminders", summary: "Lists open reminders.", permission: .readOnly, outputSensitivity: .personal)
+    static let searchWeb = ToolDescriptor(name: "searchWeb", summary: "Searches the web.", permission: .readOnly, outputSensitivity: .personal)
+    /// A web search after the assistant read calendar or reminders in the same request. The search words could carry that data, so it asks.
+    static let searchWebAfterPersonal = ToolDescriptor(name: "searchWebAfterPersonal", summary: "Searches the web after reading personal data.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let openWebsite = ToolDescriptor(name: "openWebsite", summary: "Opens a website.", permission: .readOnly, outputSensitivity: .personal)
     static let lookAtPage = ToolDescriptor(name: "lookAtPage", summary: "Reads the open page.", permission: .readOnly, outputSensitivity: .personal)
     static let actOnPage = ToolDescriptor(name: "actOnPage", summary: "Clicks or types on the open page.", permission: .readOnly, outputSensitivity: .personal)
@@ -50,7 +56,7 @@ enum LiveDescriptors {
     /// A click that could buy, send, delete or sign in. Always asks and cannot be undone.
     static let actOnPageRisky = ToolDescriptor(name: "actOnPageRisky", summary: "Does something on a page that cannot be undone.", permission: .irreversible, outputSensitivity: .personal)
     static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
-                      openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky]
+                      searchWeb, searchWebAfterPersonal, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky]
 }
 
 enum CalendarRange {

@@ -69,17 +69,29 @@ import Testing
         for e in catalog.entries { for r in e.requires { #expect(catalog.entry(r) != nil, "\(e.id) requires missing \(r)") } }
     }
 
-    @Test func anyWebHitBringsTheWholeBrowserKit() {
+    @Test func anyBrowserHitBringsTheWholeBrowserKit() {
         for id in ["openWebsite", "lookAtPage", "actOnPage"] {
             let ids = catalog.withRequirements([catalog.entry(id)!]).map(\.id)
             #expect(Set(ids) == ["openWebsite", "lookAtPage", "actOnPage"], "\(id) -> \(ids)")
         }
     }
 
+    @Test func searchBringsOpenAndReadButNotClicking() {
+        let ids = catalog.withRequirements([catalog.entry("searchWeb")!]).map(\.id)
+        #expect(ids == ["searchWeb", "openWebsite", "lookAtPage"], "\(ids)")
+    }
+
+    @Test func webQuestionsFindTheSearchTool() {
+        for text in ["When is Real Betis' next match?", "What's the weather in Seville?", "Latest news about Apple", "Who won the match yesterday?"] {
+            #expect(catalog.search(primary: "", secondary: text).first?.entry.id == "searchWeb", "\(text)")
+            #expect(catalog.search(primary: "search web", secondary: text).first?.entry.id == "searchWeb", "\(text)")
+        }
+    }
+
     @Test func calendarChatDoesNotTriggerTheBrowser() {
         for text in ["What's on my calendar tomorrow?", "Remind me to call mom in 30 minutes", "Find me an hour free on Friday", "Cancel my 3pm meeting"] {
             let ids = catalog.search(primary: "", secondary: text).map(\.entry.id)
-            #expect(!ids.contains("openWebsite") && !ids.contains("lookAtPage") && !ids.contains("actOnPage"), "\(text) -> \(ids)")
+            #expect(!ids.contains("searchWeb") && !ids.contains("openWebsite") && !ids.contains("lookAtPage") && !ids.contains("actOnPage"), "\(text) -> \(ids)")
         }
     }
 }

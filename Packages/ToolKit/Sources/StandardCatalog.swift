@@ -41,10 +41,16 @@ public extension ToolCatalog {
             keywords: ["list", "todo", "task", "pending", "outstanding", "overdue", "checklist"],
             examples: ["What's on my to-do list?", "Show my pending tasks", "Which reminders are overdue?"]),
         CatalogEntry(
+            id: "searchWeb", title: "Search the web", category: "Web",
+            description: "Searches the web and returns result titles, sites and short summaries, to answer questions about news, scores, weather, prices, schedules, opening hours or anything that may have changed. Use it instead of telling the user to look something up.",
+            keywords: ["search", "web", "google", "internet", "online", "news", "weather", "forecast", "score", "latest", "price", "lookup", "headline", "wikipedia"],
+            examples: ["Search the web for the best pizza in Istanbul", "When is Real Betis' next match?", "What's the weather in Seville?", "Latest news about Apple", "How much are AirPods?", "Who won the match yesterday?"],
+            requires: ["openWebsite", "lookAtPage"]),
+        CatalogEntry(
             id: "openWebsite", title: "Open website", category: "Web",
-            description: "Opens a website or searches the web in the in-app browser, to look something up online, check a price, find news or visit a page. Returns the page's buttons, links and fields.",
-            keywords: ["website", "web", "browse", "browser", "online", "internet", "google", "duckduckgo", "wikipedia", "url", "site", "lookup", "price", "news"],
-            examples: ["Search the web for the best pizza in Istanbul", "Open apple.com", "Look up the price of AirPods online", "Go to wikipedia and find Real Betis"],
+            description: "Opens a website the user names, or a search result, in the in-app browser. Returns the page's buttons, links and fields.",
+            keywords: ["open", "visit", "website", "site", "url", "browser", "homepage", "address"],
+            examples: ["Open apple.com", "Go to the BBC website", "Visit github.com", "Take me to the Apple homepage"],
             requires: ["lookAtPage", "actOnPage"]),
         CatalogEntry(
             id: "lookAtPage", title: "Look at page", category: "Web",

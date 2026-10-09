@@ -3,8 +3,46 @@ import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
+import Diagnostics
 
 // MARK: executors (run after the policy gate has allowed or the user has approved)
+
+struct SearchWebExecutor: ToolExecutor {
+    func execute(_ call: ToolCall) async throws -> String {
+        let query = WebSearch.cleanQuery((CalendarStore.args(call)["query"] as? String) ?? "")
+        guard let url = WebSearch.url(for: query) else { return "Not done: no search words were given." }
+        var request = URLRequest(url: url, timeoutInterval: 15)
+        request.setValue(WebSearch.userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html", forHTTPHeaderField: "Accept")
+        request.setValue(Locale.preferredLanguages.first ?? "en", forHTTPHeaderField: "Accept-Language")
+        // No cookies and no cache: the search is not tied to anything else the browser holds.
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 20
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse else { return "Not done: the search service did not answer. Tell the user." }
+            guard http.statusCode == 200 else {
+                DiagnosticsLog.shared.record("web search", "status \(http.statusCode)")
+                return "Not done: the search service answered \(http.statusCode). Tell the user the search is not available right now."
+            }
+            guard data.count < 800_000, let html = String(data: data, encoding: .utf8) else { return "Not done: the search answer could not be read." }
+            let results = WebSearch.parse(html: html)
+            DiagnosticsLog.shared.record("web search", "\(results.count) results")
+            if results.isEmpty, html.contains("anomaly") || html.contains("bots use DuckDuckGo") {
+                return "Not done: the search service is blocking requests right now. Tell the user."
+            }
+            return WebSearch.render(results, query: query)
+        } catch {
+            DiagnosticsLog.shared.record("web search", "failed: \(String(String(describing: error).prefix(80)))")
+            return "Not done: could not reach the search service. Tell the user they may be offline."
+        }
+    }
+}
 
 struct OpenWebsiteExecutor: ToolExecutor {
     func execute(_ call: ToolCall) async throws -> String {
@@ -63,7 +101,7 @@ private func runWebStep(_ gate: PolicyGate, _ ctx: TaskContext, _ reporter: any 
     let outcome = await gate.run(ToolCall(id: rowID, toolName: name, argumentsJSON: String(decoding: data, as: UTF8.self)), in: ctx.callContext())
     switch outcome {
     case .executed(let out):
-        ctx.markUntrusted()
+        ctx.markUntrusted(personal: false)
         let summary = await WebSession.shared.takeSummary(rowID)
         var details = summary.details
         if !typed.isEmpty, !summary.failed { details.insert("“\(String(typed.prefix(60)))”", at: 0) }
@@ -92,9 +130,53 @@ private enum Self_ {
 
 // MARK: tools the model sees
 
+struct LiveSearchWebTool: Tool {
+    let name = "searchWeb"
+    let description = "Searches the web and returns result titles, sites and short summaries. Use it first for news, scores, weather, prices, schedules and anything that may have changed. Never tell the user to search themselves."
+    let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "Three to eight plain search words, for example: Real Betis next match")
+        var query: String
+    }
+
+    func call(arguments a: Arguments) async throws -> String {
+        let rowID = UUID()
+        let query = WebSearch.cleanQuery(a.query)
+        await reporter.toolStarted(rowID, title: String(localized: "Searching the web…"))
+        guard !query.isEmpty else {
+            await reporter.toolFinished(rowID, title: String(localized: "No search words"), details: [], failed: true)
+            return "Not done: no search words were given."
+        }
+        let tool = ctx.sawPersonalData() ? "searchWebAfterPersonal" : "searchWeb"
+        let data = (try? JSONSerialization.data(withJSONObject: ["query": query])) ?? Data()
+        let outcome = await gate.run(ToolCall(id: rowID, toolName: tool, argumentsJSON: String(decoding: data, as: UTF8.self)), in: ctx.callContext())
+        switch outcome {
+        case .executed(let out):
+            ctx.markUntrusted(personal: false)
+            let items = out.split(separator: "\n").map(String.init)
+                .filter { $0.first?.isNumber == true && $0.contains(". ") }
+                .map { String($0.drop(while: { $0.isNumber || $0 == "." || $0 == " " })) }
+            let failed = out.hasPrefix("Not done")
+            let title = failed ? String(localized: "Couldn't search the web")
+                : items.isEmpty ? String(localized: "Searched the web · nothing found") : String(localized: "Searched the web · \(items.count) results")
+            await reporter.toolFinished(rowID, title: title, details: ["“\(query)”"] + items, failed: failed)
+            return out
+        case .blocked(let reason):
+            let (shown, told) = Self_.text(reason)
+            await reporter.toolFinished(rowID, title: shown, details: [], failed: true)
+            return told
+        case .failed(let message):
+            await reporter.toolFinished(rowID, title: String(localized: "Couldn't search the web"), details: [], failed: true)
+            return "Failed: \(message)"
+        }
+    }
+}
+
 struct LiveOpenWebsiteTool: Tool {
     let name = "openWebsite"
-    let description = "Opens a website in the in-app browser. To search the web, open https://duckduckgo.com/?q= followed by the words joined with +."
+    let description = "Opens a website the user named, or a search result, in the in-app browser. Returns the numbered buttons, links and fields on the page."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
     @Generable

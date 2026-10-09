@@ -5,7 +5,7 @@ import Diagnostics
 
 @Generable
 struct ToolRoute {
-    @Guide(description: "True when the message needs the user's calendar, reminders or another app capability. False for greetings, advice, writing help and general knowledge.")
+    @Guide(description: "True when the message needs the user's calendar or reminders, or fresh information from the web such as news, scores, weather, prices, opening hours or release dates. False for greetings, advice and writing help.")
     var needsTool: Bool
     @Guide(description: "Three to six plain words naming the capability needed, such as 'read calendar events next week' or 'create reminder'. Empty when no tool is needed.")
     var searchWords: String
@@ -20,9 +20,9 @@ enum ToolRouter {
         return """
         You decide which capability a message needs. Capabilities: \(capabilities). \
         Set needsTool to false for greetings, thanks, advice, writing help and general questions. \
-        For anything about the user's own calendar, events, free time or reminders, or that needs a website, a web search, a price or a page, set needsTool to true and \
+        For anything about the user's own calendar, events, free time or reminders, or that needs current information from the internet (news, scores, weather, prices, schedules, opening hours, release dates, who won), a website or a page, set needsTool to true and \
         write searchWords as three to six words naming what is needed, using verbs like read, find, create, move, delete, list \
-        and nouns like calendar, event, free time, reminder, website, web search, page. A short follow-up such as "and the day after?" continues the previous request.
+        and nouns like calendar, event, free time, reminder, web search, website, page. For anything that needs the internet write the words search web first. A short follow-up such as "and the day after?" continues the previous request.
         """
     }
 
@@ -47,8 +47,19 @@ enum ToolRouter {
         } catch {
             note = "router failed (\(type(of: error))): \(String(String(describing: error).prefix(120)))"
         }
-        guard needsTool else { return ([], note + " needsTool=false") }
-        let hits = catalog.search(primary: words, secondary: prompt)
-        return (catalog.withRequirements(hits.map(\.entry)), note + " needsTool=true words=\(words.split(separator: " ").count) hits=\(hits.count)")
+        var chosen: [CatalogEntry] = []
+        if needsTool {
+            let hits = catalog.search(primary: words, secondary: prompt)
+            chosen = catalog.withRequirements(hits.map(\.entry))
+            note += " needsTool=true words=\(words.split(separator: " ").count) hits=\(hits.count)"
+        } else {
+            note += " needsTool=false"
+        }
+        // A small model sometimes answers "look it up yourself" instead of using a tool. A plain web question always gets the search tool.
+        if chosen.isEmpty, WebIntent.looksLikeWebRequest(prompt), let search = catalog.entry("searchWeb") {
+            chosen = catalog.withRequirements([search])
+            note += " web-intent"
+        }
+        return (chosen, note)
     }
 }
