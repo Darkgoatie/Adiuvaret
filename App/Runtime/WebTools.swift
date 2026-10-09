@@ -8,6 +8,73 @@ import Diagnostics
 // MARK: executors (run after the policy gate has allowed or the user has approved)
 
 struct SearchWebExecutor: ToolExecutor {
+    private static func quickSession() -> URLSession {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 10
+        config.timeoutIntervalForResource = 15
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        return URLSession(configuration: config)
+    }
+
+    private static func getData(_ url: URL, _ session: URLSession) async -> Data? {
+        guard let result = try? await session.data(from: url), (result.1 as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return result.0
+    }
+
+    /// An exchange rate or a football fixture straight from a data service, or nil so the normal search can still answer.
+    static func direct(_ request: DirectSources.Request) async -> String? {
+        let session = quickSession()
+        defer { session.finishTasksAndInvalidate() }
+        var text: String?
+        switch request {
+        case .currency(let amount, let from, let to):
+            if let url = DirectSources.currencyURL(amount: amount, from: from, to: to), let data = await getData(url, session) {
+                text = DirectSources.renderCurrency(data, amount: amount, from: from, to: to)
+            }
+        case .team(let name, let kind):
+            if let searchURL = DirectSources.teamSearchURL(name), let teamData = await getData(searchURL, session),
+               let team = DirectSources.parseTeam(teamData), let url = DirectSources.eventsURL(teamID: team.id, kind: kind),
+               let data = await getData(url, session) {
+                text = DirectSources.renderEvents(data, team: team.name, kind: kind)
+            }
+        }
+        DiagnosticsLog.shared.record("direct source", text == nil ? "failed" : "ok")
+        return text
+    }
+
+    /// Opens the top three results at once and keeps the few sentences from each that answer the question.
+    static func readPages(_ results: [SearchResult], query: String) async -> [Int: String] {
+        let top = Array(results.prefix(3))
+        return await withTaskGroup(of: (Int, String?).self) { group in
+            for (i, r) in top.enumerated() {
+                group.addTask { (i, await Self.passage(from: r.url, query: query)) }
+            }
+            var out: [Int: String] = [:]
+            for await (i, text) in group { if let text, !text.isEmpty { out[i] = text } }
+            return out
+        }
+    }
+
+    private static func passage(from url: URL, query: String) async -> String? {
+        var request = URLRequest(url: url, timeoutInterval: 8)
+        request.setValue(WebSearch.userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue("text/html", forHTTPHeaderField: "Accept")
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 8
+        config.timeoutIntervalForResource = 10
+        config.httpCookieStorage = nil
+        config.urlCache = nil
+        let session = URLSession(configuration: config)
+        defer { session.finishTasksAndInvalidate() }
+        guard let result = try? await session.data(for: request), let http = result.1 as? HTTPURLResponse, http.statusCode == 200,
+              (http.value(forHTTPHeaderField: "Content-Type") ?? "").lowercased().contains("html"),
+              result.0.count < 3_000_000, let final = http.url, case .allowed(_) = WebPolicy.normalize(final.absoluteString),
+              let html = String(data: result.0, encoding: .utf8) ?? String(data: result.0, encoding: .isoLatin1) else { return nil }
+        let text = PageExtract.excerpt(html: html, query: query)
+        return text.isEmpty ? nil : text
+    }
+
     /// Live forecast for a place, or nil when the place or the service fails, so the normal search can still answer.
     static func weather(for name: String) async -> String? {
         let config = URLSessionConfiguration.ephemeral
@@ -42,6 +109,10 @@ struct SearchWebExecutor: ToolExecutor {
         let query = WebSearch.cleanQuery((CalendarStore.args(call)["query"] as? String) ?? "")
         guard let url = WebSearch.url(for: query) else { return "Not done: no search words were given." }
         if let name = Weather.place(in: query), let report = await Self.weather(for: name) { return report }
+        if let request = DirectSources.request(for: query) {
+            if let text = await Self.direct(request) { return text }
+            DiagnosticsLog.shared.record("direct source", "no answer, using search")
+        }
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue(WebSearch.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("text/html", forHTTPHeaderField: "Accept")
@@ -67,7 +138,9 @@ struct SearchWebExecutor: ToolExecutor {
             if results.isEmpty, html.contains("anomaly") || html.contains("bots use DuckDuckGo") {
                 return "Not done: the search service is blocking requests right now. Tell the user."
             }
-            return WebSearch.render(results, query: query)
+            let pages = await Self.readPages(results, query: query)
+            DiagnosticsLog.shared.record("web search", "read \(pages.count) of \(min(results.count, 3)) pages")
+            return WebSearch.render(results, query: query, excerpts: pages)
         } catch {
             DiagnosticsLog.shared.record("web search", "failed: \(String(String(describing: error).prefix(80)))")
             return "Not done: could not reach the search service. Tell the user they may be offline."
@@ -190,7 +263,9 @@ struct LiveSearchWebTool: Tool {
                 .filter { $0.first?.isNumber == true && $0.contains(". ") }
                 .map { String($0.drop(while: { $0.isNumber || $0 == "." || $0 == " " })) }
             let failed = out.hasPrefix("Not done")
+            let direct = !failed && !out.hasPrefix("Web search results") && !out.hasPrefix("The search found nothing")
             let title = failed ? String(localized: "Couldn't search the web")
+                : direct ? String(localized: "Looked up live data")
                 : items.isEmpty ? String(localized: "Searched the web · nothing found") : String(localized: "Searched the web · \(items.count) results")
             await reporter.toolFinished(rowID, title: title, details: ["“\(query)”"] + items, failed: failed)
             return out

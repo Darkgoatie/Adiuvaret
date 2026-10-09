@@ -139,7 +139,7 @@ final class MLXChatService: ChatService {
             items[i] = .tool(id: rowID, phase: failed ? .failed : .finished, title: failed ? String(localized: "Couldn't read it") : finished, details: [])
         }
         DiagnosticsLog.shared.record("mlx context", "\(name) \(failed ? "failed" : "ok") \(result.count) chars")
-        return String(result.prefix(2400))
+        return String(result.prefix(3400))
     }
 
     private static func attach(_ info: String, to prompt: String) -> String {

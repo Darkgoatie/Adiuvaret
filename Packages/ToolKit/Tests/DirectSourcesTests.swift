@@ -1,0 +1,103 @@
+import Testing
+import Foundation
+@testable import ToolKit
+
+@Suite struct DirectSourcesTests {
+    @Test func currencyQuestionsAreRecognised() {
+        #expect(DirectSources.request(for: "How much is 100 USD in Turkish lira?") == .currency(amount: 100, from: "USD", to: "TRY"))
+        #expect(DirectSources.request(for: "convert 50 euros to dollars") == .currency(amount: 50, from: "EUR", to: "USD"))
+        #expect(DirectSources.request(for: "what is the exchange rate usd to try") == .currency(amount: 1, from: "USD", to: "TRY"))
+        #expect(DirectSources.request(for: "How many lira is 1,000 dollars?") == .currency(amount: 1000, from: "USD", to: "TRY"))
+        #expect(DirectSources.request(for: "I will try this") == nil)
+        #expect(DirectSources.request(for: "What's the price of gold in dollars") == nil)
+    }
+
+    @Test func teamQuestionsAreRecognised() {
+        #expect(DirectSources.request(for: "When is Real Betis' next game?") == .team(name: "real betis", kind: .next))
+        #expect(DirectSources.request(for: "When does Real Betis play?") == .team(name: "real betis", kind: .next))
+        #expect(DirectSources.request(for: "Who won the Barcelona game yesterday?") == .team(name: "barcelona", kind: .last))
+        #expect(DirectSources.request(for: "What time is the match") == nil)
+        #expect(DirectSources.request(for: "Cancel my meeting next game") == nil)
+        #expect(DirectSources.request(for: "Tell me a joke") == nil)
+    }
+
+    @Test func addressesAreBuilt() {
+        let url = DirectSources.currencyURL(amount: 100, from: "USD", to: "TRY")?.absoluteString ?? ""
+        #expect(url.hasPrefix("https://api.frankfurter.dev/v1/latest?") && url.contains("amount=100") && url.contains("base=USD") && url.contains("symbols=TRY"), "\(url)")
+        #expect(DirectSources.currencyURL(amount: 0, from: "USD", to: "TRY") == nil)
+        #expect(DirectSources.teamSearchURL("real betis")?.absoluteString.contains("t=real%20betis") == true)
+        #expect(DirectSources.eventsURL(teamID: "133722", kind: .next)?.absoluteString.hasSuffix("eventsnext.php?id=133722") == true)
+        #expect(DirectSources.eventsURL(teamID: "13x", kind: .last) == nil)
+    }
+
+    @Test func aRateIsRendered() throws {
+        let data = Data(#"{"amount":100.0,"base":"USD","date":"2026-10-09","rates":{"TRY":4917.01}}"#.utf8)
+        let text = try #require(DirectSources.renderCurrency(data, amount: 100, from: "USD", to: "TRY"))
+        #expect(text.contains("100.00 USD = 4917.01 TRY") && text.contains("1 USD = 49.17 TRY") && text.contains("2026-10-09"), "\(text)")
+        #expect(DirectSources.renderCurrency(Data("{}".utf8), amount: 1, from: "USD", to: "TRY") == nil)
+    }
+
+    @Test func aTeamIsReadFromTheSearchAnswer() {
+        let data = Data(#"{"teams":[{"idTeam":"133722","strTeam":"Real Betis"}]}"#.utf8)
+        let team = DirectSources.parseTeam(data)
+        #expect(team?.id == "133722" && team?.name == "Real Betis")
+        #expect(DirectSources.parseTeam(Data(#"{"teams":null}"#.utf8)) == nil)
+    }
+
+    private let next = Data(#"{"events":[{"strEvent":"Real Betis vs Osasuna","strTimestamp":"2026-10-11T16:30:00","strLeague":"Spanish La Liga","dateEvent":"2026-10-11"}]}"#.utf8)
+
+    @Test func theNextMatchShowsLocalTime() throws {
+        let utc = try #require(TimeZone(identifier: "UTC"))
+        let text = try #require(DirectSources.renderEvents(next, team: "Real Betis", kind: .next, timeZone: utc))
+        #expect(text.contains("Real Betis vs Osasuna") && text.contains("Sun 11 Oct 2026 16:30") && text.contains("Spanish La Liga"), "\(text)")
+        let madrid = try #require(TimeZone(identifier: "Europe/Madrid"))
+        let local = try #require(DirectSources.renderEvents(next, team: "Real Betis", kind: .next, timeZone: madrid))
+        #expect(local.contains("Sun 11 Oct 2026 18:30"), "\(local)")
+    }
+
+    @Test func latestResultsShowScoresAndGaps() throws {
+        let data = Data(#"{"results":[{"strEvent":"Real Betis vs Ceuta","dateEvent":"2026-10-01","strLeague":"Copa","strHomeTeam":"Real Betis","strAwayTeam":"Ceuta","intHomeScore":null,"intAwayScore":null},{"strEvent":"Real Betis vs Osasuna","dateEvent":"2026-09-20","strHomeTeam":"Real Betis","strAwayTeam":"Osasuna","intHomeScore":"2","intAwayScore":"1","strLeague":"Spanish La Liga"}]}"#.utf8)
+        let text = try #require(DirectSources.renderEvents(data, team: "Real Betis", kind: .last))
+        #expect(text.contains("Real Betis vs Ceuta") && text.contains("score not recorded"), "\(text)")
+        #expect(text.contains("Real Betis 2-1 Osasuna") && text.contains("20 Sep 2026"), "\(text)")
+        #expect(DirectSources.renderEvents(Data(#"{"events":null}"#.utf8), team: "x", kind: .next) == nil)
+    }
+}
+
+@Suite struct PageExtractTests {
+    private let page = """
+    <html><head><title>T</title>
+    <meta property="og:description" content="Real Betis host Osasuna on Sunday at 16:30 in La Liga.">
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SportsEvent","name":"Real Betis vs Osasuna","startDate":"2026-10-11T16:30","location":{"@type":"Place","name":"Estadio Benito Villamarin"}}</script>
+    <script>var x = "<p>this paragraph sits inside a script block and must never be shown to anyone</p>";</script>
+    </head><body><nav><p>Menu paragraph that is long enough to pass the length filter easily okay</p></nav>
+    <p>We use cookies to improve your experience on this website and for many other purposes.</p>
+    <p>The sky was blue and the grass was green and nothing else was going on over there at all.</p>
+    <p>Real Betis will play Osasuna at Estadio Benito Villamarin on Sunday, kickoff is at 16:30 local time.</p>
+    </body></html>
+    """
+
+    @Test func termsDropFillerWords() {
+        #expect(PageExtract.terms("What's the weather in New York today?") == ["weather", "new", "york"])
+        #expect(PageExtract.terms("latest scores of the games") == ["score", "game"])
+    }
+
+    @Test func theExcerptHoldsDescriptionFactsAndTheMatchingParagraph() {
+        let text = PageExtract.excerpt(html: page, query: "real betis next match")
+        #expect(text.contains("Osasuna on Sunday"), "\(text)")
+        #expect(text.contains("Event: Real Betis vs Osasuna") && text.contains("Estadio Benito Villamarin"), "\(text)")
+        #expect(text.contains("kickoff is at 16:30"), "\(text)")
+        #expect(!text.contains("Menu paragraph") && !text.contains("cookies") && !text.contains("inside a script") && !text.contains("grass"), "\(text)")
+        #expect(text.count <= 520, "\(text.count)")
+    }
+
+    @Test func aPageWithNothingUsefulGivesAnEmptyExcerpt() {
+        #expect(PageExtract.excerpt(html: "<html><body><div>hi</div></body></html>", query: "anything here").isEmpty)
+        #expect(PageExtract.excerpt(html: "", query: "x").isEmpty)
+    }
+
+    @Test func productPricesAreRead() {
+        let html = #"<script type="application/ld+json">{"@type":"Product","name":"AirPods Pro","offers":{"@type":"Offer","price":"249.00","priceCurrency":"USD"}}</script>"#
+        #expect(PageExtract.excerpt(html: html, query: "airpods price").contains("Product: AirPods Pro, price 249.00 USD"))
+    }
+}

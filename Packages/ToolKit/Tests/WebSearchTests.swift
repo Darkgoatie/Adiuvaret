@@ -96,7 +96,7 @@ import Foundation
     @Test func plainWebRequestsAreRecognised() {
         for t in ["When is Real Betis' next match?", "What's the weather in Seville?", "Latest news about Apple", "Search for pizza near me",
                   "How much are AirPods?", "Who won the match yesterday?", "What's the price of Bitcoin?", "Google the opening hours of the Louvre",
-                  "look up the release date of the new iPhone"] {
+                  "look up the release date of the new iPhone", "Convert 50 euros to dollars", "When does Real Betis play next?"] {
             #expect(WebIntent.looksLikeWebRequest(t), "\(t)")
         }
     }
