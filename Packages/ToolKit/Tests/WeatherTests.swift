@@ -41,10 +41,10 @@ import Foundation
         let place = try #require(Weather.parsePlace(Data(geo.utf8)))
         let text = try #require(Weather.render(Data(forecast.utf8), place: place))
         #expect(text.contains("Seville, Andalusia, Spain"))
-        #expect(text.contains("Now: 19.7°C, feels like 18.2°C, clear sky, humidity 44%, wind 4.8 km/h"), text)
-        #expect(text.contains("Today: 15.1 to 28.6°C, overcast, rain chance 0%"), text)
-        #expect(text.contains("Tomorrow: 12.7 to 29.4°C, partly cloudy"), text)
-        #expect(text.contains("Mon 12 Oct: 14.8 to 31.2°C, fog, rain chance 10%"), text)
+        #expect(text.contains("Now: 19.7°C, feels like 18.2°C, clear sky, humidity 44%, wind 4.8 km/h"), Comment(rawValue: text))
+        #expect(text.contains("Today: 15.1 to 28.6°C, overcast, rain chance 0%"), Comment(rawValue: text))
+        #expect(text.contains("Tomorrow: 12.7 to 29.4°C, partly cloudy"), Comment(rawValue: text))
+        #expect(text.contains("Mon 12 Oct: 14.8 to 31.2°C, fog, rain chance 10%"), Comment(rawValue: text))
         #expect(Weather.render(Data("{}".utf8), place: place) == nil)
     }
 
