@@ -6,6 +6,7 @@ import Diagnostics
 struct AdiuvaretApp: App {
     init() {
         DesignSystemFonts.register()
+        DownloadActivity.registerAll()
         let info = Bundle.main.infoDictionary
         DiagnosticsLog.shared.record("launch", "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))")
     }

@@ -20,7 +20,7 @@ struct ModelsView: View {
             } header: {
                 Text("Download")
             } footer: {
-                Text("Models come from Hugging Face (mlx-community) and run only on this iPhone. Only the download uses the network. Your chats never leave the phone. Downloaded models chat only; calendar and reminder tools stay on the Apple model.")
+                Text("Models come from Hugging Face (mlx-community) and run only on this iPhone. Only the download uses the network, and it keeps going in the background and can be paused and resumed. Your chats never leave the phone. Downloaded models chat only; calendar and reminder tools stay on the Apple model.")
                     .font(DS.Typography.caption)
             }
         }
@@ -63,6 +63,14 @@ struct ModelsView: View {
             if case .downloading(let p) = settings.state(model.id) {
                 ProgressView(value: p).tint(DS.Colors.accent)
                     .accessibilityLabel(Text("Downloading \(model.name)")).accessibilityValue(Text("\(Int(p * 100)) percent"))
+                Text(verbatim: DownloadText.summary(fraction: p, totalBytes: model.sizeBytes)).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
+            }
+            if case .paused(let p, let reason) = settings.state(model.id) {
+                ProgressView(value: p).tint(DS.Colors.textSecondary)
+                    .accessibilityLabel(Text("Paused \(model.name)")).accessibilityValue(Text("\(Int(p * 100)) percent"))
+                Text(verbatim: String(localized: "Paused") + " · " + DownloadText.summary(fraction: p, totalBytes: model.sizeBytes))
+                    .font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
+                if let reason { Text(verbatim: reason).font(DS.Typography.caption).foregroundStyle(DS.Colors.warning) }
             }
             if case .failed(let why) = settings.state(model.id) {
                 Text(verbatim: why).font(DS.Typography.caption).foregroundStyle(DS.Colors.danger)
@@ -70,15 +78,17 @@ struct ModelsView: View {
         }
         .padding(.vertical, Spacing.xs)
         .frame(minHeight: 44)
-        .swipeActions { if installed { Button("Delete", systemImage: "trash", role: .destructive) { settings.delete(model.id) } } }
-        .contextMenu { if installed { Button("Delete download", systemImage: "trash", role: .destructive) { settings.delete(model.id) } } }
+        .swipeActions { if installed || isPaused(model) { Button("Delete", systemImage: "trash", role: .destructive) { settings.delete(model.id) } } }
+        .contextMenu { if installed || isPaused(model) { Button("Delete download", systemImage: "trash", role: .destructive) { settings.delete(model.id) } } }
         .accessibilityIdentifier("models.\(model.id)")
     }
 
     @ViewBuilder private func control(_ model: LocalModel, installed: Bool) -> some View {
         switch settings.state(model.id) {
         case .downloading:
-            Button("Cancel") { settings.cancel(model.id) }.foregroundStyle(DS.Colors.accentText).frame(minHeight: 44)
+            Button("Pause") { settings.pause(model.id) }.foregroundStyle(DS.Colors.accentText).frame(minHeight: 44)
+        case .paused:
+            Button("Resume") { settings.download(model) }.foregroundStyle(DS.Colors.accentText).frame(minHeight: 44)
         case .idle, .failed:
             if installed { trailingUse(id: model.id) }
             else {
@@ -104,6 +114,11 @@ struct ModelsView: View {
         case .tight: Text("Close to this iPhone's memory limit. It may be slow or stop.").font(DS.Typography.caption).foregroundStyle(DS.Colors.warning)
         case .tooBig: Text("Too large for this iPhone's memory. It will probably not run.").font(DS.Typography.caption).foregroundStyle(DS.Colors.warning)
         }
+    }
+
+    private func isPaused(_ model: LocalModel) -> Bool {
+        if case .paused = settings.state(model.id) { return true }
+        return false
     }
 
     private static func size(_ bytes: Int64) -> String { ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) }
