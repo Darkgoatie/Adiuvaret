@@ -28,12 +28,19 @@ final class EventHandles: @unchecked Sendable {
 }
 
 enum CalendarStore {
+    /// "Work · Google" style label, so events from different accounts can be told apart. The account name is left out when it repeats the calendar name.
+    static func label(_ calendar: EKCalendar?) -> String {
+        guard let calendar else { return "" }
+        let account = calendar.source?.title ?? ""
+        return account.isEmpty || account == calendar.title ? calendar.title : "\(calendar.title) · \(account)"
+    }
+
     static func slots(_ store: EKEventStore, start: Date, end: Date, handles: EventHandles) -> [EventSlot] {
         store.events(matching: store.predicateForEvents(withStart: start, end: end, calendars: nil))
             .sorted { $0.startDate < $1.startDate }
             .map { e in
                 EventSlot(id: handles.handle(for: e.eventIdentifier ?? e.calendarItemIdentifier, start: e.startDate),
-                          title: e.title ?? "Untitled", start: e.startDate, end: e.endDate, isAllDay: e.isAllDay, calendar: e.calendar?.title ?? "")
+                          title: e.title ?? "Untitled", start: e.startDate, end: e.endDate, isAllDay: e.isAllDay, calendar: Self.label(e.calendar))
             }
     }
 
