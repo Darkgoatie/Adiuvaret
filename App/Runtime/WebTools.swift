@@ -54,7 +54,7 @@ struct SearchWebExecutor: ToolExecutor {
 
     /// Opens the top three results at once and keeps the few sentences from each that answer the question.
     static func readPages(_ results: [SearchResult], query: String) async -> [Int: String] {
-        let top = Array(results.prefix(3))
+        let top = Array(results.prefix(5))
         return await withTaskGroup(of: (Int, String?).self) { group in
             for (i, r) in top.enumerated() {
                 group.addTask { (i, await Self.passage(from: r.url, query: query)) }
@@ -115,13 +115,51 @@ struct SearchWebExecutor: ToolExecutor {
     }
 
     func execute(_ call: ToolCall) async throws -> String {
-        let query = WebSearch.cleanQuery((CalendarStore.args(call)["query"] as? String) ?? "")
-        guard let url = WebSearch.url(for: query) else { return "Not done: no search words were given." }
-        if let name = Weather.place(in: query), let report = await Self.weather(for: name) { return report }
-        if let request = DirectSources.request(for: query) {
+        let asked = WebSearch.cleanQuery((CalendarStore.args(call)["query"] as? String) ?? "")
+        guard !asked.isEmpty else { return "Not done: no search words were given." }
+        if let name = Weather.place(in: asked), let report = await Self.weather(for: name) { return report }
+        if let request = DirectSources.request(for: asked) {
             if let text = await Self.direct(request) { return text }
             DiagnosticsLog.shared.record("direct source", "no answer, using search")
         }
+
+        // Up to three rounds: search, read the top pages, and if they do not cover the question try better words.
+        var query = WebSearch.queryFrom(asked)
+        var best: (results: [SearchResult], pages: [Int: String])?
+        var blocked = false
+        var failure: String?
+        let year = Calendar.current.component(.year, from: Date())
+        for round in 1...SearchLoop.maxRounds {
+            switch await Self.searchRound(query) {
+            case .failed(let why):
+                failure = why
+            case .blocked:
+                blocked = true
+            case .found(let results, let pages):
+                failure = nil
+                let picked = WebSearch.select(results: results, excerpts: pages)
+                let current = (results: picked.results, pages: picked.excerpts)
+                if best == nil || current.pages.count > (best?.pages.count ?? 0) { best = current }
+                DiagnosticsLog.shared.record("web search", "round \\(round): \\(results.count) results, \\(pages.count) pages")
+                if SearchLoop.isEnough(query: asked, excerpts: Array(current.pages.values)) { return WebSearch.render(current.results, query: asked, excerpts: current.pages) }
+            }
+            if blocked { break }
+            guard let next = SearchLoop.refine(asked, round: round + 1, year: year), next != query else { break }
+            query = next
+        }
+        if let best { return WebSearch.render(best.results, query: asked, excerpts: best.pages) }
+        if blocked { return "Not done: the search service is blocking requests right now. Tell the user." }
+        return failure ?? WebSearch.render([], query: asked)
+    }
+
+    private enum Round {
+        case found([SearchResult], [Int: String])
+        case failed(String)
+        case blocked
+    }
+
+    private static func searchRound(_ query: String) async -> Round {
+        guard let url = WebSearch.url(for: query) else { return .failed("Not done: no search words were given.") }
         var request = URLRequest(url: url, timeoutInterval: 15)
         request.setValue(WebSearch.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("text/html", forHTTPHeaderField: "Accept")
@@ -136,23 +174,20 @@ struct SearchWebExecutor: ToolExecutor {
         defer { session.finishTasksAndInvalidate() }
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else { return "Not done: the search service did not answer. Tell the user." }
+            guard let http = response as? HTTPURLResponse else { return .failed("Not done: the search service did not answer. Tell the user.") }
             guard http.statusCode == 200 else {
-                DiagnosticsLog.shared.record("web search", "status \(http.statusCode)")
-                return "Not done: the search service answered \(http.statusCode). Tell the user the search is not available right now."
+                DiagnosticsLog.shared.record("web search", "status \\(http.statusCode)")
+                return .failed("Not done: the search service answered \\(http.statusCode). Tell the user the search is not available right now.")
             }
-            guard data.count < 800_000, let html = String(data: data, encoding: .utf8) else { return "Not done: the search answer could not be read." }
+            guard data.count < 800_000, let html = String(data: data, encoding: .utf8) else { return .failed("Not done: the search answer could not be read.") }
             let results = WebSearch.parse(html: html)
-            DiagnosticsLog.shared.record("web search", "\(results.count) results")
-            if results.isEmpty, html.contains("anomaly") || html.contains("bots use DuckDuckGo") {
-                return "Not done: the search service is blocking requests right now. Tell the user."
-            }
-            let pages = await Self.readPages(results, query: query)
-            DiagnosticsLog.shared.record("web search", "read \(pages.count) of \(min(results.count, 3)) pages")
-            return WebSearch.render(results, query: query, excerpts: pages)
+            if results.isEmpty, html.contains("anomaly") || html.contains("bots use DuckDuckGo") { return .blocked }
+            if results.isEmpty { return .failed(WebSearch.render([], query: query)) }
+            let pages = await readPages(results, query: query)
+            return .found(results, pages)
         } catch {
-            DiagnosticsLog.shared.record("web search", "failed: \(String(String(describing: error).prefix(80)))")
-            return "Not done: could not reach the search service. Tell the user they may be offline."
+            DiagnosticsLog.shared.record("web search", "failed: \\(String(String(describing: error).prefix(80)))")
+            return .failed("Not done: could not reach the search service. Tell the user they may be offline.")
         }
     }
 }
