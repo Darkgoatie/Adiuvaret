@@ -18,7 +18,7 @@ enum ToolRouter {
             "\(c): " + catalog.entries.filter { $0.category == c }.map(\.title).joined(separator: ", ")
         }.joined(separator: ". ")
         return """
-        You decide which capability a message needs. Capabilities: \(capabilities). \
+        You decide which capability a message needs. The calendar holds only the user's own events; when a public or world event happens (a final, a launch, a holiday, a conference) is a web search question. Capabilities: \(capabilities). \
         Set needsTool to false for greetings, thanks, advice, writing help and general questions. \
         For anything about the user's own calendar, events, free time or reminders, or that needs current information from the internet (news, scores, weather, prices, schedules, opening hours, release dates, who won), a website or a page, set needsTool to true and \
         write searchWords as three to six words naming what is needed, using verbs like read, find, create, move, delete, list \
@@ -54,6 +54,11 @@ enum ToolRouter {
             note += " needsTool=true words=\(words.split(separator: " ").count) hits=\(hits.count)"
         } else {
             note += " needsTool=false"
+        }
+        // The date of a public event is a web question. The calendar only holds the user's own plans.
+        if WebIntent.looksLikePublicDateQuestion(prompt), let search = catalog.entry("searchWeb") {
+            chosen = catalog.withRequirements([search])
+            note += " public-date->web"
         }
         // A small model sometimes answers "look it up yourself" instead of using a tool. A plain web question always gets the search tool.
         if chosen.isEmpty, WebIntent.looksLikeWebRequest(prompt), let search = catalog.entry("searchWeb") {

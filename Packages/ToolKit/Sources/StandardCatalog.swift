@@ -5,8 +5,8 @@ public extension ToolCatalog {
     static let standard = ToolCatalog(entries: [
         CatalogEntry(
             id: "readCalendar", title: "Read calendar", category: "Calendar",
-            description: "Reads the user's calendar events for a day or a date range, past or future, and can search event titles. Use it to answer what is on, when something is, or what the schedule looks like.",
-            keywords: ["calendar", "event", "agenda", "appointment", "meeting", "upcoming", "birthday", "holiday", "week", "tomorrow", "today", "tonight", "weekend", "month", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+            description: "Reads the user's calendar events for a day or a date range, past or future, and can search event titles. Use it only for the user's own events, never for dates of public or world events such as sports finals, launches, holidays or conferences. Those need a web search.",
+            keywords: ["calendar", "event", "agenda", "appointment", "meeting", "upcoming", "birthday", "week", "tomorrow", "today", "tonight", "weekend", "month", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
             examples: ["What's on my calendar tomorrow?", "Do I have anything next week?", "When is my dentist appointment?", "What meetings did I have last month?"]),
         CatalogEntry(
             id: "findFreeTime", title: "Find free time", category: "Calendar",

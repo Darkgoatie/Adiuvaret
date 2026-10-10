@@ -101,6 +101,21 @@ import Foundation
         }
     }
 
+    @Test func datesOfPublicEventsAreWebQuestions() {
+        for t in ["When is the Super Bowl?", "What is the date of WWDC 2027?", "When does the Champions League final take place?", "When was the Berlin Wall torn down?", "What day is Eid this year?", "when is the next major event in tech"] {
+            #expect(WebIntent.looksLikePublicDateQuestion(t), Comment(rawValue: t))
+            #expect(WebIntent.looksLikeWebRequest(t), Comment(rawValue: t))
+            #expect(!CalendarIntent.looksLikeCalendarRequest(t), Comment(rawValue: t))
+        }
+    }
+
+    @Test func ownPlansStayWithTheCalendar() {
+        for t in ["When is my dentist appointment?", "When is my next meeting?", "What day is it today?", "When am I free tomorrow?", "What date is it?", "When is the team meeting?", "when do I fly to Madrid"] {
+            #expect(!WebIntent.looksLikePublicDateQuestion(t), Comment(rawValue: t))
+        }
+        #expect(CalendarIntent.looksLikeCalendarRequest("What events do I have next week?"))
+    }
+
     @Test func calendarAndChatAreNotWebRequests() {
         for t in ["What's on my calendar tomorrow?", "Remind me to call mom", "Find me an hour free on Friday", "Search my calendar for the dentist",
                   "Tell me a joke", "Thanks!", "Write a short email to Ana", "Cancel my meeting", "Explain how rainbows form", ""] {

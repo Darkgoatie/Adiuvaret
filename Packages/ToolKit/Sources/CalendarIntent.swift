@@ -11,6 +11,7 @@ public enum CalendarIntent {
     }
 
     public static func looksLikeCalendarRequest(_ text: String) -> Bool {
+        guard !WebIntent.looksLikePublicDateQuestion(text) else { return false }
         let p = padded(text)
         return calendarWords.contains { p.contains(" " + $0 + " ") }
     }

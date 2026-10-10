@@ -164,12 +164,28 @@ public enum WebIntent {
     ]
     private static let blockers: [String] = ["calendar", "reminder", "reminders", "my events", "meeting", "meetings", "appointment", "my schedule", "free time"]
 
+    private static let dateOpeners: [String] = [
+        "when is", "when are", "when was", "when were", "when will", "when does", "when do", "when did", "what date", "what day is", "date of", "dates of", "date for", "dates for"]
+    private static let personal: Set<String> = ["my", "me", "i", "mine", "our", "we", "myself"]
+    private static let clockQuestions: [String] = [" is it ", " is it?", " it is ", " is today ", " is tomorrow ", " is yesterday "]
+
+    /// A question about when something in the world happens ("when is the Super Bowl", "date of the next WWDC"), as opposed to the user's own plans.
+    public static func looksLikePublicDateQuestion(_ text: String) -> Bool {
+        let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard !words.isEmpty, !words.contains(where: { personal.contains($0) }) else { return false }
+        let padded = " " + words.joined(separator: " ") + " "
+        if blockers.contains(where: { padded.contains(" " + $0 + " ") }) { return false }
+        if clockQuestions.contains(where: { padded.contains($0) }) { return false }
+        return dateOpeners.contains { padded.contains(" " + $0 + " ") }
+    }
+
     public static func looksLikeWebRequest(_ text: String) -> Bool {
         let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
         guard !words.isEmpty else { return false }
         let padded = " " + words.joined(separator: " ") + " "
         if blockers.contains(where: { padded.contains(" " + $0 + " ") }) { return false }
         if phrases.contains(where: { padded.contains(" " + $0 + " ") }) { return true }
+        if looksLikePublicDateQuestion(text) { return true }
         return Weather.place(in: text) != nil || DirectSources.request(for: text) != nil
     }
 }
