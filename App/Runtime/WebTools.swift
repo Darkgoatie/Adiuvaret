@@ -140,7 +140,7 @@ struct SearchWebExecutor: ToolExecutor {
                 let picked = WebSearch.select(results: results, excerpts: pages)
                 let current = (results: picked.results, pages: picked.excerpts)
                 if best == nil || current.pages.count > (best?.pages.count ?? 0) { best = current }
-                DiagnosticsLog.shared.record("web search", "round \\(round): \\(results.count) results, \\(pages.count) pages")
+                DiagnosticsLog.shared.record("web search", "round \(round): \(results.count) results, \(pages.count) pages")
                 if SearchLoop.isEnough(query: asked, excerpts: Array(current.pages.values)) { return WebSearch.render(current.results, query: asked, excerpts: current.pages) }
             }
             if blocked { break }
@@ -176,8 +176,8 @@ struct SearchWebExecutor: ToolExecutor {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { return .failed("Not done: the search service did not answer. Tell the user.") }
             guard http.statusCode == 200 else {
-                DiagnosticsLog.shared.record("web search", "status \\(http.statusCode)")
-                return .failed("Not done: the search service answered \\(http.statusCode). Tell the user the search is not available right now.")
+                DiagnosticsLog.shared.record("web search", "status \(http.statusCode)")
+                return .failed("Not done: the search service answered \(http.statusCode). Tell the user the search is not available right now.")
             }
             guard data.count < 800_000, let html = String(data: data, encoding: .utf8) else { return .failed("Not done: the search answer could not be read.") }
             let results = WebSearch.parse(html: html)
@@ -186,7 +186,7 @@ struct SearchWebExecutor: ToolExecutor {
             let pages = await readPages(results, query: query)
             return .found(results, pages)
         } catch {
-            DiagnosticsLog.shared.record("web search", "failed: \\(String(String(describing: error).prefix(80)))")
+            DiagnosticsLog.shared.record("web search", "failed: \(String(String(describing: error).prefix(80)))")
             return .failed("Not done: could not reach the search service. Tell the user they may be offline.")
         }
     }
