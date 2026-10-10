@@ -117,6 +117,11 @@ public extension ToolCatalog {
             keywords: ["repos", "repositories", "repository", "my projects on github", "github projects"],
             examples: ["What are my current GitHub repos?", "List my repositories", "Which repos did I push to lately?"]),
         CatalogEntry(
+            id: "searchPastChats", title: "Search earlier chats", category: "Chats",
+            description: "Searches the user's earlier conversations with this assistant and returns the matching messages with the chat name and day.",
+            keywords: ["earlier chat", "we talked", "did we discuss", "what did i tell you", "last time we", "our conversation", "you said", "remember when"],
+            examples: ["What did we say about the Seville hotel?", "What did I tell you about my trip last week?", "Find our earlier chat about the budget"]),
+        CatalogEntry(
             id: "searchNotion", title: "Search Notion", category: "Notion",
             description: "Searches the titles of the user's Notion pages and databases and returns their names and last edit dates.",
             keywords: ["notion", "workspace", "wiki", "page in notion", "notion page"],

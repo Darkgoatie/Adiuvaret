@@ -69,11 +69,12 @@ enum LiveDescriptors {
     static let addTodoistTask = ToolDescriptor(name: "addTodoistTask", summary: "Adds a Todoist task.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let listGitHubIssues = ToolDescriptor(name: "listGitHubIssues", summary: "Lists GitHub issues and pull requests.", permission: .readOnly, outputSensitivity: .personal)
     static let listGitHubRepos = ToolDescriptor(name: "listGitHubRepos", summary: "Lists GitHub repositories.", permission: .readOnly, outputSensitivity: .personal)
+    static let searchPastChats = ToolDescriptor(name: "searchPastChats", summary: "Searches earlier chats.", permission: .readOnly, outputSensitivity: .personal)
     static let searchNotion = ToolDescriptor(name: "searchNotion", summary: "Searches Notion titles.", permission: .readOnly, outputSensitivity: .personal)
     static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
                       searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky,
                       searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail,
-                      listTodoistTasks, addTodoistTask, listGitHubIssues, listGitHubRepos, searchNotion]
+                      listTodoistTasks, addTodoistTask, listGitHubIssues, listGitHubRepos, searchNotion, searchPastChats]
 }
 
 enum CalendarRange {

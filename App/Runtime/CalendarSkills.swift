@@ -84,6 +84,7 @@ struct FreeTimeExecutor: ToolExecutor {
 
 struct CreateEventExecutor: ToolExecutor {
     let reporter: any ToolReporter
+    private static func label(_ c: EKCalendar) -> String { CalendarStore.label(c) }
     func execute(_ call: ToolCall) async throws -> String {
         let a = CalendarStore.args(call)
         let title = ((a["title"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -92,14 +93,14 @@ struct CreateEventExecutor: ToolExecutor {
         let minutes = max(5, min((a["durationMinutes"] as? Int) ?? 60, 1440))
         let store = EKEventStore()
         guard try await store.requestFullAccessToEvents() else { return "Calendar access denied." }
-        guard let calendar = store.defaultCalendarForNewEvents else { return "No calendar can take new events." }
+        guard let calendar = CalendarChoice.target(in: store) else { return "No calendar can take new events." }
         let e = EKEvent(eventStore: store)
         e.title = title; e.startDate = start; e.endDate = start.addingTimeInterval(Double(minutes) * 60); e.calendar = calendar
         try store.save(e, span: .thisEvent, commit: true)
         let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .short
         await reporter.actionDone(title: String(localized: "Added \(title) to Calendar"), detail: f.string(from: start),
                                   undo: .removeEvent(id: e.eventIdentifier ?? e.calendarItemIdentifier))
-        return "Created event \(title) on \(f.string(from: start)) in \(calendar.title)."
+        return "Created event \(title) on \(f.string(from: start)) in \(Self.label(calendar))."
     }
 }
 

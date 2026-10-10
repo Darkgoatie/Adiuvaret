@@ -15,6 +15,7 @@ struct IntegrationsView: View {
 
     var body: some View {
         List {
+            CalendarChoiceSection()
             ForEach(ConnectorCatalog.all) { connector in
                 Section {
                     Toggle(isOn: Binding(get: { states[connector.id] ?? false }, set: { states[connector.id] = $0; ConnectorCatalog.setOn($0, connector.id) })) {

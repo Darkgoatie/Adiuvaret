@@ -22,6 +22,7 @@ final class ChatStore {
     /// `persistence` is nil in demo launches so sample data never overwrites real chats.
     init(persistence: PersistenceStore?, make: @escaping () -> any ChatService) {
         self.persistence = persistence; self.make = make
+        ChatArchive.load = { [weak self] in (persistence?.loadChats() ?? []).filter { $0.id != self?.currentID } }
         for snap in persistence?.loadChats() ?? [] {
             let items = snap.items.compactMap(ThreadItemCoding.item)
             entries.append(Entry(id: snap.id, service: ModelSettings.shared.makeService(modelID: snap.modelID, items: items, title: snap.title), created: snap.created, pinned: snap.pinned))

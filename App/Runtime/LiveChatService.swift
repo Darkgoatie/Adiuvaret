@@ -63,7 +63,7 @@ final class LiveChatService: ChatService {
                                          "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
                                          "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
-                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "searchNotion": SearchNotionExecutor()])
+                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor()])
         let all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
             "findFreeTime": LiveFreeTimeTool(gate: gate, ctx: ctx),
@@ -86,7 +86,8 @@ final class LiveChatService: ChatService {
             "addTodoistTask": LiveAddTodoistTool(gate: gate, ctx: ctx),
             "listGitHubIssues": LiveListGitHubTool(gate: gate, ctx: ctx, reporter: bridge),
             "listGitHubRepos": LiveListGitHubReposTool(gate: gate, ctx: ctx, reporter: bridge),
-            "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge)]
+            "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge),
+            "searchPastChats": LiveSearchPastChatsTool(gate: gate, ctx: ctx, reporter: bridge)]
         let tools = toolIDs.compactMap { all[$0] }
         let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .short
         let today = CalendarRange.iso.string(from: Date())
@@ -316,7 +317,8 @@ final class LiveChatService: ChatService {
             title = String(localized: "Add this event?")
             let mins = (args["durationMinutes"] as? Int) ?? 60
             rows = [DetailRow(String(localized: "Title"), (args["title"] as? String) ?? ""), DetailRow(String(localized: "Starts"), when("start")),
-                    DetailRow(String(localized: "Length"), String(localized: "\(mins) minutes"))]
+                    DetailRow(String(localized: "Length"), String(localized: "\(mins) minutes")),
+                    DetailRow(String(localized: "Calendar"), CalendarChoice.targetName())]
         case "moveEvent":
             title = String(localized: "Move this event?")
             rows = [DetailRow(String(localized: "Event"), eventName(args["event"])), DetailRow(String(localized: "New start"), when("newStart"))]
