@@ -35,12 +35,15 @@ import Foundation
     @Test func todoistAddBuildsAJsonBody() throws {
         let r = try #require(ServiceRequest.todoistAdd(content: "Buy milk", due: "tomorrow 9am"))
         #expect(r.httpMethod == "POST")
-        let body = try #require(JSONSerialization.jsonObject(with: try #require(r.httpBody)) as? [String: String])
+        let raw = try #require(r.httpBody)
+        let object = try JSONSerialization.jsonObject(with: raw)
+        let body = try #require(object as? [String: String])
         #expect(body == ["content": "Buy milk", "due_string": "tomorrow 9am"])
         #expect(ServiceRequest.todoistAdd(content: "  ", due: "") == nil)
         #expect(ServiceRequest.todoistAdd(content: String(repeating: "a", count: 301), due: "") == nil)
         let noDue = try #require(ServiceRequest.todoistAdd(content: "Milk", due: ""))
-        #expect(!String(decoding: try #require(noDue.httpBody), as: UTF8.self).contains("due_string"))
+        let noDueBody = try #require(noDue.httpBody)
+        #expect(!String(decoding: noDueBody, as: UTF8.self).contains("due_string"))
     }
 
     @Test func todoistDeleteRefusesOddIds() {
