@@ -64,5 +64,37 @@ public extension ToolCatalog {
             keywords: ["click", "tap", "type", "fill", "textbox", "scroll", "button", "link", "checkbox", "dropdown", "slider", "tick"],
             examples: ["Click the first result", "Scroll down the page", "Type red shoes in the search box", "Tick the box and press the button"],
             requires: ["openWebsite", "lookAtPage"]),
+        CatalogEntry(
+            id: "searchNotes", title: "Search notes", category: "Notes",
+            description: "Searches the user's Obsidian or Markdown notes folder by words and returns note names with short excerpts. Use it when the user asks what their notes say.",
+            keywords: ["obsidian", "vault", "notes", "markdown", "jotted", "wrote down"],
+            examples: ["Search my Obsidian notes for the Seville trip", "What did I write in my notes about taxes?", "Find the note about the garden project in my vault"]),
+        CatalogEntry(
+            id: "readNote", title: "Read note", category: "Notes",
+            description: "Reads one note from the user's notes folder, in parts when it is long. Needs the note path from a notes search.",
+            keywords: ["open note", "read note", "show note", "full note", "contents"],
+            examples: ["Read the full Spain trip note", "Show me the whole note about taxes", "Open that note and read it"],
+            requires: ["searchNotes"]),
+        CatalogEntry(
+            id: "writeNote", title: "Write note", category: "Notes",
+            description: "Creates a new note, or adds text to the end of an existing note, in the user's notes folder after the user approves.",
+            keywords: ["jot", "append", "save a note", "new note", "write a note", "add to note"],
+            examples: ["Create a note called Packing list with a passport and charger", "Add a line to my Ideas note about the new app", "Jot down a note that the dentist moved to Friday"],
+            requires: ["searchNotes"]),
+        CatalogEntry(
+            id: "findContact", title: "Find contact", category: "Contacts",
+            description: "Looks up a person in the user's contacts and returns their phone numbers, emails and birthday. Read only.",
+            keywords: ["contact", "phone number", "email address", "birthday", "number of", "address book"],
+            examples: ["What is Ana Ruiz's phone number?", "Look up Bob in my contacts", "When is Maria's birthday?"]),
+        CatalogEntry(
+            id: "runShortcut", title: "Run shortcut", category: "Shortcuts",
+            description: "Runs a shortcut from the user's Shortcuts app by its name after the user approves. The result cannot be read back.",
+            keywords: ["shortcut", "shortcuts", "automation", "routine", "run my"],
+            examples: ["Run my Morning routine shortcut", "Start the Focus mode shortcut", "Trigger my Log water shortcut"]),
+        CatalogEntry(
+            id: "draftEmail", title: "Draft email", category: "Email",
+            description: "Opens a draft email in the Mail app with the recipient, subject and text filled in. The user reads it and presses send.",
+            keywords: ["email", "draft", "compose", "mail", "message to", "write an email"],
+            examples: ["Draft an email to ana@example.com about dinner", "Write an email to my landlord saying the heater is broken", "Compose a mail to bob@example.org with the meeting notes"]),
     ])
 }

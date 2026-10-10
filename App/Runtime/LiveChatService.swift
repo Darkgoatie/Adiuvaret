@@ -58,7 +58,10 @@ final class LiveChatService: ChatService {
                                          "searchWeb": SearchWebExecutor(),
                                          "openWebsite": OpenWebsiteExecutor(), "openOtherSite": OpenWebsiteExecutor(),
                                          "lookAtPage": LookAtPageExecutor(),
-                                         "actOnPage": ActOnPageExecutor(), "actOnPageRisky": ActOnPageExecutor()])
+                                         "actOnPage": ActOnPageExecutor(), "actOnPageRisky": ActOnPageExecutor(),
+                                         "searchNotes": SearchNotesExecutor(), "readNote": ReadNoteExecutor(), "writeNote": WriteNoteExecutor(reporter: bridge),
+                                         "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
+                                         "draftEmail": DraftEmailExecutor(reporter: bridge)])
         let all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
             "findFreeTime": LiveFreeTimeTool(gate: gate, ctx: ctx),
@@ -70,7 +73,13 @@ final class LiveChatService: ChatService {
             "searchWeb": LiveSearchWebTool(gate: gate, ctx: ctx, reporter: bridge),
             "openWebsite": LiveOpenWebsiteTool(gate: gate, ctx: ctx, reporter: bridge),
             "lookAtPage": LiveLookAtPageTool(gate: gate, ctx: ctx, reporter: bridge),
-            "actOnPage": LiveActOnPageTool(gate: gate, ctx: ctx, reporter: bridge)]
+            "actOnPage": LiveActOnPageTool(gate: gate, ctx: ctx, reporter: bridge),
+            "searchNotes": LiveSearchNotesTool(gate: gate, ctx: ctx, reporter: bridge),
+            "readNote": LiveReadNoteTool(gate: gate, ctx: ctx, reporter: bridge),
+            "writeNote": LiveWriteNoteTool(gate: gate, ctx: ctx),
+            "findContact": LiveFindContactTool(gate: gate, ctx: ctx, reporter: bridge),
+            "runShortcut": LiveRunShortcutTool(gate: gate, ctx: ctx),
+            "draftEmail": LiveDraftEmailTool(gate: gate, ctx: ctx)]
         let tools = toolIDs.compactMap { all[$0] }
         let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .short
         let today = CalendarRange.iso.string(from: Date())
@@ -311,6 +320,22 @@ final class LiveChatService: ChatService {
             title = String(localized: "Open another website?")
             rows = [DetailRow(String(localized: "Site"), WebPolicy.normalize((args["url"] as? String) ?? "").hostText),
                     DetailRow(String(localized: "Why I'm asking"), String(localized: "You asked to confirm new sites."))]
+        case "writeNote":
+            let target = (args["appendTo"] as? String) ?? ""
+            title = target.isEmpty ? String(localized: "Save this note?") : String(localized: "Add to this note?")
+            rows = [DetailRow(String(localized: "Note"), target.isEmpty ? ((args["title"] as? String) ?? "") : NoteName.title(of: target)),
+                    DetailRow(String(localized: "Text"), String(((args["text"] as? String) ?? "").prefix(200))),
+                    DetailRow(String(localized: "Where"), String(localized: "Your notes folder"))]
+        case "runShortcut":
+            title = String(localized: "Run this shortcut?")
+            rows = [DetailRow(String(localized: "Shortcut"), (args["name"] as? String) ?? ""),
+                    DetailRow(String(localized: "Note"), String(localized: "What it does depends on the shortcut. I can't see the result."))]
+        case "draftEmail":
+            title = String(localized: "Open a draft in Mail?")
+            rows = [DetailRow(String(localized: "To"), ((args["to"] as? String) ?? "").isEmpty ? String(localized: "Not set") : (args["to"] as? String) ?? ""),
+                    DetailRow(String(localized: "Subject"), (args["subject"] as? String) ?? ""),
+                    DetailRow(String(localized: "Text"), String(((args["body"] as? String) ?? "").prefix(200))),
+                    DetailRow(String(localized: "Note"), String(localized: "Nothing is sent until you press send in Mail."))]
         case "actOnPageRisky":
             title = String(localized: "Do this on the page?")
             let element = WebSession.shared.element((args["element"] as? Int) ?? 0)

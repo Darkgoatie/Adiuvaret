@@ -58,8 +58,15 @@ enum LiveDescriptors {
     static let openOtherSite = ToolDescriptor(name: "openOtherSite", summary: "Opens a different website.", permission: .reversibleWrite, outputSensitivity: .personal)
     /// A click that could buy, send, delete or sign in. Always asks and cannot be undone.
     static let actOnPageRisky = ToolDescriptor(name: "actOnPageRisky", summary: "Does something on a page that cannot be undone.", permission: .irreversible, outputSensitivity: .personal)
+    static let searchNotes = ToolDescriptor(name: "searchNotes", summary: "Searches the notes folder.", permission: .readOnly, outputSensitivity: .personal)
+    static let readNote = ToolDescriptor(name: "readNote", summary: "Reads one note.", permission: .readOnly, outputSensitivity: .personal)
+    static let writeNote = ToolDescriptor(name: "writeNote", summary: "Creates or extends a note.", permission: .reversibleWrite, outputSensitivity: .personal)
+    static let findContact = ToolDescriptor(name: "findContact", summary: "Looks up a contact.", permission: .readOnly, outputSensitivity: .sensitive)
+    static let runShortcut = ToolDescriptor(name: "runShortcut", summary: "Runs a shortcut.", permission: .reversibleWrite, outputSensitivity: .personal)
+    static let draftEmail = ToolDescriptor(name: "draftEmail", summary: "Opens a mail draft.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
-                      searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky]
+                      searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky,
+                      searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail]
 }
 
 enum CalendarRange {

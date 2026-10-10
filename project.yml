@@ -64,5 +64,6 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Adiuvaret
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: Adiuvaret reads your calendar to answer questions about your day.
+        INFOPLIST_KEY_NSContactsUsageDescription: Adiuvaret looks up a person in your contacts when you ask.
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: Adiuvaret creates reminders when you ask and approve.
         TARGETED_DEVICE_FAMILY: "1"
