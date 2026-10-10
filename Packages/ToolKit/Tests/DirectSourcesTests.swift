@@ -21,6 +21,38 @@ import Foundation
         #expect(DirectSources.request(for: "Tell me a joke") == nil)
     }
 
+    @Test func competitionQuestionsAreRecognised() {
+        #expect(DirectSources.request(for: "next UCL matchday") == .competition(id: "4480", name: "UEFA Champions League", kind: .next))
+        #expect(DirectSources.request(for: "When is the next Champions League match?") == .competition(id: "4480", name: "UEFA Champions League", kind: .next))
+        #expect(DirectSources.request(for: "Premier League fixtures this weekend") == .competition(id: "4328", name: "English Premier League", kind: .next))
+        #expect(DirectSources.request(for: "latest Champions League results") == .competition(id: "4480", name: "UEFA Champions League", kind: .last))
+        #expect(DirectSources.request(for: "Europa Conference League matchday") == nil)
+        #expect(DirectSources.request(for: "When does Real Madrid play in the Champions League?") == .team(name: "real madrid", kind: .next))
+        #expect(DirectSources.request(for: "Champions League winners history") == nil)
+    }
+
+    @Test func competitionDaysAreListed() throws {
+        let utc = try #require(TimeZone(identifier: "UTC"))
+        let now = Date(timeIntervalSince1970: 1_791_590_400)
+        let next = DirectSources.competitionDayURLs(id: "4480", kind: .next, now: now, timeZone: utc)
+        #expect(next.count == 10 && next[0].absoluteString.hasSuffix("eventsday.php?d=2026-10-10&l=4480"), "\(next.first?.absoluteString ?? "")")
+        let last = DirectSources.competitionDayURLs(id: "4480", kind: .last, now: now, timeZone: utc)
+        #expect(last.count == 7 && last[0].absoluteString.contains("d=2026-10-09"), "\(last.first?.absoluteString ?? "")")
+        #expect(DirectSources.competitionDayURLs(id: "x1", kind: .next, now: now, timeZone: utc).isEmpty)
+    }
+
+    @Test func aMatchdayIsRenderedFromTheFirstDayWithGames() throws {
+        let utc = try #require(TimeZone(identifier: "UTC"))
+        let empty = Data(#"{"events":null}"#.utf8)
+        let day1 = Data(#"{"events":[{"strEvent":"Arsenal vs Lille","strTimestamp":"2026-10-13T19:00:00","intRound":"2"},{"strEvent":"Lens vs Sporting CP","strTimestamp":"2026-10-13T16:45:00","intRound":"2"}]}"#.utf8)
+        let day2 = Data(#"{"events":[{"strEvent":"Manchester City vs Paris Saint-Germain","strTimestamp":"2026-10-14T19:00:00","intRound":"2"}]}"#.utf8)
+        let text = try #require(DirectSources.renderCompetition(days: [empty, day1, day2], name: "UEFA Champions League", kind: .next, timeZone: utc))
+        #expect(text.contains("Upcoming UEFA Champions League matches"), "\(text)")
+        #expect(text.contains("1. Lens vs Sporting CP, Tue 13 Oct 16:45") && text.contains("2. Arsenal vs Lille, Tue 13 Oct 19:00"), "\(text)")
+        #expect(text.contains("Manchester City vs Paris Saint-Germain, Wed 14 Oct 19:00"), "\(text)")
+        #expect(DirectSources.renderCompetition(days: [empty], name: "x", kind: .next, timeZone: utc) == nil)
+    }
+
     @Test func addressesAreBuilt() {
         let url = DirectSources.currencyURL(amount: 100, from: "USD", to: "TRY")?.absoluteString ?? ""
         #expect(url.hasPrefix("https://api.frankfurter.dev/v1/latest?") && url.contains("amount=100") && url.contains("base=USD") && url.contains("symbols=TRY"), "\(url)")

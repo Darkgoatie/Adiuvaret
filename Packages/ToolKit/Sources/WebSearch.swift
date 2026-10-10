@@ -136,7 +136,7 @@ public enum WebIntent {
         "search", "google", "look up", "lookup", "look it up", "find out", "online", "on the web", "on the internet", "internet", "web search",
         "latest", "news", "headline", "headlines", "weather", "forecast", "score", "scores", "who won", "price of", "prices", "how much is",
         "how much does", "how much are", "exchange rate", "stock price", "release date", "next match", "next game", "next fixture",
-        "opening hours", "browse", "wikipedia", "what happened"
+        "opening hours", "browse", "wikipedia", "what happened", "matchday", "fixtures", "standings", "lineup", "transfer", "transfers"
     ]
     private static let blockers: [String] = ["calendar", "reminder", "reminders", "my events", "meeting", "meetings", "appointment", "my schedule", "free time"]
 

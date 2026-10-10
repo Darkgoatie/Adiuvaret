@@ -32,6 +32,15 @@ struct SearchWebExecutor: ToolExecutor {
             if let url = DirectSources.currencyURL(amount: amount, from: from, to: to), let data = await getData(url, session) {
                 text = DirectSources.renderCurrency(data, amount: amount, from: from, to: to)
             }
+        case .competition(let id, let name, let kind):
+            let urls = DirectSources.competitionDayURLs(id: id, kind: kind)
+            let days = await withTaskGroup(of: (Int, Data?).self) { group -> [Data] in
+                for (i, url) in urls.enumerated() { group.addTask { (i, await Self.getData(url, session)) } }
+                var found: [(Int, Data)] = []
+                for await (i, data) in group { if let data { found.append((i, data)) } }
+                return found.sorted { $0.0 < $1.0 }.map(\.1)
+            }
+            text = DirectSources.renderCompetition(days: days, name: name, kind: kind)
         case .team(let name, let kind):
             if let searchURL = DirectSources.teamSearchURL(name), let teamData = await getData(searchURL, session),
                let team = DirectSources.parseTeam(teamData), let url = DirectSources.eventsURL(teamID: team.id, kind: kind),

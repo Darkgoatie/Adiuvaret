@@ -6,9 +6,10 @@ public enum DirectSources {
     public enum Request: Equatable, Sendable {
         case currency(amount: Double, from: String, to: String)
         case team(name: String, kind: Kind)
+        case competition(id: String, name: String, kind: Kind)
     }
 
-    public static func request(for text: String) -> Request? { currencyRequest(text) ?? teamRequest(text) }
+    public static func request(for text: String) -> Request? { currencyRequest(text) ?? competitionRequest(text) ?? teamRequest(text) }
 
     // MARK: currency
 
@@ -54,18 +55,99 @@ public enum DirectSources {
         return "Live exchange rate (European Central Bank via Frankfurter, \(date)): \(num(amount)) \(from) = \(num(value)) \(to). 1 \(from) = \(num(value / amount)) \(to)."
     }
 
+    // MARK: competitions
+
+    /// Competitions that have a fixture list in TheSportsDB. Longer names come first so "europa conference league" is not read as "europa league".
+    static let competitions: [(names: [String], id: String, title: String)] = [
+        (["champions league", "ucl"], "4480", "UEFA Champions League"),
+        (["europa league", "uel"], "4481", "UEFA Europa League"),
+        (["premier league", "epl"], "4328", "English Premier League"),
+        (["la liga", "laliga"], "4335", "La Liga"),
+        (["bundesliga"], "4331", "Bundesliga"),
+        (["serie a"], "4332", "Serie A"),
+        (["ligue 1"], "4334", "Ligue 1"),
+        (["super lig", "süper lig"], "4339", "Süper Lig"),
+        (["eredivisie"], "4337", "Eredivisie"),
+        (["primeira liga"], "4344", "Primeira Liga"),
+        (["mls", "major league soccer"], "4346", "Major League Soccer"),
+        (["fa cup"], "4482", "FA Cup"),
+        (["world cup"], "4429", "FIFA World Cup")]
+
+    private static let roundWords: Set<String> = ["matchday", "matchdays", "round", "fixtures", "fixture", "match", "matches", "game", "games", "schedule", "results", "result", "scores", "score", "play", "plays", "playing", "tonight", "today", "tomorrow", "next", "upcoming", "last", "latest", "when", "yesterday", "who", "won", "lost", "beat", "draw"]
+
+    static func competitionRequest(_ text: String) -> Request? {
+        let words = text.lowercased().split(whereSeparator: { !($0.isLetter || $0.isNumber) }).map(String.init)
+        guard !words.contains(where: { blockers.contains($0) }), words.contains(where: { roundWords.contains($0) }) else { return nil }
+        let padded = " " + words.joined(separator: " ") + " "
+        guard !padded.contains(" conference league ") else { return nil }
+        guard let comp = competitions.first(where: { c in c.names.contains { padded.contains(" " + $0 + " ") } }) else { return nil }
+        // A question that names a team as well ("Real Madrid in the Champions League") is about that team, so the team lookup handles it.
+        let nameWords = Set(competitions.flatMap(\.names).flatMap { $0.split(separator: " ").map(String.init) })
+        let leftover = words.filter { !teamFillers.contains($0) && !roundWords.contains($0) && !nameWords.contains($0) && !lastWords.contains($0) && !nextWords.contains($0) && !["uefa", "european", "cup", "league", "english", "spanish", "german", "italian", "french", "turkish", "dutch", "portuguese"].contains($0) }
+        guard leftover.isEmpty else { return nil }
+        let isLast = words.contains(where: { lastWords.contains($0) }) && !words.contains(where: { upcomingWords.contains($0) })
+        return .competition(id: comp.id, name: comp.title, kind: isLast ? .last : .next)
+    }
+
+    /// The days to ask for: today and the following days for upcoming games, yesterday and the days before for results.
+    public static func competitionDayURLs(id: String, kind: Kind, now: Date = Date(), timeZone: TimeZone = .current) -> [URL] {
+        guard id.allSatisfy(\.isNumber), !id.isEmpty else { return [] }
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = timeZone
+        let f = formatter("yyyy-MM-dd", timeZone)
+        let offsets = kind == .next ? Array(0...9) : Array((1...7).map { -$0 })
+        return offsets.compactMap { o in
+            cal.date(byAdding: .day, value: o, to: now).flatMap { URL(string: "https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=\(f.string(from: $0))&l=\(id)") }
+        }
+    }
+
+    /// The first day that has matches, with every match that day: one matchday.
+    public static func renderCompetition(days: [Data], name: String, kind: Kind, timeZone: TimeZone = .current) -> String? {
+        struct Row { let date: Date; let line: String }
+        let utc = TimeZone(identifier: "UTC") ?? timeZone
+        let stamp = formatter("yyyy-MM-dd'T'HH:mm:ss", utc)
+        let when = formatter("EEE d MMM HH:mm", timeZone)
+        let dayKey = formatter("yyyy-MM-dd", timeZone)
+        var byDay: [String: [Row]] = [:]
+        for data in days {
+            guard let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let events = o["events"] as? [[String: Any]] else { continue }
+            for e in events {
+                guard let title = e["strEvent"] as? String, let ts = (e["strTimestamp"] as? String).flatMap({ stamp.date(from: $0) }) else { continue }
+                var line = title + ", " + when.string(from: ts)
+                if kind == .last {
+                    if let h = scoreText(e["intHomeScore"]), let a = scoreText(e["intAwayScore"]), let home = e["strHomeTeam"] as? String, let away = e["strAwayTeam"] as? String {
+                        line = "\(home) \(h)-\(a) \(away), " + when.string(from: ts)
+                    } else {
+                        line += ", score not recorded"
+                    }
+                }
+                if let r = e["intRound"] as? String, !r.isEmpty, byDay[dayKey.string(from: ts)] == nil { line += " (round \(r))" }
+                byDay[dayKey.string(from: ts), default: []].append(Row(date: ts, line: line))
+            }
+        }
+        guard !byDay.isEmpty else { return nil }
+        let keys = byDay.keys.sorted()
+        let first = kind == .next ? keys.first! : keys.last!
+        var rows = byDay[first] ?? []
+        if kind == .next, keys.count > 1 { rows += byDay[keys[1]] ?? [] }
+        rows.sort { $0.date < $1.date }
+        let head = kind == .next
+            ? "Upcoming \(name) matches (TheSportsDB, times in \(timeZone.identifier)):"
+            : "Latest \(name) results (TheSportsDB, times in \(timeZone.identifier)):"
+        return ([head] + rows.prefix(24).enumerated().map { "\($0.offset + 1). \($0.element.line)" }).joined(separator: "\n")
+    }
+
     // MARK: football fixtures
 
     private static let matchWords: Set<String> = ["match", "matches", "game", "games", "fixture", "fixtures", "play", "plays", "playing", "score", "scores",
                                                   "result", "results", "won", "lost", "beat"]
-    private static let upcomingWords: Set<String> = ["next", "upcoming", "following", "tomorrow", "tonight", "later"]
-    private static let nextWords: Set<String> = ["next", "upcoming", "following", "when", "tomorrow", "tonight", "later", "kickoff"]
-    private static let lastWords: Set<String> = ["last", "latest", "recent", "previous", "yesterday", "won", "lost", "beat", "result", "results", "score", "scores", "final"]
-    private static let teamFillers: Set<String> = [
+    static let upcomingWords: Set<String> = ["next", "upcoming", "following", "tomorrow", "tonight", "later"]
+    static let nextWords: Set<String> = ["next", "upcoming", "following", "when", "tomorrow", "tonight", "later", "kickoff"]
+    static let lastWords: Set<String> = ["last", "latest", "recent", "previous", "yesterday", "won", "lost", "beat", "result", "results", "score", "scores", "final"]
+    static let teamFillers: Set<String> = [
         "is", "does", "do", "did", "was", "were", "the", "a", "an", "of", "for", "what", "whats", "time", "date", "who", "whom", "how", "tell", "me", "give",
         "show", "find", "my", "team", "club", "football", "soccer", "vs", "against", "with", "on", "in", "at", "to", "and", "it", "this", "season", "can",
         "you", "please", "about", "their", "his", "her", "s", "i", "want", "know", "get", "are", "will", "be", "going", "there", "today", "now", "start", "starts"]
-    private static let blockers: Set<String> = ["calendar", "meeting", "meetings", "reminder", "reminders", "appointment", "appointments", "schedule"]
+    static let blockers: Set<String> = ["calendar", "meeting", "meetings", "reminder", "reminders", "appointment", "appointments", "schedule"]
 
     static func teamRequest(_ text: String) -> Request? {
         let words = text.lowercased().split(whereSeparator: { !($0.isLetter || $0.isNumber) }).map(String.init)
@@ -96,13 +178,13 @@ public enum DirectSources {
         return URL(string: "https://www.thesportsdb.com/api/v1/json/3/" + (kind == .next ? "eventsnext" : "eventslast") + ".php?id=" + teamID)
     }
 
-    private static func scoreText(_ v: Any?) -> String? {
+    static func scoreText(_ v: Any?) -> String? {
         if let s = v as? String, !s.isEmpty { return s }
         if let n = v as? Int { return String(n) }
         return nil
     }
 
-    private static func formatter(_ format: String, _ zone: TimeZone) -> DateFormatter {
+    static func formatter(_ format: String, _ zone: TimeZone) -> DateFormatter {
         let f = DateFormatter()
         f.calendar = Calendar(identifier: .gregorian); f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = zone; f.dateFormat = format
