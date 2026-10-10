@@ -21,6 +21,13 @@ import Foundation
         #expect(DirectSources.request(for: "Tell me a joke") == nil)
     }
 
+    @Test func historyQuestionsAreNotTeamLookups() {
+        for t in ["Who won the 2022 World Cup?", "Who won the Euro 2016 final?", "Who won the Olympics in 1996?"] {
+            #expect(DirectSources.request(for: t) == nil, Comment(rawValue: t))
+        }
+        #expect(DirectSources.request(for: "When is Real Betis' next game?") == .team(name: "real betis", kind: .next))
+    }
+
     @Test func competitionQuestionsAreRecognised() {
         #expect(DirectSources.request(for: "next UCL matchday") == .competition(id: "4480", name: "UEFA Champions League", kind: .next))
         #expect(DirectSources.request(for: "When is the next Champions League match?") == .competition(id: "4480", name: "UEFA Champions League", kind: .next))
@@ -102,6 +109,8 @@ import Foundation
         #expect(WebSearch.queryFrom("Who is the CEO of Nvidia?") == "CEO Nvidia")
         #expect(WebSearch.queryFrom("What is the capital of France") == "capital France")
         #expect(WebSearch.queryFrom("is the") == "is the")
+        #expect(WebSearch.queryFrom("How much is a PS5?") == "PS5")
+        #expect(WebSearch.queryFrom("How many moons does Mars have?") == "moons Mars have")
     }
 
     @Test func coverageDecidesWhenThePagesAreEnough() {

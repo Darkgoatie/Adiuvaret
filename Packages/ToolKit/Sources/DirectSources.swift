@@ -158,6 +158,9 @@ public enum DirectSources {
               words.contains(where: { matchWords.contains($0) }),
               words.contains(where: { nextWords.contains($0) || lastWords.contains($0) }) else { return nil }
         let isNext = words.contains(where: { upcomingWords.contains($0) }) || !words.contains(where: { lastWords.contains($0) })
+        // A year or a tournament word means a history or event question, not a team lookup.
+        let eventWords: Set<String> = ["cup", "world", "olympics", "olympic", "euro", "final", "finals", "tournament", "championship"]
+        if words.contains(where: { eventWords.contains($0) || ($0.count == 4 && $0.hasPrefix("20") && $0.allSatisfy(\.isNumber)) || ($0.count == 4 && $0.hasPrefix("19") && $0.allSatisfy(\.isNumber)) }) { return nil }
         let name = words.filter { !teamFillers.contains($0) && !matchWords.contains($0) && !nextWords.contains($0) && !lastWords.contains($0) && !competitionWords.contains($0) }
             .prefix(4).joined(separator: " ")
         return name.isEmpty ? nil : .team(name: name, kind: isNext ? .next : .last)

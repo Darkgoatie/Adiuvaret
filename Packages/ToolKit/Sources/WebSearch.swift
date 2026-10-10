@@ -24,7 +24,7 @@ public enum WebSearch {
     private static let questionWords: Set<String> = [
         "when", "what", "whats", "where", "which", "who", "whom", "how", "is", "are", "was", "were", "does", "did", "do", "the", "a", "an", "of",
         "me", "tell", "give", "show", "please", "can", "you", "i", "to", "for", "in", "on", "at", "it", "my", "and", "about", "this", "that",
-        "could", "would", "will", "be", "there", "any", "some", "find", "get", "look", "up", "out", "search"]
+        "could", "would", "will", "be", "there", "any", "some", "find", "get", "look", "up", "out", "search", "much", "many"]
 
     /// Search words from a whole sentence: question words and fillers dropped, the rest kept in order and in its own case.
     public static func queryFrom(_ prompt: String) -> String {
