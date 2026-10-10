@@ -53,8 +53,8 @@ final class LiveChatService: ChatService {
                                          "deleteEvent": DeleteEventExecutor(reporter: bridge, handles: handles),
                                          "createReminder": LiveReminderExecutor(reporter: bridge),
                                          "listReminders": ListRemindersExecutor(),
-                                         "searchWeb": SearchWebExecutor(), "searchWebAfterPersonal": SearchWebExecutor(),
-                                         "openWebsite": OpenWebsiteExecutor(), "openOtherSite": OpenWebsiteExecutor(),
+                                         "searchWeb": SearchWebExecutor(),
+                                         "openWebsite": OpenWebsiteExecutor(),
                                          "lookAtPage": LookAtPageExecutor(),
                                          "actOnPage": ActOnPageExecutor(), "actOnPageRisky": ActOnPageExecutor()])
         let all: [String: any Tool] = [
@@ -284,14 +284,6 @@ final class LiveChatService: ChatService {
         case "deleteEvent":
             title = String(localized: "Delete this event?")
             rows = [DetailRow(String(localized: "Event"), eventName(args["event"])), DetailRow(String(localized: "Note"), String(localized: "This can't be undone."))]
-        case "searchWebAfterPersonal":
-            title = String(localized: "Search the web?")
-            rows = [DetailRow(String(localized: "Search for"), (args["query"] as? String) ?? ""),
-                    DetailRow(String(localized: "Why I'm asking"), String(localized: "I read your calendar or reminders first, and the search words leave your iPhone."))]
-        case "openOtherSite":
-            title = String(localized: "Open another website?")
-            rows = [DetailRow(String(localized: "Site"), WebPolicy.normalize((args["url"] as? String) ?? "").hostText),
-                    DetailRow(String(localized: "Why I'm asking"), String(localized: "I read a page and it led here."))]
         case "actOnPageRisky":
             title = String(localized: "Do this on the page?")
             let element = WebSession.shared.element((args["element"] as? Int) ?? 0)

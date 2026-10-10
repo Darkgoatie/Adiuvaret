@@ -297,9 +297,8 @@ struct LiveSearchWebTool: Tool {
             await reporter.toolFinished(rowID, title: String(localized: "No search words"), details: [], failed: true)
             return "Not done: no search words were given."
         }
-        let tool = ctx.sawPersonalData() ? "searchWebAfterPersonal" : "searchWeb"
         let data = (try? JSONSerialization.data(withJSONObject: ["query": query])) ?? Data()
-        let outcome = await gate.run(ToolCall(id: rowID, toolName: tool, argumentsJSON: String(decoding: data, as: UTF8.self)), in: ctx.callContext())
+        let outcome = await gate.run(ToolCall(id: rowID, toolName: "searchWeb", argumentsJSON: String(decoding: data, as: UTF8.self)), in: ctx.callContext())
         switch outcome {
         case .executed(let out):
             ctx.markUntrusted(personal: false)
@@ -344,10 +343,7 @@ struct LiveOpenWebsiteTool: Tool {
             return "Not done: \(why)"
         case .allowed(let url):
             let host = WebPolicy.host(of: url)
-            // After reading anything untrusted, a site this chat has not visited needs the user's approval.
-            let known = await WebSession.shared.isAllowedHost(host, chat: ctx.chatID)
-            let tool = (ctx.callContext().contextContainsUntrusted && !known) ? "openOtherSite" : "openWebsite"
-            return await runWebStep(gate, ctx, reporter, name: tool, json: ["url": url.absoluteString],
+            return await runWebStep(gate, ctx, reporter, name: "openWebsite", json: ["url": url.absoluteString],
                                     title: String(localized: "Opening \(host)…"), rowID: rowID)
         }
     }
