@@ -32,7 +32,7 @@ public enum ConnectorIntent {
             return Match(connector: "todoist", tool: "listTodoistTasks", arguments: ["search": search])
         }
         if set.contains("notion") {
-            let skip: Set<String> = ["notion", "find", "search", "my", "the", "in", "for", "page", "pages", "a", "is", "there", "about", "on", "look", "up", "me", "workspace"]
+            let skip: Set<String> = ["notion", "find", "search", "my", "the", "in", "for", "page", "pages", "a", "is", "there", "about", "on", "look", "up", "me", "workspace", "open", "go", "to", "check", "show", "get", "what", "whats", "do", "i", "have", "any"]
             let query = w.filter { !skip.contains($0) }.prefix(4).joined(separator: " ")
             guard !query.isEmpty else { return nil }
             return Match(connector: "notion", tool: "searchNotion", arguments: ["query": query])
