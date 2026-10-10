@@ -60,6 +60,11 @@ enum ToolRouter {
             chosen = catalog.withRequirements([search])
             note += " public-date->web"
         }
+        // A question that names a connected app goes to that app's tool, whatever the router said.
+        if let match = ConnectorIntent.detect(prompt), ConnectorCatalog.isOn(match.connector), let entry = catalog.entry(match.tool) {
+            chosen = catalog.withRequirements([entry])
+            note += " connector=\(match.connector)"
+        }
         // A small model sometimes answers "look it up yourself" instead of using a tool. A plain web question always gets the search tool.
         if chosen.isEmpty, WebIntent.looksLikeWebRequest(prompt), let search = catalog.entry("searchWeb") {
             chosen = catalog.withRequirements([search])

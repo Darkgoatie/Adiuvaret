@@ -1,0 +1,42 @@
+import Foundation
+
+/// Spots questions that belong to a connected app, so they reach the right tool even when the model does not pick one.
+public enum ConnectorIntent {
+    public struct Match: Sendable, Equatable {
+        public let connector: String
+        public let tool: String
+        public let arguments: [String: String]
+    }
+
+    private static func words(_ text: String) -> [String] {
+        text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+    }
+
+    private static let writeVerbs: Set<String> = ["add", "create", "put", "new"]
+
+    /// The read tool that answers this message, or nil. Only read tools are matched here: writes stay with the model and the approval card.
+    public static func detect(_ text: String) -> Match? {
+        let w = words(text)
+        guard !w.isEmpty else { return nil }
+        let set = Set(w)
+        if set.contains("github") || (set.contains("pull") && (set.contains("request") || set.contains("requests"))) || set.contains("pr") || set.contains("prs") {
+            let what: String
+            if set.contains("review") || set.contains("reviews") { what = "review" }
+            else if set.contains("created") || set.contains("mine") || set.contains("opened") || set.contains("author") { what = "created" }
+            else { what = "assigned" }
+            return Match(connector: "github", tool: "listGitHubIssues", arguments: ["what": what, "words": ""])
+        }
+        if set.contains("todoist") && set.isDisjoint(with: writeVerbs) {
+            let skip: Set<String> = ["todoist", "tasks", "task", "list", "what", "whats", "is", "on", "my", "the", "show", "do", "i", "have", "any", "in", "a", "about", "for", "me", "open", "today"]
+            let search = w.filter { !skip.contains($0) }.prefix(3).joined(separator: " ")
+            return Match(connector: "todoist", tool: "listTodoistTasks", arguments: ["search": search])
+        }
+        if set.contains("notion") {
+            let skip: Set<String> = ["notion", "find", "search", "my", "the", "in", "for", "page", "pages", "a", "is", "there", "about", "on", "look", "up", "me", "workspace"]
+            let query = w.filter { !skip.contains($0) }.prefix(4).joined(separator: " ")
+            guard !query.isEmpty else { return nil }
+            return Match(connector: "notion", tool: "searchNotion", arguments: ["query": query])
+        }
+        return nil
+    }
+}

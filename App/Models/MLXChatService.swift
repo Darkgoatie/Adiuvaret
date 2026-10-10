@@ -144,6 +144,14 @@ final class MLXChatService: ChatService {
         } else if CalendarIntent.looksLikeReminderRequest(prompt) {
             executor = ListRemindersExecutor(); name = "listReminders"; args = ["search": ""]
             running = String(localized: "Reading your reminders…"); finished = String(localized: "Read your reminders")
+        } else if let match = ConnectorIntent.detect(prompt), ConnectorCatalog.isOn(match.connector) {
+            switch match.tool {
+            case "listGitHubIssues": executor = ListGitHubExecutor()
+            case "listTodoistTasks": executor = ListTodoistExecutor()
+            default: executor = SearchNotionExecutor()
+            }
+            name = match.tool; args = match.arguments
+            running = String(localized: "Checking \(match.connector.capitalized)…"); finished = String(localized: "Checked \(match.connector.capitalized)")
         } else if WebIntent.looksLikeWebRequest(prompt) {
             executor = SearchWebExecutor(); name = "searchWeb"; args = ["query": prompt]
             running = String(localized: "Searching the web…"); finished = String(localized: "Searched the web")
