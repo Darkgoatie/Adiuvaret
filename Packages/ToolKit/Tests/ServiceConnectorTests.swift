@@ -92,6 +92,16 @@ import Foundation
         #expect(GitHubParse.issues(Data("{}".utf8)).isEmpty)
     }
 
+    @Test func githubReposAreListed() throws {
+        let url = try #require(ServiceRequest.githubRepos()?.url)
+        #expect(ServiceHost.isAllowed(url, for: "github"))
+        #expect(url.absoluteString.contains("/user/repos"), Comment(rawValue: url.absoluteString))
+        let json = Data(#"[{"full_name":"Darkgoatie/Adiuvaret","private":false,"fork":false,"archived":false,"language":"Swift","pushed_at":"2026-10-10T08:00:00Z"},{"full_name":"Darkgoatie/Old","private":true,"fork":true,"archived":true,"language":null,"pushed_at":"2025-01-02T08:00:00Z"}]"#.utf8)
+        let lines = GitHubParse.repos(json)
+        #expect(lines == ["Darkgoatie/Adiuvaret (public, Swift, pushed 2026-10-10)", "Darkgoatie/Old (private, fork, archived, pushed 2025-01-02)"], Comment(rawValue: "\(lines)"))
+        #expect(GitHubParse.repos(Data("{}".utf8)).isEmpty)
+    }
+
     @Test func notionResultsAreListed() {
         let json = Data(#"{"results":[{"object":"page","id":"a","last_edited_time":"2026-10-01T08:00:00.000Z","properties":{"Name":{"type":"title","title":[{"plain_text":"Product "},{"plain_text":"roadmap"}]},"Tags":{"type":"multi_select"}}},{"object":"database","id":"b","title":[{"plain_text":"Tasks"}]}]}"#.utf8)
         let lines = NotionParse.results(json)

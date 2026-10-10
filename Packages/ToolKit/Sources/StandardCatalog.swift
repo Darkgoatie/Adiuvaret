@@ -108,9 +108,14 @@ public extension ToolCatalog {
             examples: ["Add buy milk to my Todoist", "Put renew passport on Todoist for next Friday", "Create a Todoist task to call the bank"]),
         CatalogEntry(
             id: "listGitHubIssues", title: "List GitHub work", category: "GitHub",
-            description: "Lists open GitHub issues and pull requests that are assigned to the user, created by the user, or waiting for the user's review.",
+            description: "Lists open GitHub issues and pull requests, not repositories, that are assigned to the user, created by the user, or waiting for the user's review.",
             keywords: ["github", "pull request", "pull requests", "issues", "code review", "assigned"],
             examples: ["What GitHub issues are assigned to me?", "Which pull requests are waiting for my review?", "List my open GitHub pull requests"]),
+        CatalogEntry(
+            id: "listGitHubRepos", title: "List GitHub repositories", category: "GitHub",
+            description: "Lists the user's GitHub repositories, most recently pushed first, with visibility, language and last push date.",
+            keywords: ["repos", "repositories", "repository", "my projects on github", "github projects"],
+            examples: ["What are my current GitHub repos?", "List my repositories", "Which repos did I push to lately?"]),
         CatalogEntry(
             id: "searchNotion", title: "Search Notion", category: "Notion",
             description: "Searches the titles of the user's Notion pages and databases and returns their names and last edit dates.",

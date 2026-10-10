@@ -19,6 +19,10 @@ public enum ConnectorIntent {
         let w = words(text)
         guard !w.isEmpty else { return nil }
         let set = Set(w)
+        let repoWords: Set<String> = ["repo", "repos", "repository", "repositories"]
+        if !set.isDisjoint(with: repoWords), set.isDisjoint(with: ["todoist", "notion"]), !set.isDisjoint(with: ["my", "mine", "current", "github", "list", "show", "i"]) {
+            return Match(connector: "github", tool: "listGitHubRepos", arguments: [:])
+        }
         if set.contains("github") || (set.contains("pull") && (set.contains("request") || set.contains("requests"))) || set.contains("pr") || set.contains("prs") {
             let what: String
             if set.contains("review") || set.contains("reviews") { what = "review" }

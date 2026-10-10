@@ -64,6 +64,13 @@ public enum ServiceRequest {
         return make(parts?.url, headers: ["Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"])
     }
 
+    public static func githubRepos() -> URLRequest? {
+        var parts = URLComponents(string: "https://api.github.com/user/repos")
+        parts?.queryItems = [URLQueryItem(name: "sort", value: "pushed"), URLQueryItem(name: "per_page", value: "15"),
+                             URLQueryItem(name: "affiliation", value: "owner,collaborator,organization_member")]
+        return make(parts?.url, headers: ["Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"])
+    }
+
     public static func notionSearch(query: String) -> URLRequest? {
         make(URL(string: "https://api.notion.com/v1/search"), method: "POST",
              body: ["query": String(query.prefix(100)), "page_size": 8], headers: ["Notion-Version": "2022-06-28"])
@@ -130,6 +137,23 @@ public enum GitHubParse {
             let kind = i["pull_request"] != nil ? "PR" : "issue"
             let updated = String(((i["updated_at"] as? String) ?? "").prefix(10))
             return "\(repo)#\(number) \(kind): \(clip(title, 90)) (\((i["state"] as? String) ?? "open")\(updated.isEmpty ? "" : ", updated " + updated))"
+        }
+    }
+}
+
+extension GitHubParse {
+    public static func repos(_ data: Data) -> [String] {
+        guard let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+        return list.compactMap { r in
+            guard let name = r["full_name"] as? String else { return nil }
+            var tags: [String] = []
+            tags.append((r["private"] as? Bool) == true ? "private" : "public")
+            if (r["fork"] as? Bool) == true { tags.append("fork") }
+            if (r["archived"] as? Bool) == true { tags.append("archived") }
+            if let lang = r["language"] as? String, !lang.isEmpty { tags.append(lang) }
+            let pushed = String(((r["pushed_at"] as? String) ?? "").prefix(10))
+            if !pushed.isEmpty { tags.append("pushed " + pushed) }
+            return name + " (" + tags.joined(separator: ", ") + ")"
         }
     }
 }

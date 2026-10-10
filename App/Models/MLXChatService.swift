@@ -147,6 +147,7 @@ final class MLXChatService: ChatService {
         } else if let match = ConnectorIntent.detect(prompt), ConnectorCatalog.isOn(match.connector) {
             switch match.tool {
             case "listGitHubIssues": executor = ListGitHubExecutor()
+            case "listGitHubRepos": executor = ListGitHubReposExecutor()
             case "listTodoistTasks": executor = ListTodoistExecutor()
             default: executor = SearchNotionExecutor()
             }

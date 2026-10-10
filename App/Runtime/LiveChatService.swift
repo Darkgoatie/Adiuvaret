@@ -63,7 +63,7 @@ final class LiveChatService: ChatService {
                                          "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
                                          "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
-                                         "listGitHubIssues": ListGitHubExecutor(), "searchNotion": SearchNotionExecutor()])
+                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "searchNotion": SearchNotionExecutor()])
         let all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
             "findFreeTime": LiveFreeTimeTool(gate: gate, ctx: ctx),
@@ -85,6 +85,7 @@ final class LiveChatService: ChatService {
             "listTodoistTasks": LiveListTodoistTool(gate: gate, ctx: ctx, reporter: bridge),
             "addTodoistTask": LiveAddTodoistTool(gate: gate, ctx: ctx),
             "listGitHubIssues": LiveListGitHubTool(gate: gate, ctx: ctx, reporter: bridge),
+            "listGitHubRepos": LiveListGitHubReposTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge)]
         let tools = toolIDs.compactMap { all[$0] }
         let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .short

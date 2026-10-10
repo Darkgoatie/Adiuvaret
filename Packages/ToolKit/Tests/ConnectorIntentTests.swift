@@ -10,6 +10,12 @@ import Testing
         #expect(ConnectorIntent.detect("can you check my github repos")?.connector == "github")
     }
 
+    @Test func repoQuestionsGoToTheRepoList() {
+        for t in ["What are my current GitHub repos?", "List my repositories", "show my repos", "Which GitHub repositories do I have?"] {
+            #expect(ConnectorIntent.detect(t)?.tool == "listGitHubRepos", Comment(rawValue: t))
+        }
+    }
+
     @Test func todoistReadsKeepTheirSearchWords() {
         #expect(ConnectorIntent.detect("What is on my Todoist today?") == .init(connector: "todoist", tool: "listTodoistTasks", arguments: ["search": ""]))
         #expect(ConnectorIntent.detect("Do I have a Todoist task about the bank?")?.arguments["search"] == "bank")
