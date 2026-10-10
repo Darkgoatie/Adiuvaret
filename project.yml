@@ -35,6 +35,8 @@ targets:
         product: Diagnostics
       - package: AdiuvaretPackages
         product: ModelLibrary
+      - package: AdiuvaretPackages
+        product: MemoryKit
       - package: MLXLM
         product: MLXLLM
       - package: MLXLM

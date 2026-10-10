@@ -64,7 +64,7 @@ struct RootView: View {
 
     @ViewBuilder private func destination(_ r: Route) -> some View {
         switch r {
-        case .memory: PlaceholderScreen(title: String(localized: "What I know about you"), icon: "brain.head.profile")
+        case .memory: MemoryView()
         case .notes, .note: PlaceholderScreen(title: String(localized: "Notes and Tasks"), icon: "note.text")
         case .briefings, .briefing: PlaceholderScreen(title: String(localized: "Briefings and Automations"), icon: "sun.max")
         case .approvalsInbox: PlaceholderScreen(title: String(localized: "Approvals"), icon: "checkmark.seal")

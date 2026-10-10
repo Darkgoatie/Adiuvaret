@@ -13,6 +13,7 @@ let package = Package(
         .library(name: "ToolKit", targets: ["ToolKit"]),
         .library(name: "Diagnostics", targets: ["Diagnostics"]),
         .library(name: "ModelLibrary", targets: ["ModelLibrary"]),
+        .library(name: "MemoryKit", targets: ["MemoryKit"]),
     ],
     targets: [
         .target(name: "AdiuvaretCore", path: "AdiuvaretCore/Sources"),
@@ -22,6 +23,8 @@ let package = Package(
         .target(name: "ToolKit", path: "ToolKit/Sources"),
         .target(name: "Diagnostics", path: "Diagnostics/Sources"),
         .target(name: "ModelLibrary", path: "ModelLibrary/Sources"),
+        .target(name: "MemoryKit", path: "MemoryKit/Sources"),
+        .testTarget(name: "MemoryKitTests", dependencies: ["MemoryKit"], path: "MemoryKit/Tests"),
         .testTarget(name: "ModelLibraryTests", dependencies: ["ModelLibrary"], path: "ModelLibrary/Tests"),
         .testTarget(name: "DiagnosticsTests", dependencies: ["Diagnostics"], path: "Diagnostics/Tests"),
         .testTarget(name: "ToolKitTests", dependencies: ["ToolKit"], path: "ToolKit/Tests"),

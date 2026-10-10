@@ -120,7 +120,7 @@ private struct ItemView: View {
             ApprovalCard(phase: p, title: t, rows: rows, actionsEnabled: service.banner != .killSwitch,
                          onApprove: { service.approve(id) }, onDeny: { service.deny(id) })
         case .draft(_, let k, let to, let t): DraftCard(kind: k, recipient: to, text: t)
-        case .memory(_, let t): MemoryChip(text: t)
+        case .memory(let id, let t): MemoryChip(text: t, onUndo: { service.undo(id) }, onWhy: {})
         case .error(_, let t): ErrorMessageRow(message: t, onRetry: { Task { await service.retry() } })
         }
     }

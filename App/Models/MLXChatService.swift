@@ -21,6 +21,8 @@ final class MLXChatService: ChatService {
     @ObservationIgnored private var session: ChatSession?
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var lastPrompt = ""
+    @ObservationIgnored private var memoryUndos: [UUID: UUID] = [:]
+    @ObservationIgnored private var memoryBlock = ""
 
     var modelName: String { ModelCatalog.model(modelID)?.name ?? modelID }
 
@@ -39,6 +41,15 @@ final class MLXChatService: ChatService {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !isGenerating, !trimmed.isEmpty else { return }
         items.append(.user(id: UUID(), text: trimmed))
+        switch MemoryHub.learn(from: trimmed) {
+        case .saved(let fact):
+            let id = UUID()
+            memoryUndos[id] = fact.id
+            items.append(.memory(id: id, text: fact.text))
+        case .full:
+            items.append(.error(id: UUID(), text: String(localized: "My memory is full. Open What I know about you in Advanced and delete something so I can remember new things.")))
+        case .none: break
+        }
         if title == String(localized: "New chat") { title = String(trimmed.prefix(40)) }
         lastPrompt = trimmed
         await run(trimmed)
@@ -53,7 +64,14 @@ final class MLXChatService: ChatService {
     func stop() { task?.cancel() }
     func approve(_ id: UUID) {}
     func deny(_ id: UUID) {}
-    func undo(_ id: UUID) {}
+    func undo(_ id: UUID) {
+        guard let factID = memoryUndos[id] else { return }
+        MemoryHub.store.remove(factID)
+        memoryUndos[id] = nil
+        items.removeAll { $0.id == id }
+        memoryBlock = ""
+        session = nil
+    }
 
     private func run(_ prompt: String) async {
         isGenerating = true
@@ -66,6 +84,8 @@ final class MLXChatService: ChatService {
             let clock = ContinuousClock()
             let start = clock.now
             do {
+                let block = MemoryHub.block(for: prompt)
+                if block != memoryBlock { memoryBlock = block; session = nil }
                 let chat = try await ensureSession()
                 let context = await gatherContext(for: prompt)
                 let message = context.map { Self.attach($0, to: prompt) } ?? prompt
@@ -176,7 +196,7 @@ final class MLXChatService: ChatService {
         var kept = ChatAlternation.normalize(turns).suffix(12)
         while kept.first?.isUser == false { kept.removeFirst() }
         let history = kept.map { $0.isUser ? Chat.Message.user($0.text) : Chat.Message.assistant($0.text) }
-        return [.system(Self.instructions())] + history
+        return [.system(Self.instructions() + memoryBlock)] + history
     }
 
     private static func instructions() -> String {
