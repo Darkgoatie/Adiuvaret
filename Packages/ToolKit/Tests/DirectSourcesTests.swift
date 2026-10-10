@@ -96,7 +96,54 @@ import Foundation
     }
 }
 
+@Suite struct SearchLoopTests {
+    @Test func queriesAreWrittenFromSentences() {
+        #expect(WebSearch.queryFrom("When is the next UCL matchday?") == "next UCL matchday")
+        #expect(WebSearch.queryFrom("Who is the CEO of Nvidia?") == "CEO Nvidia")
+        #expect(WebSearch.queryFrom("What is the capital of France") == "capital France")
+        #expect(WebSearch.queryFrom("is the") == "is the")
+    }
+
+    @Test func coverageDecidesWhenThePagesAreEnough() {
+        let good = ["The next UCL matchday is on 13 October with Arsenal vs Lille at 19:00 local time and Lens vs Sporting after that."]
+        #expect(SearchLoop.isEnough(query: "next UCL matchday", excerpts: good))
+        #expect(!SearchLoop.isEnough(query: "next UCL matchday", excerpts: []))
+        #expect(!SearchLoop.isEnough(query: "next UCL matchday", excerpts: ["A long text about gardening and tomatoes that has nothing to do with football at all, truly nothing."]))
+        #expect(!SearchLoop.isEnough(query: "next UCL matchday", excerpts: ["UCL"]))
+        #expect(SearchLoop.coverage(query: "next UCL matchday", excerpts: good) == 1)
+    }
+
+    @Test func laterRoundsChangeTheWords() {
+        #expect(SearchLoop.refine("next UCL matchday", round: 2, year: 2026) == "next UCL matchday 2026")
+        #expect(SearchLoop.refine("next UCL matchday 2026", round: 2, year: 2026) == "next UCL matchday 2026 latest")
+        #expect(SearchLoop.refine("next UCL matchday", round: 3, year: 2026) == "next UCL matchday official")
+        #expect(SearchLoop.refine("x", round: 4, year: 2026) == nil)
+    }
+
+    @Test func resultsWithPageTextComeFirst() throws {
+        func r(_ n: Int) -> SearchResult { SearchResult(title: "T\(n)", url: URL(string: "https://s\(n).com/")!, snippet: "") }
+        let picked = WebSearch.select(results: (0..<7).map(r), excerpts: [4: "four", 6: "six"], limit: 4)
+        #expect(picked.results.map(\\.title) == ["T4", "T6", "T0", "T1"], "\\(picked.results.map(\\.title))")
+        #expect(picked.excerpts == [0: "four", 1: "six"], "\\(picked.excerpts)")
+        #expect(WebSearch.select(results: [], excerpts: [:]).results.isEmpty)
+    }
+}
+
 @Suite struct PageExtractTests {
+    @Test func tableRowsAndListItemsAreRead() {
+        let html = "<table><tr><td>Arsenal vs Lille</td><td>Tue 13 Oct</td><td>19:00</td></tr><tr><td>x</td></tr></table><ul><li>Lens vs Sporting CP, Tue 13 Oct 16:45</li></ul>"
+        let text = PageExtract.excerpt(html: html, query: "arsenal lille lens sporting")
+        #expect(text.contains("Arsenal vs Lille Tue 13 Oct 19:00"), "\\(text)")
+        #expect(text.contains("Lens vs Sporting CP, Tue 13 Oct 16:45"), "\\(text)")
+    }
+
+    @Test func dataBlocksOfScriptDrivenPagesAreRead() {
+        let html = #"<script id="__NEXT_DATA__" type="application/json">{"props":{"fixtures":[{"t":"Arsenal v Lille kicks off Tuesday 13 October 19:00"},{"t":"Unrelated text about cooking pasta at home tonight"}]}}</script>"#
+        let text = PageExtract.excerpt(html: html, query: "arsenal lille kickoff")
+        #expect(text.contains("Arsenal v Lille kicks off"), "\\(text)")
+        #expect(!text.contains("pasta"), "\\(text)")
+    }
+
     private let page = """
     <html><head><title>T</title>
     <meta property="og:description" content="Real Betis host Osasuna on Sunday at 16:30 in La Liga.">

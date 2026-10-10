@@ -73,6 +73,10 @@ public enum DirectSources {
         (["fa cup"], "4482", "FA Cup"),
         (["world cup"], "4429", "FIFA World Cup")]
 
+    static let competitionWords: Set<String> = Set(competitions.flatMap(\.names).flatMap { $0.split(separator: " ").map(String.init) })
+        .union(["uefa", "european", "league", "english", "spanish", "german", "italian", "french", "turkish", "dutch", "portuguese"])
+    static let timeWords: Set<String> = ["weekend", "week", "month", "stage", "leg", "round", "midweek", "saturday", "sunday", "friday", "monday", "tuesday", "wednesday", "thursday"]
+
     private static let roundWords: Set<String> = ["matchday", "matchdays", "round", "fixtures", "fixture", "match", "matches", "game", "games", "schedule", "results", "result", "scores", "score", "play", "plays", "playing", "tonight", "today", "tomorrow", "next", "upcoming", "last", "latest", "when", "yesterday", "who", "won", "lost", "beat", "draw"]
 
     static func competitionRequest(_ text: String) -> Request? {
@@ -82,8 +86,7 @@ public enum DirectSources {
         guard !padded.contains(" conference league ") else { return nil }
         guard let comp = competitions.first(where: { c in c.names.contains { padded.contains(" " + $0 + " ") } }) else { return nil }
         // A question that names a team as well ("Real Madrid in the Champions League") is about that team, so the team lookup handles it.
-        let nameWords = Set(competitions.flatMap(\.names).flatMap { $0.split(separator: " ").map(String.init) })
-        let leftover = words.filter { !teamFillers.contains($0) && !roundWords.contains($0) && !nameWords.contains($0) && !lastWords.contains($0) && !nextWords.contains($0) && !["uefa", "european", "cup", "league", "english", "spanish", "german", "italian", "french", "turkish", "dutch", "portuguese"].contains($0) }
+        let leftover = words.filter { !teamFillers.contains($0) && !roundWords.contains($0) && !competitionWords.contains($0) && !lastWords.contains($0) && !nextWords.contains($0) && !timeWords.contains($0) }
         guard leftover.isEmpty else { return nil }
         let isLast = words.contains(where: { lastWords.contains($0) }) && !words.contains(where: { upcomingWords.contains($0) })
         return .competition(id: comp.id, name: comp.title, kind: isLast ? .last : .next)
@@ -155,7 +158,7 @@ public enum DirectSources {
               words.contains(where: { matchWords.contains($0) }),
               words.contains(where: { nextWords.contains($0) || lastWords.contains($0) }) else { return nil }
         let isNext = words.contains(where: { upcomingWords.contains($0) }) || !words.contains(where: { lastWords.contains($0) })
-        let name = words.filter { !teamFillers.contains($0) && !matchWords.contains($0) && !nextWords.contains($0) && !lastWords.contains($0) }
+        let name = words.filter { !teamFillers.contains($0) && !matchWords.contains($0) && !nextWords.contains($0) && !lastWords.contains($0) && !competitionWords.contains($0) }
             .prefix(4).joined(separator: " ")
         return name.isEmpty ? nil : .team(name: name, kind: isNext ? .next : .last)
     }

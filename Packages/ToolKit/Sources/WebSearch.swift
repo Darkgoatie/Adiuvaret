@@ -21,6 +21,30 @@ public enum WebSearch {
     public static let maxResultsPerSite = 2
     static let maxURLLength = 200
 
+    private static let questionWords: Set<String> = [
+        "when", "what", "whats", "where", "which", "who", "whom", "how", "is", "are", "was", "were", "does", "did", "do", "the", "a", "an", "of",
+        "me", "tell", "give", "show", "please", "can", "you", "i", "to", "for", "in", "on", "at", "it", "my", "and", "about", "this", "that",
+        "could", "would", "will", "be", "there", "any", "some", "find", "get", "look", "up", "out", "search"]
+
+    /// Search words from a whole sentence: question words and fillers dropped, the rest kept in order and in its own case.
+    public static func queryFrom(_ prompt: String) -> String {
+        let words = prompt.split(whereSeparator: { !($0.isLetter || $0.isNumber) }).map(String.init)
+        let kept = words.filter { !questionWords.contains($0.lowercased()) }.prefix(8)
+        return kept.isEmpty ? cleanQuery(prompt) : kept.joined(separator: " ")
+    }
+
+    /// Results that came with page text first, then the rest in search order, cut to `limit`. Excerpt keys follow the new order.
+    public static func select(results: [SearchResult], excerpts: [Int: String], limit: Int = maxResults) -> (results: [SearchResult], excerpts: [Int: String]) {
+        let order = results.indices.sorted { (excerpts[$0] == nil ? 1 : 0, $0) < (excerpts[$1] == nil ? 1 : 0, $1) }
+        var picked: [SearchResult] = []
+        var pages: [Int: String] = [:]
+        for (n, i) in order.prefix(limit).enumerated() {
+            picked.append(results[i])
+            if let text = excerpts[i] { pages[n] = text }
+        }
+        return (picked, pages)
+    }
+
     public static func cleanQuery(_ raw: String) -> String {
         let flat = raw.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
         return String(flat.prefix(maxQueryLength)).trimmingCharacters(in: .whitespaces)

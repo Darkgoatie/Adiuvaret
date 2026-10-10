@@ -26,7 +26,10 @@ public enum PageExtract {
         var parts: [String] = []
         if let meta = metaDescription(html) { parts.append(meta) }
         parts += facts(html)
-        parts += passages(html, terms: terms(query))
+        let words = terms(query)
+        let found = passages(html, terms: words)
+        parts += found
+        if found.count < 2 { parts += embedded(html, terms: words) }
         var seen = Set<String>()
         let unique = parts.filter { seen.insert(String($0.lowercased().prefix(40))).inserted }
         return SnapshotFormat.clip(unique.joined(separator: " | "), limit)
@@ -85,13 +88,42 @@ public enum PageExtract {
         }
     }
 
+    /// Text held in a page's data blocks (such as __NEXT_DATA__), for sites that fill their pages in with JavaScript.
+    static func embedded(_ html: String, terms: [String]) -> [String] {
+        guard !terms.isEmpty else { return [] }
+        var out: [String] = []
+        for m in groups(#"<script[^>]*(?:id="__NEXT_DATA__"|type="application/json")[^>]*>(.*?)</script>"#, in: html) {
+            guard let data = m[1].data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: data) else { continue }
+            var budget = 6000
+            walk(json, terms, &out, &budget)
+            if out.count >= 2 { break }
+        }
+        return Array(out.prefix(2).map { SnapshotFormat.clip($0, 220) })
+    }
+
+    private static func walk(_ node: Any, _ terms: [String], _ out: inout [String], _ budget: inout Int) {
+        guard budget > 0, out.count < 4 else { return }
+        budget -= 1
+        if let s = node as? String {
+            let t = WebSearch.clean(s)
+            guard t.count >= 20, t.count <= 300 else { return }
+            let lower = t.lowercased()
+            if terms.filter({ lower.contains($0) }).count >= min(2, terms.count) { out.append(t) }
+        } else if let list = node as? [Any] {
+            for item in list { walk(item, terms, &out, &budget) }
+        } else if let dict = node as? [String: Any] {
+            for key in dict.keys.sorted() { if let v = dict[key] { walk(v, terms, &out, &budget) } }
+        }
+    }
+
     static func passages(_ html: String, terms: [String]) -> [String] {
         let body = html.replacingOccurrences(of: #"<(script|style|noscript|svg|nav|footer|header|form|aside)\b.*?</\1>"#, with: " ",
                                              options: [.regularExpression, .caseInsensitive])
         var rows: [(index: Int, text: String, score: Int)] = []
-        for (i, m) in groups(#"<p(?:\s[^>]*)?>(.*?)</p>"#, in: body).enumerated() {
-            let text = WebSearch.clean(m[1])
-            guard text.count >= 50, text.count <= 1500 else { continue }
+        for (i, m) in groups(#"<(p|li|tr|h2|h3|dd)(?:\s[^>]*)?>(.*?)</\1>"#, in: body).enumerated() {
+            let inner = m[2].replacingOccurrences(of: #"</t[dh]>"#, with: " ", options: [.regularExpression, .caseInsensitive])
+            let text = WebSearch.clean(inner)
+            guard text.count >= (m[1].lowercased() == "p" ? 50 : 25), text.count <= 1500 else { continue }
             let lower = text.lowercased()
             if lower.contains("cookie") || lower.contains("privacy policy") || lower.contains("all rights reserved") { continue }
             rows.append((i, text, terms.filter { lower.contains($0) }.count))
