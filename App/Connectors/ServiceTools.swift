@@ -79,7 +79,7 @@ struct SearchNotionExecutor: ToolExecutor {
 
 // MARK: tools the model sees
 
-private func serviceRead(_ gate: PolicyGate, _ ctx: TaskContext, _ reporter: any ToolReporter, name: String, json: [String: Any],
+func serviceRead(_ gate: PolicyGate, _ ctx: TaskContext, _ reporter: any ToolReporter, name: String, json: [String: Any],
                          running: String, done: (Int) -> String) async -> String {
     let id = UUID()
     await reporter.toolStarted(id, title: running)
