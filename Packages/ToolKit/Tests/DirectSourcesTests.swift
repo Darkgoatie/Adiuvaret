@@ -123,8 +123,8 @@ import Foundation
     @Test func resultsWithPageTextComeFirst() throws {
         func r(_ n: Int) -> SearchResult { SearchResult(title: "T\(n)", url: URL(string: "https://s\(n).com/")!, snippet: "") }
         let picked = WebSearch.select(results: (0..<7).map(r), excerpts: [4: "four", 6: "six"], limit: 4)
-        #expect(picked.results.map(\.title) == ["T4", "T6", "T0", "T1"], "\\(picked.results.map(\.title))")
-        #expect(picked.excerpts == [0: "four", 1: "six"], "\\(picked.excerpts)")
+        #expect(picked.results.map(\.title) == ["T4", "T6", "T0", "T1"], "\(picked.results.map(\.title))")
+        #expect(picked.excerpts == [0: "four", 1: "six"], "\(picked.excerpts)")
         #expect(WebSearch.select(results: [], excerpts: [:]).results.isEmpty)
     }
 }
@@ -133,15 +133,15 @@ import Foundation
     @Test func tableRowsAndListItemsAreRead() {
         let html = "<table><tr><td>Arsenal vs Lille</td><td>Tue 13 Oct</td><td>19:00</td></tr><tr><td>x</td></tr></table><ul><li>Lens vs Sporting CP, Tue 13 Oct 16:45</li></ul>"
         let text = PageExtract.excerpt(html: html, query: "arsenal lille lens sporting")
-        #expect(text.contains("Arsenal vs Lille Tue 13 Oct 19:00"), "\\(text)")
-        #expect(text.contains("Lens vs Sporting CP, Tue 13 Oct 16:45"), "\\(text)")
+        #expect(text.contains("Arsenal vs Lille Tue 13 Oct 19:00"), "\(text)")
+        #expect(text.contains("Lens vs Sporting CP, Tue 13 Oct 16:45"), "\(text)")
     }
 
     @Test func dataBlocksOfScriptDrivenPagesAreRead() {
         let html = #"<script id="__NEXT_DATA__" type="application/json">{"props":{"fixtures":[{"t":"Arsenal v Lille kicks off Tuesday 13 October 19:00"},{"t":"Unrelated text about cooking pasta at home tonight"}]}}</script>"#
         let text = PageExtract.excerpt(html: html, query: "arsenal lille kickoff")
-        #expect(text.contains("Arsenal v Lille kicks off"), "\\(text)")
-        #expect(!text.contains("pasta"), "\\(text)")
+        #expect(text.contains("Arsenal v Lille kicks off"), "\(text)")
+        #expect(!text.contains("pasta"), "\(text)")
     }
 
     private let page = """
