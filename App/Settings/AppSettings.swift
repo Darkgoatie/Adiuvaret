@@ -13,6 +13,7 @@ enum LiveEngine {
 final class AppSettings {
     static let shared = AppSettings()
     private static let actionsOffKey = "settings.actionsOff"
+    private static let strictKey = "settings.strictWeb"
 
     var actionsOff: Bool {
         didSet {
@@ -22,7 +23,13 @@ final class AppSettings {
         }
     }
 
+    /// When on, opening a website the chat has not visited yet needs the user's approval.
+    var strictWeb: Bool {
+        didSet { UserDefaults.standard.set(strictWeb, forKey: Self.strictKey) }
+    }
+
     private init() {
+        strictWeb = UserDefaults.standard.bool(forKey: Self.strictKey)
         let stored = UserDefaults.standard.bool(forKey: Self.actionsOffKey)
         actionsOff = stored
         Task { await LiveEngine.shared.setKillSwitch(stored) }

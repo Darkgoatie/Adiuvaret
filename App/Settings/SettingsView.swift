@@ -33,6 +33,14 @@ struct SettingsView: View {
             } header: { Text("Browser") } footer: {
                 Text("Signs you out of every website the assistant opened and removes cookies and saved site data.").font(DS.Typography.caption)
             }
+            Section {
+                Toggle(isOn: Binding(get: { AppSettings.shared.strictWeb }, set: { AppSettings.shared.strictWeb = $0 })) {
+                    Text("Ask before opening new sites").font(DS.Typography.body)
+                }
+                .frame(minHeight: 44).accessibilityIdentifier("settings.strictWeb")
+            } footer: {
+                Text("Searching stays automatic. With this on, the assistant asks before it opens a website it has not visited in that chat.").font(DS.Typography.caption)
+            }
             Section("Testing") {
                 NavigationLink("Diagnostics") { DiagnosticsView() }
                 NavigationLink("Spike") { SpikeView() }

@@ -47,7 +47,7 @@ struct LiveListRemindersTool: Tool {
         let outcome = await gate.run(ToolCall(toolName: name, argumentsJSON: String(decoding: data, as: UTF8.self)), in: ctx.callContext())
         switch outcome {
         case .executed(let out):
-            ctx.markUntrusted()
+            ctx.markUntrusted(); ctx.notePrivate(out)
             let lines = out.split(separator: "\n").map(String.init).filter { !$0.hasPrefix("(") && !$0.contains(" open reminders.") && !$0.hasPrefix("No open") }
             let title = lines.isEmpty ? String(localized: "Looked at reminders · none open") : String(localized: "Looked at reminders · \(lines.count) open")
             await reporter.toolFinished(id, title: title, details: lines, failed: false)

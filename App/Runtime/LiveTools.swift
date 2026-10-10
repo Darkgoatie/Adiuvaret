@@ -12,8 +12,13 @@ final class TaskContext: @unchecked Sendable {
     private var taskID = UUID()
     private var untrusted = false
     private var personal = false
+    private var userMessage = ""
+    private var privateText = ""
 
-    func beginTask() { lock.lock(); taskID = UUID(); untrusted = false; personal = false; lock.unlock() }
+    func beginTask(message: String = "") { lock.lock(); taskID = UUID(); untrusted = false; personal = false; userMessage = message; privateText = ""; lock.unlock() }
+    /// Calendar or reminder text read in this task, kept only to stop it reaching a search.
+    func notePrivate(_ text: String) { lock.lock(); privateText += " " + text.prefix(4000); lock.unlock() }
+    func scrub(_ query: String) -> QueryScrubber.Result { lock.lock(); defer { lock.unlock() }; return QueryScrubber.scrub(query: query, userMessage: userMessage, privateText: privateText) }
     /// `personal` is true for calendar and reminder content, false for web pages.
     func markUntrusted(personal: Bool = true) { lock.lock(); untrusted = true; if personal { self.personal = true }; lock.unlock() }
     func sawPersonalData() -> Bool { lock.lock(); defer { lock.unlock() }; return personal }
@@ -49,10 +54,12 @@ enum LiveDescriptors {
     static let openWebsite = ToolDescriptor(name: "openWebsite", summary: "Opens a website.", permission: .readOnly, outputSensitivity: .personal)
     static let lookAtPage = ToolDescriptor(name: "lookAtPage", summary: "Reads the open page.", permission: .readOnly, outputSensitivity: .personal)
     static let actOnPage = ToolDescriptor(name: "actOnPage", summary: "Clicks or types on the open page.", permission: .readOnly, outputSensitivity: .personal)
+    /// Opening a site the chat has not visited, with strict mode on. Always asks.
+    static let openOtherSite = ToolDescriptor(name: "openOtherSite", summary: "Opens a different website.", permission: .reversibleWrite, outputSensitivity: .personal)
     /// A click that could buy, send, delete or sign in. Always asks and cannot be undone.
     static let actOnPageRisky = ToolDescriptor(name: "actOnPageRisky", summary: "Does something on a page that cannot be undone.", permission: .irreversible, outputSensitivity: .personal)
     static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
-                      searchWeb, openWebsite, lookAtPage, actOnPage, actOnPageRisky]
+                      searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky]
 }
 
 enum CalendarRange {
@@ -144,7 +151,7 @@ struct LiveReadCalendarTool: Tool {
         let outcome = await gate.run(ToolCall(toolName: name, argumentsJSON: json), in: ctx.callContext())
         switch outcome {
         case .executed(let out):
-            ctx.markUntrusted()
+            ctx.markUntrusted(); ctx.notePrivate(out)
             let all = out.split(separator: "\n").map(String.init)
             let lines = all.filter { !$0.hasPrefix("Checked") && !$0.hasPrefix("No events") && !$0.hasPrefix("(") }.map { l in
                 l.split(separator: " ", maxSplits: 1).dropFirst().first.map(String.init) ?? l

@@ -115,7 +115,7 @@ struct SearchWebExecutor: ToolExecutor {
     }
 
     func execute(_ call: ToolCall) async throws -> String {
-        let asked = WebSearch.cleanQuery((CalendarStore.args(call)["query"] as? String) ?? "")
+        let asked = WebSearch.cleanQuery(QueryScrubber.scrub(query: (CalendarStore.args(call)["query"] as? String) ?? "", userMessage: (CalendarStore.args(call)["query"] as? String) ?? "").query)
         guard !asked.isEmpty else { return "Not done: no search words were given." }
         if let name = Weather.place(in: asked), let report = await Self.weather(for: name) { return report }
         if let request = DirectSources.request(for: asked) {
@@ -291,7 +291,9 @@ struct LiveSearchWebTool: Tool {
 
     func call(arguments a: Arguments) async throws -> String {
         let rowID = UUID()
-        let query = WebSearch.cleanQuery(a.query)
+        let scrubbed = ctx.scrub(WebSearch.cleanQuery(a.query))
+        if scrubbed.changed { DiagnosticsLog.shared.record("web search", "removed \(scrubbed.removed.count) private words from the search") }
+        let query = WebSearch.cleanQuery(scrubbed.query)
         await reporter.toolStarted(rowID, title: String(localized: "Searching the web…"))
         guard !query.isEmpty else {
             await reporter.toolFinished(rowID, title: String(localized: "No search words"), details: [], failed: true)
@@ -343,7 +345,10 @@ struct LiveOpenWebsiteTool: Tool {
             return "Not done: \(why)"
         case .allowed(let url):
             let host = WebPolicy.host(of: url)
-            return await runWebStep(gate, ctx, reporter, name: "openWebsite", json: ["url": url.absoluteString],
+            let strict = await MainActor.run { AppSettings.shared.strictWeb }
+            let known = await WebSession.shared.isAllowedHost(host, chat: ctx.chatID)
+            let tool = (strict && !known) ? "openOtherSite" : "openWebsite"
+            return await runWebStep(gate, ctx, reporter, name: tool, json: ["url": url.absoluteString],
                                     title: String(localized: "Opening \(host)…"), rowID: rowID)
         }
     }

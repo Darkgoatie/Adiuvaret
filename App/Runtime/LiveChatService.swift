@@ -54,7 +54,7 @@ final class LiveChatService: ChatService {
                                          "createReminder": LiveReminderExecutor(reporter: bridge),
                                          "listReminders": ListRemindersExecutor(),
                                          "searchWeb": SearchWebExecutor(),
-                                         "openWebsite": OpenWebsiteExecutor(),
+                                         "openWebsite": OpenWebsiteExecutor(), "openOtherSite": OpenWebsiteExecutor(),
                                          "lookAtPage": LookAtPageExecutor(),
                                          "actOnPage": ActOnPageExecutor(), "actOnPageRisky": ActOnPageExecutor()])
         let all: [String: any Tool] = [
@@ -127,7 +127,7 @@ final class LiveChatService: ChatService {
 
     private func run(_ prompt: String) async {
         isGenerating = true
-        ctx.beginTask()
+        ctx.beginTask(message: prompt)
         var prior = items
         if case .user? = prior.last { prior.removeLast() }
         let routeID = UUID()
@@ -285,6 +285,10 @@ final class LiveChatService: ChatService {
         case "deleteEvent":
             title = String(localized: "Delete this event?")
             rows = [DetailRow(String(localized: "Event"), eventName(args["event"])), DetailRow(String(localized: "Note"), String(localized: "This can't be undone."))]
+        case "openOtherSite":
+            title = String(localized: "Open another website?")
+            rows = [DetailRow(String(localized: "Site"), WebPolicy.normalize((args["url"] as? String) ?? "").hostText),
+                    DetailRow(String(localized: "Why I'm asking"), String(localized: "You asked to confirm new sites."))]
         case "actOnPageRisky":
             title = String(localized: "Do this on the page?")
             let element = WebSession.shared.element((args["element"] as? Int) ?? 0)
