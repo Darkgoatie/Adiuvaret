@@ -7,6 +7,7 @@ struct ModelsView: View {
     let settings = ModelSettings.shared
     let use: (String) -> Void
     @State private var confirming: LocalModel?
+    @State private var onCellular: LocalModel?
 
     var body: some View {
         List {
@@ -29,9 +30,36 @@ struct ModelsView: View {
         .navigationTitle(String(localized: "Models"))
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $confirming) { model in
-            LicenseSheet(model: model) { settings.download(model); confirming = nil } cancel: { confirming = nil }
+            LicenseSheet(model: model) { confirming = nil; begin(model) } cancel: { confirming = nil }
                 .presentationDetents([.medium])
         }
+        .confirmationDialog(String(localized: "Download over cellular?"), isPresented: Binding(get: { onCellular != nil }, set: { if !$0 { onCellular = nil } }), titleVisibility: .visible, presenting: onCellular) { model in
+            Button("Download anyway") { settings.download(model) }
+            Button("Cancel", role: .cancel) {}
+        } message: { model in
+            Text("You are not on Wi-Fi. This will use about \(sizeText(model)) of mobile data.")
+        }
+    }
+
+    /// Starts or resumes a download, asking first when the connection is cellular, a hotspot or in Low Data Mode.
+    private func begin(_ model: LocalModel) {
+        Task {
+            let net = await NetworkCheck.current()
+            let left = remaining(model)
+            if CellularPolicy.needsWarning(isExpensive: net.isExpensive, isConstrained: net.isConstrained, remainingBytes: left) {
+                onCellular = model
+            } else {
+                settings.download(model)
+            }
+        }
+    }
+
+    private func remaining(_ model: LocalModel) -> Int64 {
+        CellularPolicy.remainingBytes(sizeBytes: model.sizeBytes, fraction: ModelStore.pendingFraction(model.id) ?? 0)
+    }
+
+    private func sizeText(_ model: LocalModel) -> String {
+        ByteCountFormatter.string(fromByteCount: remaining(model), countStyle: .file)
     }
 
     private var appleRow: some View {
@@ -88,12 +116,12 @@ struct ModelsView: View {
         case .downloading:
             Button("Pause") { settings.pause(model.id) }.foregroundStyle(DS.Colors.accentText).frame(minHeight: 44)
         case .paused:
-            Button("Resume") { settings.download(model) }.foregroundStyle(DS.Colors.accentText).frame(minHeight: 44)
+            Button("Resume") { begin(model) }.foregroundStyle(DS.Colors.accentText).frame(minHeight: 44)
         case .idle, .failed:
             if installed { trailingUse(id: model.id) }
             else {
                 Button(settings.state(model.id) == .idle ? "Download" : "Retry") {
-                    if model.needsLicenseNotice { confirming = model } else { settings.download(model) }
+                    if model.needsLicenseNotice { confirming = model } else { begin(model) }
                 }
                 .foregroundStyle(DS.Colors.accentText).frame(minHeight: 44)
             }
