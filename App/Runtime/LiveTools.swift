@@ -14,9 +14,12 @@ final class TaskContext: @unchecked Sendable {
     private var personal = false
     private var userMessage = ""
     private var privateText = ""
+    private var ran: [String] = []
 
-    func beginTask(message: String = "") { lock.lock(); taskID = UUID(); untrusted = false; personal = false; userMessage = message; privateText = ""; lock.unlock() }
+    func beginTask(message: String = "") { lock.lock(); ran = []; taskID = UUID(); untrusted = false; personal = false; userMessage = message; privateText = ""; lock.unlock() }
     /// Calendar or reminder text read in this task, kept only to stop it reaching a search.
+    func noteRan(_ tool: String) { lock.lock(); ran.append(tool); lock.unlock() }
+    func toolsRan() -> [String] { lock.lock(); defer { lock.unlock() }; return ran }
     func notePrivate(_ text: String) { lock.lock(); privateText += " " + text.prefix(4000); lock.unlock() }
     func scrub(_ query: String) -> QueryScrubber.Result { lock.lock(); defer { lock.unlock() }; return QueryScrubber.scrub(query: query, userMessage: userMessage, privateText: privateText) }
     /// `personal` is true for calendar and reminder content, false for web pages.
@@ -209,5 +212,16 @@ struct LiveCreateReminderTool: Tool {
         case .blocked(let r): return "Not done: \(r). Tell the user nothing was created."
         case .failed(let m): return "Failed: \(m)"
         }
+    }
+}
+
+/// Remembers which tools finished without failing, for the skill offer. It never looks at arguments or results.
+struct RecordingExecutor: ToolExecutor {
+    let inner: any ToolExecutor
+    let ctx: TaskContext
+    func execute(_ call: ToolCall) async throws -> String {
+        let out = try await inner.execute(call)
+        if !out.hasPrefix("Not done"), !out.hasPrefix("Failed"), !out.hasPrefix("No ") { ctx.noteRan(call.toolName) }
+        return out
     }
 }

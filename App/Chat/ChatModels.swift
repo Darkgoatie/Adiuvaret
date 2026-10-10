@@ -17,12 +17,13 @@ enum ThreadItem: Identifiable {
     case approval(id: UUID, phase: ApprovalCard.Phase, title: String, rows: [DetailRow])
     case draft(id: UUID, kind: DraftCard.Kind, to: String, text: String)
     case memory(id: UUID, text: String)
+    case skillOffer(id: UUID, phase: SkillOfferCard.Phase, title: String)
     case error(id: UUID, text: String)
 
     var id: UUID {
         switch self {
         case .user(let i, _), .assistant(let i, _, _), .tool(let i, _, _, _), .action(let i, _, _, _, _),
-             .approval(let i, _, _, _), .draft(let i, _, _, _), .memory(let i, _), .error(let i, _): i
+             .approval(let i, _, _, _), .draft(let i, _, _, _), .memory(let i, _), .skillOffer(let i, _, _), .error(let i, _): i
         }
     }
 }

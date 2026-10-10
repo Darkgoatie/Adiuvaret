@@ -84,7 +84,7 @@ final class MLXChatService: ChatService {
             let clock = ContinuousClock()
             let start = clock.now
             do {
-                let block = MemoryHub.block(for: prompt)
+                let block = [MemoryHub.block(for: prompt), SkillHub.block(for: prompt)].filter { !$0.isEmpty }.joined(separator: "\n")
                 if block != memoryBlock { memoryBlock = block; session = nil }
                 let chat = try await ensureSession()
                 let context = await gatherContext(for: prompt)

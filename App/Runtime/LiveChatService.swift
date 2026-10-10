@@ -23,6 +23,7 @@ final class LiveChatService: ChatService {
     @ObservationIgnored private var pending: [UUID: CheckedContinuation<ApprovalResponse, Never>] = [:]
     @ObservationIgnored private var undos: [UUID: UndoAction] = [:]
     @ObservationIgnored private var memoryUndos: [UUID: UUID] = [:]
+    @ObservationIgnored private var skillOffers: [UUID: SkillHub.Offer] = [:]
     @ObservationIgnored private var memoryBlock = ""
     @ObservationIgnored private let handles = EventHandles()
     @ObservationIgnored private var useReasoning = !UserDefaults.standard.bool(forKey: "reasoning.unsupported")
@@ -47,8 +48,7 @@ final class LiveChatService: ChatService {
 
     private func makeSession(history: [ThreadItem] = [], toolIDs: [String]) -> LanguageModelSession {
         let bridge = Bridge(service: self)
-        let gate = PolicyGate(engine: engine, approvals: bridge,
-                              executors: ["readCalendar": LiveCalendarExecutor(handles: handles),
+        let rawExecutors: [String: any ToolExecutor] = ["readCalendar": LiveCalendarExecutor(handles: handles),
                                          "findFreeTime": FreeTimeExecutor(),
                                          "createEvent": CreateEventExecutor(reporter: bridge),
                                          "moveEvent": MoveEventExecutor(reporter: bridge, handles: handles),
@@ -63,7 +63,8 @@ final class LiveChatService: ChatService {
                                          "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
                                          "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
-                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor()])
+                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor()]
+        let gate = PolicyGate(engine: engine, approvals: bridge, executors: rawExecutors.mapValues { RecordingExecutor(inner: $0, ctx: ctx) as any ToolExecutor })
         let all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
             "findFreeTime": LiveFreeTimeTool(gate: gate, ctx: ctx),
@@ -156,7 +157,7 @@ final class LiveChatService: ChatService {
     private func run(_ prompt: String) async {
         isGenerating = true
         ctx.beginTask(message: prompt)
-        let block = MemoryHub.block(for: prompt)
+        let block = [MemoryHub.block(for: prompt), SkillHub.block(for: prompt)].filter { !$0.isEmpty }.joined(separator: "\n")
         ctx.notePrivate(block)
         if block != memoryBlock { memoryBlock = block; session = nil }
         var prior = items
@@ -215,6 +216,7 @@ final class LiveChatService: ChatService {
         }
         task = work
         await work.value
+        offerSkill(for: prompt)
         isGenerating = false
     }
 
@@ -270,8 +272,31 @@ final class LiveChatService: ChatService {
         pending.removeAll()
     }
 
-    func approve(_ id: UUID) { resolve(id, .approved) }
-    func deny(_ id: UUID) { resolve(id, .denied) }
+    func approve(_ id: UUID) {
+        if let offer = skillOffers.removeValue(forKey: id) {
+            let saved = SkillHub.save(title: offer.title, whenToUse: offer.title, playbook: offer.playbook)
+            setOffer(id, saved ? .saved : .dismissed, offer.title)
+            return
+        }
+        resolve(id, .approved)
+    }
+
+    func deny(_ id: UUID) {
+        if let offer = skillOffers.removeValue(forKey: id) { setOffer(id, .dismissed, offer.title); return }
+        resolve(id, .denied)
+    }
+
+    private func setOffer(_ id: UUID, _ phase: SkillOfferCard.Phase, _ title: String) {
+        if let i = items.firstIndex(where: { $0.id == id }) { items[i] = .skillOffer(id: id, phase: phase, title: title) }
+    }
+
+    /// After a task that used two or more different tools, asks whether to keep the steps. Nothing is saved until the user taps Save.
+    private func offerSkill(for prompt: String) {
+        guard let offer = SkillHub.offer(message: prompt, tools: ctx.toolsRan()) else { return }
+        let id = UUID()
+        skillOffers[id] = offer
+        items.append(.skillOffer(id: id, phase: .offered, title: offer.title))
+    }
 
     private func resolve(_ id: UUID, _ r: ApprovalResponse) {
         guard let cont = pending.removeValue(forKey: id) else { return }

@@ -34,6 +34,7 @@ enum ThreadItemCoding {
             switch p { case .approved: f.phase = "approved"; case .denied: f.phase = "denied"; default: f.phase = "timedOut" }
         case .draft(_, let k, let to, let t): kind = "draft"; f.text = t; f.to = to; f.draftKind = k == .mail ? "mail" : "message"
         case .memory(_, let t): kind = "memory"; f.text = t
+        case .skillOffer(_, let p, let t): kind = "skillOffer"; f.title = t; f.phase = p == .saved ? "saved" : "dismissed"
         case .error(_, let t): kind = "error"; f.text = t
         }
         guard let data = try? JSONEncoder().encode(f) else { return nil }
@@ -54,6 +55,7 @@ enum ThreadItemCoding {
             return .approval(id: s.id, phase: p, title: f.title ?? "", rows: (f.rows ?? []).map { DetailRow($0.label, $0.value) })
         case "draft": return .draft(id: s.id, kind: f.draftKind == "mail" ? .mail : .message, to: f.to ?? "", text: f.text ?? "")
         case "memory": return .memory(id: s.id, text: f.text ?? "")
+        case "skillOffer": return .skillOffer(id: s.id, phase: f.phase == "saved" ? .saved : .dismissed, title: f.title ?? "")
         case "error": return .error(id: s.id, text: f.text ?? "")
         default: return nil
         }

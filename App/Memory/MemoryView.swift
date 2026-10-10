@@ -5,12 +5,14 @@ import MemoryKit
 /// "What I know about you": every saved fact, editable and deletable.
 struct MemoryView: View {
     @State private var facts: [MemoryFact] = MemoryHub.store.all()
+    @State private var skills: [Skill] = SkillHub.store.all()
     @State private var editing: MemoryFact?
     @State private var draft = ""
     @State private var confirmClear = false
 
     var body: some View {
         List {
+            skillsSection
             if facts.isEmpty {
                 Text("Nothing yet. When you tell me something about yourself, such as where you live or what you like, I keep it here and you can change or delete it.")
                     .font(DS.Typography.body).foregroundStyle(DS.Colors.textSecondary)
@@ -51,7 +53,31 @@ struct MemoryView: View {
         } message: { Text("All saved facts will be deleted.") }
     }
 
-    private func reload() { facts = MemoryHub.store.all() }
+    private func reload() { facts = MemoryHub.store.all(); skills = SkillHub.store.all() }
+
+    @ViewBuilder private var skillsSection: some View {
+        if !skills.isEmpty {
+            Section {
+                ForEach(skills) { skill in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(isOn: Binding(get: { skill.enabled }, set: { SkillHub.store.setEnabled(skill.id, $0); reload() })) {
+                            Text(verbatim: skill.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
+                        }
+                        Text(verbatim: skill.playbook).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
+                    }
+                    .frame(minHeight: 44).accessibilityIdentifier("memory.skill")
+                }
+                .onDelete { offsets in
+                    for i in offsets { SkillHub.store.remove(skills[i].id) }
+                    reload()
+                }
+            } header: {
+                Text("Routines")
+            } footer: {
+                Text("\(skills.count) of \(SkillLimits.maxSkills) routines. They only guide the steps. I still ask before anything changes. Swipe to delete.")
+            }
+        }
+    }
 }
 
 #Preview { NavigationStack { MemoryView() } }
