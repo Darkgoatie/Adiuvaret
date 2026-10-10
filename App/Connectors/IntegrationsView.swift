@@ -8,6 +8,10 @@ struct IntegrationsView: View {
     @State private var picking = false
     @State private var folder = NoteVault.shared.folderName
     @State private var failed = false
+    @State private var tokenFor: Connector?
+    @State private var tokenText = ""
+    @State private var tokenRejected = false
+    @State private var connected: Set<String> = Set(ServiceHost.hosts.keys.filter { SecretStore.has($0) })
 
     var body: some View {
         List {
@@ -21,6 +25,7 @@ struct IntegrationsView: View {
                     row(String(localized: "Changes"), connector.changes)
                     row(String(localized: "Network"), connector.network)
                     if connector.id == "notes" { folderRow }
+                    if ServiceHost.hosts[connector.id] != nil { tokenRow(connector) }
                 }
             }
         }
@@ -28,6 +33,13 @@ struct IntegrationsView: View {
         .background(DS.Colors.background)
         .navigationTitle(String(localized: "Integrations"))
         .navigationBarTitleDisplayMode(.inline)
+        .alert(String(localized: "Paste your token"), isPresented: Binding(get: { tokenFor != nil }, set: { if !$0 { tokenFor = nil; tokenText = "" } })) {
+            SecureField("Token", text: $tokenText)
+            Button("Save") { saveToken() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("It is stored in this iPhone's Keychain and only sent to \(tokenFor.flatMap { ServiceHost.hosts[$0.id] } ?? "the service").")
+        }
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { result in
             guard case .success(let url) = result else { return }
             do { try NoteVault.shared.connect(url); folder = NoteVault.shared.folderName; failed = false } catch { failed = true }
@@ -40,6 +52,29 @@ struct IntegrationsView: View {
             Text(verbatim: value).font(DS.Typography.subheadline).foregroundStyle(DS.Colors.textPrimary)
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder private func tokenRow(_ connector: Connector) -> some View {
+        Button { tokenFor = connector; tokenRejected = false } label: {
+            Text(connected.contains(connector.id) ? String(localized: "Replace token") : String(localized: "Paste token"))
+                .font(DS.Typography.body).foregroundStyle(DS.Colors.accentText).frame(minHeight: 44, alignment: .leading)
+        }
+        .accessibilityIdentifier("integration.\(connector.id).token")
+        if connected.contains(connector.id) {
+            Button(String(localized: "Remove token"), role: .destructive) { SecretStore.delete(connector.id); connected.remove(connector.id) }.frame(minHeight: 44)
+        }
+        if tokenRejected, tokenFor == nil { Text("That does not look like a token.").font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
+    }
+
+    private func saveToken() {
+        guard let connector = tokenFor else { return }
+        let token = ServiceToken.clean(tokenText)
+        tokenText = ""
+        tokenFor = nil
+        guard ServiceToken.isPlausible(token), SecretStore.save(token, for: connector.id) else { tokenRejected = true; return }
+        connected.insert(connector.id)
+        states[connector.id] = true
+        ConnectorCatalog.setOn(true, connector.id)
     }
 
     @ViewBuilder private var folderRow: some View {

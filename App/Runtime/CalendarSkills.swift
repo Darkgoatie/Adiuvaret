@@ -155,6 +155,8 @@ enum EventUndo {
             return (try? store.save(e, span: .thisEvent, commit: true)) != nil
         case .removeReminder(let id):
             return await ReminderUndo.remove(id: id)
+        case .removeTodoist(let id):
+            return (try? await ServiceClient.send(ServiceRequest.todoistDelete(id: id), to: "todoist")) != nil
         }
     }
 }

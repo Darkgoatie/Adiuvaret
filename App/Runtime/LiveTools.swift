@@ -40,6 +40,7 @@ enum UndoAction: Sendable {
     case removeReminder(id: String)
     case removeEvent(id: String)
     case restoreEvent(id: String, start: Date, end: Date)
+    case removeTodoist(id: String)
 }
 
 enum LiveDescriptors {
@@ -64,9 +65,14 @@ enum LiveDescriptors {
     static let findContact = ToolDescriptor(name: "findContact", summary: "Looks up a contact.", permission: .readOnly, outputSensitivity: .sensitive)
     static let runShortcut = ToolDescriptor(name: "runShortcut", summary: "Runs a shortcut.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let draftEmail = ToolDescriptor(name: "draftEmail", summary: "Opens a mail draft.", permission: .reversibleWrite, outputSensitivity: .personal)
+    static let listTodoistTasks = ToolDescriptor(name: "listTodoistTasks", summary: "Lists Todoist tasks.", permission: .readOnly, outputSensitivity: .personal)
+    static let addTodoistTask = ToolDescriptor(name: "addTodoistTask", summary: "Adds a Todoist task.", permission: .reversibleWrite, outputSensitivity: .personal)
+    static let listGitHubIssues = ToolDescriptor(name: "listGitHubIssues", summary: "Lists GitHub issues and pull requests.", permission: .readOnly, outputSensitivity: .personal)
+    static let searchNotion = ToolDescriptor(name: "searchNotion", summary: "Searches Notion titles.", permission: .readOnly, outputSensitivity: .personal)
     static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
                       searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky,
-                      searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail]
+                      searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail,
+                      listTodoistTasks, addTodoistTask, listGitHubIssues, searchNotion]
 }
 
 enum CalendarRange {

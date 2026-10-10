@@ -28,7 +28,19 @@ public enum ConnectorCatalog {
         Connector(id: "mail", title: "Email drafts", symbol: "envelope",
                   reads: "Nothing.",
                   changes: "Opens a draft in Mail. You press send.",
-                  network: "None from Adiuvaret.", defaultOn: true)
+                  network: "None from Adiuvaret.", defaultOn: true),
+        Connector(id: "todoist", title: "Todoist", symbol: "checklist",
+                  reads: "Your open tasks and their due dates.",
+                  changes: "Adds a task, after you approve.",
+                  network: "Requests go to api.todoist.com with your own token. Only the words of the task leave the iPhone.", defaultOn: false),
+        Connector(id: "github", title: "GitHub", symbol: "chevron.left.forwardslash.chevron.right",
+                  reads: "Issues and pull requests assigned to you, created by you, or waiting for your review.",
+                  changes: "Nothing. Read only.",
+                  network: "Requests go to api.github.com with your own token. Only the kind of list you asked for leaves the iPhone.", defaultOn: false),
+        Connector(id: "notion", title: "Notion", symbol: "doc.richtext",
+                  reads: "Titles of pages and databases your integration was shared with.",
+                  changes: "Nothing. Read only.",
+                  network: "Requests go to api.notion.com with your own token. Only your search words leave the iPhone.", defaultOn: false)
     ]
 
     public static func connector(_ id: String) -> Connector? { all.first { $0.id == id } }

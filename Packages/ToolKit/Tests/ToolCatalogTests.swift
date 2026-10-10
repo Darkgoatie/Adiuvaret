@@ -45,7 +45,7 @@ import Testing
     }
 
     @Test func categoriesKeepOrder() {
-        #expect(catalog.categories == ["Calendar", "Reminders", "Web", "Notes", "Contacts", "Shortcuts", "Email"])
+        #expect(catalog.categories == ["Calendar", "Reminders", "Web", "Notes", "Contacts", "Shortcuts", "Email", "Todoist", "GitHub", "Notion"])
     }
 
     @Test func tokensSplitCamelCaseAndDropNoise() {
