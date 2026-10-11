@@ -175,8 +175,11 @@ public enum InfoFeeds {
     public static func referenceSubject(for text: String) -> String? {
         let words = text.split(whereSeparator: { !$0.isLetter && !$0.isNumber && $0 != "'" && $0 != "-" }).map(String.init)
         let lower = words.map { $0.lowercased() }
-        guard lower.count >= 3, ["who", "what", "tell"].contains(lower[0]) else { return nil }
-        var rest = Array(words.dropFirst())
+        guard lower.count >= 3 else { return nil }
+        var rest: [String]
+        if ["who", "what"].contains(lower[0]) { rest = Array(words.dropFirst()) }
+        else if lower[0] == "tell", lower.count >= 4, lower[1] == "me", lower[2] == "about" { rest = Array(words.dropFirst(3)) }
+        else { return nil }
         let skip: Set<String> = ["is", "are", "was", "were", "a", "an", "the", "about", "me", "us", "of", "does", "mean", "means", "meaning"]
         while let f = rest.first, skip.contains(f.lowercased()) { rest.removeFirst() }
         while let l = rest.last, skip.contains(l.lowercased()) { rest.removeLast() }

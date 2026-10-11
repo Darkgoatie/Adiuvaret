@@ -144,7 +144,7 @@ import Foundation
         #expect(InfoFeeds.referenceSubject(for: "what is photosynthesis") == "photosynthesis")
         #expect(InfoFeeds.referenceSubject(for: "tell me about Real Betis") == "Real Betis")
         #expect(InfoFeeds.referenceSubject(for: "what does serendipity mean") == "serendipity")
-        for t in ["what is the weather today", "what is my next meeting", "what time is it", "who won the match last night in the big league cup final", "hello there", "who are you", "what can you do", "what is it"] {
+        for t in ["what is the weather today", "what is my next meeting", "what time is it", "who won the match last night in the big league cup final", "hello there", "who are you", "what can you do", "what is it", "Tell me a joke", "tell me something"] {
             #expect(InfoFeeds.referenceSubject(for: t) == nil, Comment(rawValue: t))
         }
     }
