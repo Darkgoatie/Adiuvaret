@@ -6,7 +6,7 @@ struct DataTableView: View {
     let table: DataTable
 
     private var numeric: Set<Int> { Set(table.numericColumns) }
-    private let columnWidth: CGFloat = 112
+    private let maxColumnWidth: CGFloat = 220
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -44,7 +44,8 @@ struct DataTableView: View {
             .monospacedDigit()
             .foregroundStyle(header ? DS.Colors.textSecondary : DS.Colors.textPrimary)
             .multilineTextAlignment(numeric.contains(column) ? .trailing : .leading)
-            .frame(width: columnWidth, alignment: numeric.contains(column) ? .trailing : .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: maxColumnWidth, alignment: numeric.contains(column) ? .trailing : .leading)
             .padding(.horizontal, Spacing.s).padding(.vertical, Spacing.s)
     }
 }
