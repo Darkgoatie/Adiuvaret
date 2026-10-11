@@ -1,5 +1,6 @@
 import AppIntents
 import Foundation
+import ToolKit
 
 /// Ask Adiuvaret something from Siri, Spotlight, the Action Button or Shortcuts. The app opens on a new chat and answers.
 struct AskAdiuvaretIntent: AppIntent {
