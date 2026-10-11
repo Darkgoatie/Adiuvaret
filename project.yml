@@ -37,6 +37,8 @@ targets:
         product: ModelLibrary
       - package: AdiuvaretPackages
         product: MemoryKit
+      - package: AdiuvaretPackages
+        product: BriefingKit
       - package: MLXLM
         product: MLXLLM
       - package: MLXLM

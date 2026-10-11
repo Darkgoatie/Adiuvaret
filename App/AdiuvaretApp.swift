@@ -1,12 +1,15 @@
 import SwiftUI
 import DesignSystem
 import Diagnostics
+import UserNotifications
 
 @main
 struct AdiuvaretApp: App {
     init() {
         DesignSystemFonts.register()
         DownloadActivity.registerAll()
+        BriefingHub.registerBackground()
+        UNUserNotificationCenter.current().delegate = BriefingNotificationDelegate.shared
         let info = Bundle.main.infoDictionary
         DiagnosticsLog.shared.record("launch", "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))")
     }

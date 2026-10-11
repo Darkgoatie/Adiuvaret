@@ -58,6 +58,14 @@ final class ChatStore {
         entries.append(e); currentID = e.id
     }
 
+    /// Shows a service that was built outside the store, such as a briefing chat. An empty open chat is replaced, otherwise it is added.
+    func open(_ service: any ChatService) {
+        persistCurrent()
+        if current.items.isEmpty { replaceCurrent(with: service); return }
+        let e = Entry(id: UUID(), service: service, created: Date())
+        entries.append(e); currentID = e.id
+    }
+
     func select(_ id: UUID) {
         persistCurrent()
         if entries.contains(where: { $0.id == id }) { currentID = id }

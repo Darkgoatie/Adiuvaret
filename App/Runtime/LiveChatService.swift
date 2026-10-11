@@ -33,6 +33,8 @@ final class LiveChatService: ChatService {
     @ObservationIgnored private let engine = LiveEngine.shared
 
     @ObservationIgnored var onChange: (() -> Void)?
+    /// When set, the chat uses exactly these tools and skips the router. Briefings use it so only reading tools exist.
+    @ObservationIgnored var fixedTools: [String]?
 
     init(restoring items: [ThreadItem] = [], title: String? = nil) {
         self.items = items
@@ -195,7 +197,14 @@ final class LiveChatService: ChatService {
         items.append(.tool(id: routeID, phase: .running, title: String(localized: "Choosing the right tool…"), details: []))
         let clock = ContinuousClock()
         let turnStart = clock.now
-        let (chosen, routeNote) = await ToolRouter.chooseWithNote(prompt: prompt, previous: previousPrompt)
+        var chosen: [CatalogEntry]
+        var routeNote = "fixed tools"
+        if let fixed = fixedTools {
+            chosen = ToolCatalog.standard.entries.filter { fixed.contains($0.id) }
+        } else {
+            let routed = await ToolRouter.chooseWithNote(prompt: prompt, previous: previousPrompt)
+            chosen = routed.0; routeNote = routed.1
+        }
         DiagnosticsLog.shared.record("route", "tools=[\(chosen.map(\.id).joined(separator: ","))] \(routeNote) \((clock.now - turnStart).milliseconds) ms")
         let ids = chosen.map(\.id)
         if let i = items.firstIndex(where: { $0.id == routeID }) {

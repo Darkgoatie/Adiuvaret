@@ -98,6 +98,15 @@ private func date(_ s: String) -> Date {
         #expect(p.contains("do not create, move, delete or send"))
     }
 
+    @Test func toolsFollowTheBriefing() {
+        var b = Briefing(title: "x")
+        #expect(BriefingTools.tools(for: b) == ["readCalendar", "listReminders"])
+        b.includeReminders = false; b.extra = "weather"
+        #expect(BriefingTools.tools(for: b) == ["readCalendar", "searchWeb"])
+        b.includeCalendar = false; b.extra = "  "
+        #expect(BriefingTools.tools(for: b).isEmpty)
+    }
+
     @Test func briefingToolsHaveNoWriteTools() {
         for id in ["createEvent", "moveEvent", "deleteEvent", "createReminder", "writeNote", "draftEmail", "runShortcut", "addTodoistTask", "actOnPage", "actOnPageRisky", "openWebsite"] {
             #expect(!BriefingTools.allowed.contains(id), "\(id)")

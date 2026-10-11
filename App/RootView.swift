@@ -2,11 +2,13 @@ import SwiftUI
 import DesignSystem
 import Persistence
 import ModelLibrary
+import BriefingKit
 
 struct RootView: View {
     @State private var drawerOpen = false
     @State private var path: [Route] = []
     @Environment(\.scenePhase) private var scenePhase
+    @Bindable private var launch = LaunchRouter.shared
     @State private var store = ChatStore(persistence: Self.demoLaunch ? nil : try? PersistenceStore()) { RootView.makeService(.empty) }
 
     var body: some View {
@@ -33,10 +35,17 @@ struct RootView: View {
             .navigationDestination(for: Route.self) { route in destination(route) }
         }
         .overlay { WebPanel() }
-        .onChange(of: scenePhase) { _, phase in if phase != .active { store.persistAll() } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { store.persistAll() }
+            else { Task { await BriefingHub.shared.reschedule(reason: "foreground") } }
+        }
+        .onChange(of: launch.pendingBriefing) { _, id in if let id { launch.pendingBriefing = nil; runBriefing(id) } }
+        .onChange(of: launch.pendingQuestion) { _, text in if let text { launch.pendingQuestion = nil; ask(text) } }
         .onChange(of: drawerOpen) { _, open in if open { store.persistCurrent() } }
         .onOpenURL { url in if let r = Self.route(from: url) { handle(r) } }
         .onAppear {
+            if let id = launch.pendingBriefing { launch.pendingBriefing = nil; runBriefing(id) }
+            if let text = launch.pendingQuestion { launch.pendingQuestion = nil; ask(text) }
             if CommandLine.arguments.contains("-demo") { store.replaceCurrent(with: Self.makeService(.conversation)) }
             if CommandLine.arguments.contains("-demoKill") { store.replaceCurrent(with: Self.makeService(.killSwitch)) }
             if CommandLine.arguments.contains("-demoUnavailable") { store.replaceCurrent(with: Self.makeService(.unavailable)) }
@@ -53,11 +62,31 @@ struct RootView: View {
         return ModelSettings.shared.makeService()
     }
 
+    /// Opens a new chat that reads what the briefing lists and writes it up. The chat gets reading tools only.
+    private func runBriefing(_ id: UUID) {
+        guard let b = BriefingHub.shared.store.find(id) else { return }
+        drawerOpen = false; path = []
+        let service = LiveChatService(restoring: [], title: b.title)
+        service.fixedTools = BriefingTools.tools(for: b)
+        store.open(service)
+        let prompt = BriefingPrompt.text(for: b)
+        Task { await service.send(prompt); store.persistCurrent() }
+    }
+
+    /// A question from Siri, Shortcuts or the share sheet starts in a fresh chat.
+    private func ask(_ text: String) {
+        drawerOpen = false; path = []
+        store.newChat()
+        let service = store.current
+        Task { await service.send(text); store.persistCurrent() }
+    }
+
     private func handle(_ route: Route) {
         drawerOpen = false
         switch route {
         case .newChat: store.newChat(); path = []
         case .chat(let id): store.select(id); path = []
+        case .briefing(let id): runBriefing(id)
         default: path = [route]
         }
     }
@@ -66,7 +95,8 @@ struct RootView: View {
         switch r {
         case .memory: MemoryView()
         case .notes, .note: PlaceholderScreen(title: String(localized: "Notes and Tasks"), icon: "note.text")
-        case .briefings, .briefing: PlaceholderScreen(title: String(localized: "Briefings and Automations"), icon: "sun.max")
+        case .briefings: BriefingsView(open: { runBriefing($0) })
+        case .briefing: EmptyView()
         case .approvalsInbox: PlaceholderScreen(title: String(localized: "Approvals"), icon: "checkmark.seal")
         case .activity: PlaceholderScreen(title: String(localized: "Activity log"), icon: "list.bullet.rectangle")
         case .integrations: IntegrationsView()

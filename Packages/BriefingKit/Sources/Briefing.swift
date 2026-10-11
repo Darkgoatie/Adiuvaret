@@ -39,6 +39,15 @@ public enum BriefingTools {
                                                "listTodoistTasks", "listGitHubIssues", "searchNotion"]
 
     public static func filter(_ ids: [String]) -> [String] { ids.filter(allowed.contains) }
+
+    /// The tools a briefing chat is given, fixed by what the briefing asks for. No router guess is involved.
+    public static func tools(for b: Briefing) -> [String] {
+        var ids: [String] = []
+        if b.includeCalendar { ids.append("readCalendar") }
+        if b.includeReminders { ids.append("listReminders") }
+        if !b.extra.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { ids.append("searchWeb") }
+        return filter(ids)
+    }
 }
 
 public enum BriefingPrompt {
