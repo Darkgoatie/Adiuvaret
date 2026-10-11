@@ -119,13 +119,28 @@ struct ChatView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .defaultScrollAnchor(.bottom, for: .initialOffset)
-                .defaultScrollAnchor(.bottom, for: .sizeChanges)
+                .onScrollGeometryChange(for: ScrollEdges.self) { g in
+                    ScrollEdges(offset: g.contentOffset.y, content: g.contentSize.height, container: g.containerSize.height)
+                } action: { old, new in
+                    // Follow new text only when the view was already at the bottom before it grew.
+                    if new.content > old.content, old.isAtBottom, let last = service.items.last {
+                        proxy.scrollTo(last.id, anchor: .bottom)
+                    }
+                }
                 .onChange(of: service.items.count) { _, _ in
-                    if let last = service.items.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+                    // A message the user just sent always shows.
+                    if let last = service.items.last, case .user = last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
                 }
             }
         }
     }
+}
+
+private struct ScrollEdges: Equatable {
+    var offset: CGFloat
+    var content: CGFloat
+    var container: CGFloat
+    var isAtBottom: Bool { offset + container >= content - 40 }
 }
 
 private struct ItemView: View {
