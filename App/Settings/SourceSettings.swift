@@ -7,7 +7,7 @@ import Diagnostics
 @MainActor @Observable
 final class SourceSettings {
     static let shared = SourceSettings()
-    private static let key = "settings.sourcePreferences"
+    nonisolated private static let key = "settings.sourcePreferences"
 
     private(set) var preferences: SourcePreferences
 
