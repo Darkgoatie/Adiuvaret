@@ -25,6 +25,12 @@ struct ChatView: View {
                      stop: service.stop)
         }
         .onAppear { if CommandLine.arguments.contains("-focus") { focused = true } }
+        .onChange(of: service.isGenerating) { was, now in
+            // VoiceOver users cannot see the stream finish, so say so; sighted users get a light tap.
+            guard was, !now, case .assistant? = service.items.last else { return }
+            AccessibilityNotification.Announcement(String(localized: "Reply ready")).post()
+        }
+        .sensoryFeedback(.success, trigger: service.isGenerating) { was, now in was && !now }
         .background(DS.Colors.background)
         .sheet(item: $editing) { target in
             EditMessageSheet(target: target, hasLater: hasItems(after: target.id)) { text in
