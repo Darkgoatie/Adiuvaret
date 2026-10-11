@@ -83,7 +83,12 @@ jobs:
             -authenticationKeyPath "$P8" -authenticationKeyID $KEY_ID -authenticationKeyIssuerID $ISSUER_ID | tail -5
           ls -l build/ipa
           rm -rf build/ipa_check && mkdir build/ipa_check && unzip -q build/ipa/Adiuvaret.ipa -d build/ipa_check
-          echo "ENTITLEMENTS:"; codesign -d --entitlements - build/ipa_check/Payload/Adiuvaret.app 2>&1 | grep -E "increased-memory|application-identifier|Executable" || echo "none found"
+          echo "ENTITLEMENTS:"; codesign -d --entitlements :- build/ipa_check/Payload/Adiuvaret.app 2>/dev/null | tr -d '
+' | head -c 1500; echo
+          echo "PROFILE:"; security cms -D -i build/ipa_check/Payload/Adiuvaret.app/embedded.mobileprovision 2>/dev/null | tr -d '
+	' | grep -o "<key>Entitlements</key>.*</dict><key>ExpirationDate" | head -c 1500; echo
+          echo "ARCHIVE ENTITLEMENTS:"; codesign -d --entitlements :- build/Adiuvaret.xcarchive/Products/Applications/Adiuvaret.app 2>/dev/null | tr -d '
+' | head -c 600; echo
 
       - name: Upload to TestFlight
         if: ${{ inputs.upload }}
