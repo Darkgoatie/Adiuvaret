@@ -2,6 +2,8 @@ import Foundation
 import Observation
 import ModelLibrary
 import ToolKit
+import AdiuvaretCore
+import PolicyEngine
 import Diagnostics
 
 /// Chat with an online model through the user's own API key. Only the messages typed in this chat, and public data fetched for them, are sent.
