@@ -14,6 +14,17 @@
 		<string>com.halit.adiuvaret.download.gemma-4-e4b-it-4bit</string>
 		<string>com.halit.adiuvaret.briefing.refresh</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.halit.adiuvaret</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>adiuvaret</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

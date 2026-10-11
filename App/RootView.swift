@@ -42,7 +42,11 @@ struct RootView: View {
         .onChange(of: launch.pendingBriefing) { _, id in if let id { launch.pendingBriefing = nil; runBriefing(id) } }
         .onChange(of: launch.pendingQuestion) { _, text in if let text { launch.pendingQuestion = nil; ask(text) } }
         .onChange(of: drawerOpen) { _, open in if open { store.persistCurrent() } }
-        .onOpenURL { url in if let r = Self.route(from: url) { handle(r) } }
+        .onOpenURL { url in
+            if let q = Self.question(from: url) { LaunchRouter.shared.ask(q) }
+            else if let id = Self.briefingID(from: url) { LaunchRouter.shared.open(briefing: id) }
+            else if let r = Self.route(from: url) { handle(r) }
+        }
         .onAppear {
             if let id = launch.pendingBriefing { launch.pendingBriefing = nil; runBriefing(id) }
             if let text = launch.pendingQuestion { launch.pendingQuestion = nil; ask(text) }
@@ -108,6 +112,18 @@ struct RootView: View {
             SettingsView()
         case .newChat, .chat: EmptyView()
         }
+    }
+
+    /// adiuvaret://ask?text=What is on today
+    static func question(from url: URL) -> String? {
+        guard url.scheme == "adiuvaret", url.host() == "ask" else { return nil }
+        return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "text" }?.value
+    }
+
+    /// adiuvaret://briefing?id=<uuid>
+    static func briefingID(from url: URL) -> UUID? {
+        guard url.scheme == "adiuvaret", url.host() == "briefing" else { return nil }
+        return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "id" }?.value.flatMap(UUID.init)
     }
 
     /// adiuvaret://new, adiuvaret://approvals, adiuvaret://notes ...
