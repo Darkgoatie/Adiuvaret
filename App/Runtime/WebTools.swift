@@ -22,6 +22,19 @@ struct SearchWebExecutor: ToolExecutor {
         return result.0
     }
 
+    /// A full league table, or nil so the normal search can still answer.
+    static func standings(_ request: Standings.Request) async -> String? {
+        let session = quickSession()
+        defer { session.finishTasksAndInvalidate() }
+        guard let url = Standings.url(code: request.code), let data = await getData(url, session) else {
+            DiagnosticsLog.shared.record("standings", "request failed")
+            return nil
+        }
+        let text = Standings.render(data, name: request.name, wantsChart: request.wantsChart)
+        DiagnosticsLog.shared.record("standings", text == nil ? "unreadable" : "ok")
+        return text
+    }
+
     /// An exchange rate or a football fixture straight from a data service, or nil so the normal search can still answer.
     static func direct(_ request: DirectSources.Request) async -> String? {
         let session = quickSession()
@@ -118,6 +131,7 @@ struct SearchWebExecutor: ToolExecutor {
         let asked = WebSearch.cleanQuery(QueryScrubber.scrub(query: (CalendarStore.args(call)["query"] as? String) ?? "", userMessage: (CalendarStore.args(call)["query"] as? String) ?? "").query)
         guard !asked.isEmpty else { return "Not done: no search words were given." }
         if let name = Weather.place(in: asked), let report = await Self.weather(for: name) { return report }
+        if let request = Standings.request(for: asked), let text = await Self.standings(request) { return text }
         if let request = DirectSources.request(for: asked) {
             if let text = await Self.direct(request) { return text }
             DiagnosticsLog.shared.record("direct source", "no answer, using search")

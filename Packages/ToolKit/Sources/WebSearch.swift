@@ -186,6 +186,6 @@ public enum WebIntent {
         if blockers.contains(where: { padded.contains(" " + $0 + " ") }) { return false }
         if phrases.contains(where: { padded.contains(" " + $0 + " ") }) { return true }
         if looksLikePublicDateQuestion(text) { return true }
-        return Weather.place(in: text) != nil || DirectSources.request(for: text) != nil
+        return Weather.place(in: text) != nil || DirectSources.request(for: text) != nil || Standings.request(for: text) != nil
     }
 }
