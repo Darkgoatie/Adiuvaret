@@ -112,6 +112,11 @@ public extension ToolCatalog {
             keywords: ["github", "pull request", "pull requests", "issues", "code review", "assigned"],
             examples: ["What GitHub issues are assigned to me?", "Which pull requests are waiting for my review?", "List my open GitHub pull requests"]),
         CatalogEntry(
+            id: "listGitHubCommits", title: "List GitHub commits", category: "GitHub",
+            description: "Lists the newest commits of one of the user's GitHub repositories, with message, author and day.",
+            keywords: ["commit", "commits", "latest commits", "commit history", "recent changes", "pushed"],
+            examples: ["Show the latest 3 commits on Adiuvaret", "What are the last commits in my Keply repo?", "List recent commits on arztalep"]),
+        CatalogEntry(
             id: "listGitHubRepos", title: "List GitHub repositories", category: "GitHub",
             description: "Lists the user's GitHub repositories, most recently pushed first, with visibility, language and last push date.",
             keywords: ["repos", "repositories", "repository", "my projects on github", "github projects"],

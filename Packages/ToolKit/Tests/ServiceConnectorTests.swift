@@ -102,6 +102,35 @@ import Foundation
         #expect(GitHubParse.repos(Data("{}".utf8)).isEmpty)
     }
 
+    @Test func commitRequestsStayOnOneRepository() throws {
+        let r = try #require(ServiceRequest.githubCommits(fullName: "Darkgoatie/Adiuvaret", count: 3))
+        #expect(ServiceHost.isAllowed(try #require(r.url), for: "github"))
+        #expect(r.url?.absoluteString == "https://api.github.com/repos/Darkgoatie/Adiuvaret/commits?per_page=3", Comment(rawValue: r.url?.absoluteString ?? ""))
+        #expect(ServiceRequest.githubCommits(fullName: "Darkgoatie/Adiuvaret", count: 99)?.url?.absoluteString.hasSuffix("per_page=10") == true)
+        for bad in ["Adiuvaret", "a/b/c", "../x", "a/..", "a b/c", "", "/x", "x/"] {
+            #expect(ServiceRequest.githubCommits(fullName: bad, count: 3) == nil, Comment(rawValue: bad))
+        }
+    }
+
+    @Test func commitsAreListed() {
+        let json = Data(#"[{"sha":"9477b3b8c1f0","commit":{"message":"Skills: offer card\n\nlonger body","author":{"name":"Halit","date":"2026-10-10T08:00:00Z"}}},{"sha":"045092f1234","commit":{"message":"Share serviceRead","author":{"name":"Halit","date":"2026-10-09T08:00:00Z"}}}]"#.utf8)
+        let lines = GitHubParse.commits(json)
+        #expect(lines == ["9477b3b Skills: offer card (Halit, 2026-10-10)", "045092f Share serviceRead (Halit, 2026-10-09)"], Comment(rawValue: "\(lines)"))
+        #expect(GitHubParse.commits(Data("{}".utf8)).isEmpty)
+    }
+
+    @Test func repoNamesAreMatchedFromShortWords() {
+        let names = ["Darkgoatie/Adiuvaret", "Darkgoatie/Keply", "Darkgoatie/arztalep-work", "Darkgoatie/JustCivilized"]
+        #expect(GitHubParse.pickRepo("adiuvaret", from: names) == "Darkgoatie/Adiuvaret")
+        #expect(GitHubParse.pickRepo("Keply", from: names) == "Darkgoatie/Keply")
+        #expect(GitHubParse.pickRepo("arztalep", from: names) == "Darkgoatie/arztalep-work")
+        #expect(GitHubParse.pickRepo("justcivilized", from: names) == "Darkgoatie/JustCivilized")
+        #expect(GitHubParse.pickRepo("Darkgoatie/Keply", from: names) == "Darkgoatie/Keply")
+        #expect(GitHubParse.pickRepo("zebra", from: names) == nil)
+        #expect(GitHubParse.pickRepo("", from: names) == nil)
+        #expect(GitHubParse.pickRepo("x", from: []) == nil)
+    }
+
     @Test func notionResultsAreListed() {
         let json = Data(#"{"results":[{"object":"page","id":"a","last_edited_time":"2026-10-01T08:00:00.000Z","properties":{"Name":{"type":"title","title":[{"plain_text":"Product "},{"plain_text":"roadmap"}]},"Tags":{"type":"multi_select"}}},{"object":"database","id":"b","title":[{"plain_text":"Tasks"}]}]}"#.utf8)
         let lines = NotionParse.results(json)

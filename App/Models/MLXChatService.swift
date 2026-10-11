@@ -174,6 +174,7 @@ final class MLXChatService: ChatService {
             switch match.tool {
             case "listGitHubIssues": executor = ListGitHubExecutor()
             case "listGitHubRepos": executor = ListGitHubReposExecutor()
+            case "listGitHubCommits": executor = ListGitHubCommitsExecutor()
             case "listTodoistTasks": executor = ListTodoistExecutor()
             default: executor = SearchNotionExecutor()
             }

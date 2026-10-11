@@ -64,7 +64,7 @@ final class LiveChatService: ChatService {
                                          "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
                                          "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
-                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor()]
+                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "listGitHubCommits": ListGitHubCommitsExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor()]
         let gate = PolicyGate(engine: engine, approvals: bridge, executors: rawExecutors.mapValues { RecordingExecutor(inner: $0, ctx: ctx) as any ToolExecutor })
         let all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
@@ -88,6 +88,7 @@ final class LiveChatService: ChatService {
             "addTodoistTask": LiveAddTodoistTool(gate: gate, ctx: ctx),
             "listGitHubIssues": LiveListGitHubTool(gate: gate, ctx: ctx, reporter: bridge),
             "listGitHubRepos": LiveListGitHubReposTool(gate: gate, ctx: ctx, reporter: bridge),
+            "listGitHubCommits": LiveListGitHubCommitsTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchPastChats": LiveSearchPastChatsTool(gate: gate, ctx: ctx, reporter: bridge)]
         let tools = toolIDs.compactMap { all[$0] }

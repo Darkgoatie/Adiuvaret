@@ -19,6 +19,15 @@ public enum ConnectorIntent {
         let w = words(text)
         guard !w.isEmpty else { return nil }
         let set = Set(w)
+        if set.contains("commit") || set.contains("commits") {
+            let numberWords: [String: Int] = ["one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10]
+            let count = w.compactMap { Int($0) ?? numberWords[$0] }.first.map { max(1, min($0, 10)) } ?? 3
+            let skip: Set<String> = ["latest", "last", "recent", "newest", "show", "list", "get", "give", "me", "my", "the", "a", "an", "what", "whats", "are", "is", "were", "was",
+                                     "commit", "commits", "on", "in", "of", "for", "from", "to", "at", "github", "repo", "repos", "repository", "repositories", "and", "can", "you",
+                                     "please", "did", "i", "do", "have", "made", "make", "pushed", "push", "new", "all", "about", "history", "log", "changes"]
+            let name = w.filter { !skip.contains($0) && Int($0) == nil && numberWords[$0] == nil }.last ?? ""
+            return Match(connector: "github", tool: "listGitHubCommits", arguments: ["repo": name, "count": String(count)])
+        }
         let repoWords: Set<String> = ["repo", "repos", "repository", "repositories"]
         if !set.isDisjoint(with: repoWords), set.isDisjoint(with: ["todoist", "notion"]), !set.isDisjoint(with: ["my", "mine", "current", "github", "list", "show", "i"]) {
             return Match(connector: "github", tool: "listGitHubRepos", arguments: [:])

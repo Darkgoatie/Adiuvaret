@@ -64,11 +64,21 @@ public enum ServiceRequest {
         return make(parts?.url, headers: ["Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"])
     }
 
-    public static func githubRepos() -> URLRequest? {
+    public static func githubRepos(perPage: Int = 15) -> URLRequest? {
         var parts = URLComponents(string: "https://api.github.com/user/repos")
-        parts?.queryItems = [URLQueryItem(name: "sort", value: "pushed"), URLQueryItem(name: "per_page", value: "15"),
+        parts?.queryItems = [URLQueryItem(name: "sort", value: "pushed"), URLQueryItem(name: "per_page", value: String(max(1, min(perPage, 100)))),
                              URLQueryItem(name: "affiliation", value: "owner,collaborator,organization_member")]
         return make(parts?.url, headers: ["Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"])
+    }
+
+    /// The newest commits of one repository. `fullName` must look like owner/name.
+    public static func githubCommits(fullName: String, count: Int) -> URLRequest? {
+        let parts = fullName.split(separator: "/", omittingEmptySubsequences: false)
+        let ok: (Substring) -> Bool = { !$0.isEmpty && $0.count <= 100 && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" || $0 == "." } && !$0.hasPrefix(".") }
+        guard parts.count == 2, ok(parts[0]), ok(parts[1]) else { return nil }
+        var c = URLComponents(string: "https://api.github.com/repos/\(fullName)/commits")
+        c?.queryItems = [URLQueryItem(name: "per_page", value: String(max(1, min(count, 10))))]
+        return make(c?.url, headers: ["Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"])
     }
 
     public static func notionSearch(query: String) -> URLRequest? {
@@ -138,6 +148,37 @@ public enum GitHubParse {
             let updated = String(((i["updated_at"] as? String) ?? "").prefix(10))
             return "\(repo)#\(number) \(kind): \(clip(title, 90)) (\((i["state"] as? String) ?? "open")\(updated.isEmpty ? "" : ", updated " + updated))"
         }
+    }
+}
+
+extension GitHubParse {
+    /// "abc1234 Fix the build (Halit, 2026-10-10)" for each commit, newest first as GitHub returns them.
+    public static func commits(_ data: Data) -> [String] {
+        guard let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+        return list.compactMap { c in
+            guard let sha = c["sha"] as? String, let commit = c["commit"] as? [String: Any], let message = commit["message"] as? String else { return nil }
+            let first = message.split(whereSeparator: \.isNewline).first.map(String.init) ?? message
+            let author = (commit["author"] as? [String: Any]).flatMap { $0["name"] as? String } ?? ((c["author"] as? [String: Any])?["login"] as? String) ?? ""
+            let date = String((((commit["author"] as? [String: Any])?["date"] as? String) ?? "").prefix(10))
+            let who = [author, date].filter { !$0.isEmpty }.joined(separator: ", ")
+            let text = first.count > 90 ? String(first.prefix(89)) + "…" : first
+            return "\(sha.prefix(7)) \(text)" + (who.isEmpty ? "" : " (\(who))")
+        }
+    }
+
+    /// Full names of the repositories in a repository list.
+    public static func repoNames(_ data: Data) -> [String] {
+        ((try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]) ?? []).compactMap { $0["full_name"] as? String }
+    }
+
+    /// The repository a user meant by a short name such as "adiuvaret". An exact match on the repository part wins, then a match inside it.
+    public static func pickRepo(_ asked: String, from names: [String]) -> String? {
+        func flat(_ s: String) -> String { String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }) }
+        let wanted = flat(asked.split(separator: "/").last.map(String.init) ?? asked)
+        guard !wanted.isEmpty else { return nil }
+        func part(_ n: String) -> String { flat(n.split(separator: "/").last.map(String.init) ?? n) }
+        if let exact = names.first(where: { part($0) == wanted }) { return exact }
+        return names.first { part($0).contains(wanted) || (wanted.count >= 4 && wanted.contains(part($0)) && part($0).count >= 4) }
     }
 }
 

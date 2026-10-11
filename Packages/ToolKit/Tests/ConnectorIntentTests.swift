@@ -16,6 +16,15 @@ import Testing
         }
     }
 
+    @Test func commitQuestionsNameTheRepoAndCount() {
+        #expect(ConnectorIntent.detect("latest 3 commits on adiuvaret") == .init(connector: "github", tool: "listGitHubCommits", arguments: ["repo": "adiuvaret", "count": "3"]))
+        #expect(ConnectorIntent.detect("Show me the last five commits in Keply")?.arguments == ["repo": "keply", "count": "5"])
+        #expect(ConnectorIntent.detect("what are the recent commits on my arztalep repo")?.arguments["repo"] == "arztalep")
+        #expect(ConnectorIntent.detect("list commits")?.arguments == ["repo": "", "count": "3"])
+        #expect(ConnectorIntent.detect("last 50 commits on keply")?.arguments["count"] == "10")
+        #expect(ConnectorIntent.detect("latest commits on github for adiuvaret")?.tool == "listGitHubCommits")
+    }
+
     @Test func todoistReadsKeepTheirSearchWords() {
         #expect(ConnectorIntent.detect("What is on my Todoist today?") == .init(connector: "todoist", tool: "listTodoistTasks", arguments: ["search": ""]))
         #expect(ConnectorIntent.detect("Do I have a Todoist task about the bank?")?.arguments["search"] == "bank")
