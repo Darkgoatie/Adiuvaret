@@ -62,6 +62,21 @@ final class DemoChatService: ChatService {
 
     func setTitle(_ t: String) {}
 
+    func deleteMessage(_ id: UUID) { if !isGenerating { items.removeAll { $0.id == id } } }
+
+    func edit(_ id: UUID, text: String) async {
+        guard !isGenerating, let i = items.firstIndex(where: { $0.id == id }), case .user = items[i] else { return }
+        items.removeSubrange(i...)
+        await send(text)
+    }
+
+    func regenerate(_ id: UUID) async {
+        guard !isGenerating, let i = items.firstIndex(where: { $0.id == id }), case .assistant = items[i],
+              let p = items[..<i].lastIndex(where: { if case .user = $0 { true } else { false } }), case .user(_, let t) = items[p] else { return }
+        items.removeSubrange(p...)
+        await send(t)
+    }
+
     func stop() { task?.cancel() }
 
     func approve(_ id: UUID) {

@@ -3,6 +3,8 @@ import SwiftUI
 /// Renders the light Markdown the on-device model writes: bold, italic, code, bullets, numbers, headings, code blocks.
 public struct RichText: View {
     nonisolated enum Block: Equatable {
+        case table(DataTable)
+        case chart(ChartSpec)
         case paragraph(String)
         case heading(String)
         case bullet(String)
@@ -26,6 +28,10 @@ public struct RichText: View {
 
     @ViewBuilder private func row(_ block: Block) -> some View {
         switch block {
+        case .table(let t):
+            DataTableView(table: t)
+        case .chart(let c):
+            ChartBlockView(spec: c)
         case .paragraph(let s):
             Text(Self.inline(s)).font(DS.Typography.body)
         case .heading(let s):
@@ -76,18 +82,40 @@ public struct RichText: View {
         var out: [Block] = []
         var paragraph: [String] = []
         var fence: [String]?
+        var fenceLanguage = ""
+        var pipes: [String] = []
         func flush() {
+            flushPipes()
             if !paragraph.isEmpty { out.append(.paragraph(paragraph.joined(separator: "\n"))); paragraph = [] }
+        }
+        func flushPipes() {
+            guard !pipes.isEmpty else { return }
+            if let t = RichData.markdownTable(pipes) { out.append(.table(t)) }
+            else { paragraph.append(contentsOf: pipes) }
+            pipes = []
+        }
+        func closeFence(_ lines: [String]) {
+            let body = lines.joined(separator: "\n")
+            switch fenceLanguage {
+            case "csv": if let t = RichData.csv(body) { out.append(.table(t)) } else { out.append(.code(body)) }
+            case "chart": if let c = RichData.chart(body) { out.append(.chart(c)) } else { out.append(.code(body)) }
+            default: out.append(.code(body))
+            }
         }
         for raw in text.split(separator: "\n", omittingEmptySubsequences: false) {
             let line = raw.trimmingCharacters(in: .whitespaces)
             if line.hasPrefix("```") {
-                if let open = fence { out.append(.code(open.joined(separator: "\n"))); fence = nil }
-                else { flush(); fence = [] }
+                if let open = fence { closeFence(open); fence = nil }
+                else { flush(); fence = []; fenceLanguage = line.dropFirst(3).trimmingCharacters(in: .whitespaces).lowercased() }
                 continue
             }
             if fence != nil { fence?.append(String(raw)); continue }
             let indented = raw.prefix(while: { $0 == " " || $0 == "\t" }).count >= 2
+            if line.contains("|"), line.hasPrefix("|") || line.hasSuffix("|") {
+                if pipes.isEmpty, !paragraph.isEmpty { out.append(.paragraph(paragraph.joined(separator: "\n"))); paragraph = [] }
+                pipes.append(line)
+                continue
+            } else if !pipes.isEmpty { flushPipes() }
             if line.isEmpty { flush(); continue }
             if Self.isRuleOrLoneMarker(line) { flush(); continue }
             if let h = line.firstMatch(of: /^#{1,6}\s+(.+)$/) {
@@ -100,7 +128,7 @@ public struct RichText: View {
                 paragraph.append(line)
             }
         }
-        if let open = fence { out.append(.code(open.joined(separator: "\n"))) }
+        if let open = fence { closeFence(open) }
         flush()
         return out
     }

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import DesignSystem
+import ModelLibrary
 
 struct ChatSummary: Identifiable, Hashable {
     enum Group: Int, CaseIterable { case pinned, today, yesterday, week, older }
@@ -47,4 +48,27 @@ enum ChatBanner: Equatable {
     func undo(_ id: UUID)
     func retry() async
     func setTitle(_ t: String)
+    /// Replaces one of the user's messages, drops everything after it, and answers again.
+    func edit(_ id: UUID, text: String) async
+    /// Replaces the newest assistant reply with a fresh one.
+    func regenerate(_ id: UUID) async
+    /// Removes one message. Tool rows and cards go with the chat, not one by one.
+    func deleteMessage(_ id: UUID)
+}
+
+extension ThreadItem {
+    var editingRole: ThreadEditing.Role {
+        switch self {
+        case .user: .user
+        case .assistant: .assistant
+        default: .other
+        }
+    }
+
+    var messageText: String? {
+        switch self {
+        case .user(_, let t), .assistant(_, let t, _): t
+        default: nil
+        }
+    }
 }

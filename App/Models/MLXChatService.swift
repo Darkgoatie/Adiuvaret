@@ -61,6 +61,32 @@ final class MLXChatService: ChatService {
         await run(lastPrompt)
     }
 
+    func deleteMessage(_ id: UUID) {
+        let roles = items.map(\.editingRole)
+        guard let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canDelete(roles, at: i, generating: isGenerating) else { return }
+        items.remove(at: i)
+        session = nil
+    }
+
+    func edit(_ id: UUID, text: String) async {
+        let roles = items.map(\.editingRole)
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty, let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canEdit(roles, at: i, generating: isGenerating) else { return }
+        items.removeSubrange(i...)
+        session = nil
+        await send(t)
+    }
+
+    func regenerate(_ id: UUID) async {
+        let roles = items.map(\.editingRole)
+        guard let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canRegenerate(roles, at: i, generating: isGenerating),
+              let point = ThreadEditing.regenerationPoint(roles, at: i), case .user(_, let prompt) = items[point.prompt] else { return }
+        items.removeSubrange(point.keep...)
+        session = nil
+        lastPrompt = prompt
+        await run(prompt)
+    }
+
     func stop() { task?.cancel() }
     func approve(_ id: UUID) {}
     func deny(_ id: UUID) {}
@@ -210,7 +236,7 @@ final class MLXChatService: ChatService {
 
     private static func instructions() -> String {
         let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .short
-        return "You are Adiuvaret, a warm, concise personal assistant. Privacy rule: nothing you read from the calendar, reminders or a web page may appear in anything sent to the internet. Facts arrive as plain text; quote them only to the user in chat. on the user's iPhone. Now is \(f.string(from: Date())). In this mode you cannot use tools. Facts about the user's calendar, reminders or the web arrive attached to their message, labelled as information from the phone. Answer those questions only from the attached information and say where it came from. If the question needs the calendar, reminders or the web and nothing is attached, say you could not get it. Never guess dates, times, events, scores or news. You cannot create or change anything in this mode. Write plain, short sentences. Use bold or bullet lists only for several items."
+        return "You are Adiuvaret, a warm, concise personal assistant. Privacy rule: nothing you read from the calendar, reminders or a web page may appear in anything sent to the internet. Facts arrive as plain text; quote them only to the user in chat. on the user's iPhone. Now is \(f.string(from: Date())). In this mode you cannot use tools. Facts about the user's calendar, reminders or the web arrive attached to their message, labelled as information from the phone. Answer those questions only from the attached information and say where it came from. If the question needs the calendar, reminders or the web and nothing is attached, say you could not get it. Never guess dates, times, events, scores or news. You cannot create or change anything in this mode. Write plain, short sentences. Use bold or bullet lists only for several items.\(RichReplyRules.text)"
     }
 
     private func replace(_ id: UUID, _ text: String?, streaming: Bool) {

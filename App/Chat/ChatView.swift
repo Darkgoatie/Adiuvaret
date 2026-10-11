@@ -6,6 +6,7 @@ struct ChatView: View {
     let service: any ChatService
     @State private var draft = ""
     @FocusState private var focused: Bool
+    @State private var editing: EditTarget?
     let openDrawer: () -> Void
     var turnFinished: () -> Void = {}
     var switchModel: (String) -> Void = { _ in }
@@ -25,6 +26,16 @@ struct ChatView: View {
         }
         .onAppear { if CommandLine.arguments.contains("-focus") { focused = true } }
         .background(DS.Colors.background)
+        .sheet(item: $editing) { target in
+            EditMessageSheet(target: target, hasLater: hasItems(after: target.id)) { text in
+                Task { await service.edit(target.id, text: text); turnFinished() }
+            }
+        }
+    }
+
+    private func hasItems(after id: UUID) -> Bool {
+        guard let i = service.items.firstIndex(where: { $0.id == id }) else { return false }
+        return i < service.items.count - 1
     }
 
     private var quick: [String] {
@@ -89,7 +100,9 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Spacing.l) {
                         ForEach(service.items) { item in
-                            ItemView(item: item, service: service).id(item.id)
+                            ItemView(item: item, service: service)
+                                .messageActions(item, service: service, editing: $editing, saved: turnFinished)
+                                .id(item.id)
                         }
                     }
                     .padding(.horizontal, Spacing.l).padding(.vertical, Spacing.m)
