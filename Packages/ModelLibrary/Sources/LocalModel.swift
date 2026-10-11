@@ -64,8 +64,10 @@ public enum ModelCatalog {
     }
 
     /// The model to use: the saved one if it is still available, otherwise the built-in one.
-    public static func resolve(active: String?, installed: Set<String>) -> String {
-        guard let active, active != appleID, installed.contains(active), model(active) != nil else { return appleID }
+    public static func resolve(active: String?, installed: Set<String>, connected: Set<String> = []) -> String {
+        guard let active, active != appleID else { return appleID }
+        if let (p, _) = Providers.parseModelID(active) { return connected.contains(p.id) ? active : appleID }
+        guard installed.contains(active), model(active) != nil else { return appleID }
         return active
     }
 }

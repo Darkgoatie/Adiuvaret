@@ -43,7 +43,7 @@ final class ChatStore {
     func switchModel(to id: String) {
         let old = current
         guard !old.isGenerating else { return }
-        let resolved = ModelCatalog.resolve(active: id, installed: ModelSettings.shared.installed)
+        let resolved = ModelCatalog.resolve(active: id, installed: ModelSettings.shared.installed, connected: ProviderStore.shared.connected)
         guard resolved != old.modelID else { return }
         replaceCurrent(with: ModelSettings.shared.makeService(modelID: resolved, items: old.items, title: old.title))
         persistCurrent()

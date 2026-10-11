@@ -38,6 +38,10 @@ import Foundation
         #expect(ModelCatalog.resolve(active: nil, installed: [q]) == "apple")
         #expect(ModelCatalog.resolve(active: "mlx-community/unknown", installed: ["mlx-community/unknown"]) == "apple")
         #expect(ModelCatalog.resolve(active: "apple", installed: [q]) == "apple")
+        #expect(ModelCatalog.resolve(active: "openai:gpt-4.1", installed: [], connected: ["openai"]) == "openai:gpt-4.1")
+        #expect(ModelCatalog.resolve(active: "openai:gpt-4.1", installed: [], connected: []) == "apple")
+        #expect(ModelCatalog.resolve(active: "openai:gpt-4.1", installed: [], connected: ["anthropic"]) == "apple")
+        #expect(ModelCatalog.resolve(active: "nope:gpt-4.1", installed: [], connected: ["nope"]) == "apple")
     }
 
     @Test func fitGrowsWithModelSize() {

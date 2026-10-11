@@ -37,7 +37,7 @@ final class ModelSettings {
     init() {
         let saved = Set(UserDefaults.standard.stringArray(forKey: "models.installed") ?? [])
         installed = saved
-        activeID = ModelCatalog.resolve(active: UserDefaults.standard.string(forKey: "models.active"), installed: saved)
+        activeID = ModelCatalog.resolve(active: UserDefaults.standard.string(forKey: "models.active"), installed: saved, connected: ProviderStore.shared.connected)
         DiagnosticsLog.shared.record("memory budget", "\(memoryBudget / 1_000_000) MB available, device \(ProcessInfo.processInfo.physicalMemory / 1_000_000) MB")
         // Downloads that were stopped by the system or by closing the app come back as paused, not lost.
         for model in ModelCatalog.all where !saved.contains(model.id) {
@@ -47,12 +47,18 @@ final class ModelSettings {
 
     var choices: [ModelChoice] { ModelCatalog.choices(installed: installed) }
 
+    /// Models of connected online providers the user turned on. A chat with one of these is sent to the provider.
+    var cloudChoices: [ModelChoice] { ProviderStore.shared.choices }
+
+    static func isCloud(_ id: String) -> Bool { Providers.parseModelID(id) != nil }
+
     /// Memory this app can still use, as reported by iOS. Models larger than this cannot run.
     var memoryBudget: Int64 { Int64(os_proc_available_memory()) }
 
     func state(_ id: String) -> DownloadState { states[id] ?? .idle }
 
     func loadState(_ id: String) -> LoadState {
+        if Self.isCloud(id) { return .loaded }
         if id == ModelCatalog.appleID {
             switch SystemLanguageModel.default.availability {
             case .available: return .loaded
@@ -114,10 +120,10 @@ final class ModelSettings {
 
     /// Makes `id` the model for new chats. Unknown or missing models fall back to Apple.
     func select(_ id: String) {
-        activeID = ModelCatalog.resolve(active: id, installed: installed)
+        activeID = ModelCatalog.resolve(active: id, installed: installed, connected: ProviderStore.shared.connected)
         defaults.set(activeID, forKey: "models.active")
         DiagnosticsLog.shared.record("model select", activeID)
-        if activeID == ModelCatalog.appleID {
+        if activeID == ModelCatalog.appleID || Self.isCloud(activeID) {
             for (id, state) in loadStates where state == .loaded || state == .loading { loadStates[id] = .idle }
             Task { await MLXRuntime.shared.unload() }
         } else {
@@ -127,7 +133,8 @@ final class ModelSettings {
 
     /// A chat service for `modelID` (default: the active model), seeded with earlier messages.
     func makeService(modelID: String? = nil, items: [ThreadItem] = [], title: String? = nil) -> any ChatService {
-        let id = ModelCatalog.resolve(active: modelID ?? activeID, installed: installed)
+        let id = ModelCatalog.resolve(active: modelID ?? activeID, installed: installed, connected: ProviderStore.shared.connected)
+        if Self.isCloud(id) { return CloudChatService(restoring: items, title: title, modelID: id) }
         #if canImport(MLXLLM)
         if id != ModelCatalog.appleID { preload(id); return MLXChatService(restoring: items, title: title, modelID: id) }
         #endif

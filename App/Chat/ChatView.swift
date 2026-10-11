@@ -33,6 +33,11 @@ struct ChatView: View {
         }
     }
 
+    private var chipKind: ModelPrivacyChip.Kind {
+        if let (p, _) = Providers.parseModelID(service.modelID) { return .cloud(provider: p.name) }
+        return service.modelID == "apple" ? .onDevice : .localModel
+    }
+
     private func hasItems(after id: UUID) -> Bool {
         guard let i = service.items.firstIndex(where: { $0.id == id }) else { return false }
         return i < service.items.count - 1
@@ -76,11 +81,20 @@ struct ChatView: View {
                     if choice.id == service.modelID { Label(choice.name, systemImage: "checkmark") } else { Text(verbatim: choice.name) }
                 }
             }
+            if !ModelSettings.shared.cloudChoices.isEmpty {
+                Section(String(localized: "Online, sent to the provider")) {
+                    ForEach(ModelSettings.shared.cloudChoices) { choice in
+                        Button { switchModel(choice.id) } label: {
+                            if choice.id == service.modelID { Label(choice.name, systemImage: "checkmark") } else { Label(choice.name, systemImage: "cloud") }
+                        }
+                    }
+                }
+            }
             Divider()
             Button("Manage models", systemImage: "cpu", action: openModels)
         } label: {
             HStack(spacing: Spacing.xs) {
-                ModelPrivacyChip(model: service.modelName, kind: service.modelID == "apple" ? .onDevice : .localModel, prominent: false)
+                ModelPrivacyChip(model: service.modelName, kind: chipKind, prominent: false)
                 ModelStatusDot(state: ModelSettings.shared.loadState(service.modelID))
                 Image(systemName: "chevron.down").imageScale(.small).foregroundStyle(DS.Colors.textSecondary)
             }

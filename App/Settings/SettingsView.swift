@@ -16,8 +16,15 @@ struct SettingsView: View {
                         .frame(minHeight: 44)
                 }
                 .accessibilityIdentifier("settings.preferences")
+                NavigationLink {
+                    ProvidersView()
+                } label: {
+                    Label { Text("Providers").font(DS.Typography.body) } icon: { Image(systemName: "cloud") }
+                        .frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("settings.providers")
             } footer: {
-                Text("Choose which source I ask first for weather, sports, news, prices and facts.").font(DS.Typography.caption)
+                Text("Preferences: which source I ask first for weather, sports, news, prices and facts. Providers: connect an online model like Claude, ChatGPT or Gemini with your own key.").font(DS.Typography.caption)
             }
             Section {
                 Toggle(isOn: $settings.actionsOff) {
