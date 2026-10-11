@@ -49,6 +49,8 @@ targets:
         product: HuggingFace
       - package: SwiftTransformers
         product: Tokenizers
+      - target: AdiuvaretWidgets
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
@@ -70,3 +72,24 @@ targets:
         INFOPLIST_KEY_NSContactsUsageDescription: Adiuvaret looks up a person in your contacts when you ask.
         INFOPLIST_KEY_NSRemindersFullAccessUsageDescription: Adiuvaret creates reminders when you ask and approve.
         TARGETED_DEVICE_FAMILY: "1"
+  AdiuvaretWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [Widgets]
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Adiuvaret
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret.widgets
+        DEVELOPMENT_TEAM: P6LL282795
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "11"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: Adiuvaret shows your next event on the Home and Lock Screen.
