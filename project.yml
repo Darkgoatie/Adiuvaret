@@ -52,6 +52,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
         DEVELOPMENT_TEAM: P6LL282795
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Config/Adiuvaret.entitlements
         MARKETING_VERSION: "0.2.0"
         CURRENT_PROJECT_VERSION: "11"
         SWIFT_VERSION: "6.0"

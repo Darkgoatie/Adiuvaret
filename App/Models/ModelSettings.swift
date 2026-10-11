@@ -38,6 +38,7 @@ final class ModelSettings {
         let saved = Set(UserDefaults.standard.stringArray(forKey: "models.installed") ?? [])
         installed = saved
         activeID = ModelCatalog.resolve(active: UserDefaults.standard.string(forKey: "models.active"), installed: saved)
+        DiagnosticsLog.shared.record("memory budget", "\(memoryBudget / 1_000_000) MB available, device \(ProcessInfo.processInfo.physicalMemory / 1_000_000) MB")
         // Downloads that were stopped by the system or by closing the app come back as paused, not lost.
         for model in ModelCatalog.all where !saved.contains(model.id) {
             if let fraction = ModelStore.pendingFraction(model.id) { states[model.id] = .paused(fraction, reason: nil) }
