@@ -28,6 +28,18 @@ import Foundation
         #expect(!WebIntent.looksLikeWebRequest("set the table for dinner"))
     }
 
+    @Test func fixtureTitlesMapToEspnCodes() {
+        #expect(Standings.code(forTitle: "La Liga") == "esp.1")
+        #expect(Standings.code(forTitle: "UEFA Champions League") == "uefa.champions")
+        #expect(Standings.code(forTitle: "English Premier League") == "eng.1")
+        #expect(Standings.code(forTitle: "FA Cup") == nil)
+        #expect(Standings.scoreboardURL(code: "esp.1")?.absoluteString == "https://site.api.espn.com/apis/site/v2/sports/soccer/esp.1/scoreboard")
+        #expect(Standings.scoreboardURL(code: "../x") == nil)
+        for c in DirectSources.competitions.map(\.title) where ["FA Cup", "FIFA World Cup", "Major League Soccer"].contains(c) == false {
+            #expect(Standings.code(forTitle: c) != nil, Comment(rawValue: c))
+        }
+    }
+
     @Test func urlsStayOnTheStandingsFeed() throws {
         let url = try #require(Standings.url(code: "esp.1"))
         #expect(url.absoluteString == "https://site.api.espn.com/apis/v2/sports/soccer/esp.1/standings")

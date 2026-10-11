@@ -187,5 +187,7 @@ public enum WebIntent {
         if phrases.contains(where: { padded.contains(" " + $0 + " ") }) { return true }
         if looksLikePublicDateQuestion(text) { return true }
         return Weather.place(in: text) != nil || DirectSources.request(for: text) != nil || Standings.request(for: text) != nil
+            || InfoFeeds.cryptoRequest(for: text) != nil || InfoFeeds.stockRequest(for: text) != nil || InfoFeeds.holidayRequest(for: text) != nil
+            || InfoFeeds.newsTopic(for: text) != nil || InfoFeeds.referenceSubject(for: text) != nil || SportsScores.request(for: text) != nil
     }
 }

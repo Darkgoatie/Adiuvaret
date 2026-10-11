@@ -9,6 +9,17 @@ struct SettingsView: View {
     var body: some View {
         List {
             Section {
+                NavigationLink {
+                    PreferencesView()
+                } label: {
+                    Label { Text("Preferences").font(DS.Typography.body) } icon: { Image(systemName: "slider.horizontal.3") }
+                        .frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("settings.preferences")
+            } footer: {
+                Text("Choose which source I ask first for weather, sports, news, prices and facts.").font(DS.Typography.caption)
+            }
+            Section {
                 Toggle(isOn: $settings.actionsOff) {
                     Label { Text("Switch off actions").font(DS.Typography.body) } icon: { Image(systemName: "hand.raised") }
                 }

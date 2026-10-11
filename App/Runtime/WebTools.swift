@@ -46,6 +46,7 @@ struct SearchWebExecutor: ToolExecutor {
                 text = DirectSources.renderCurrency(data, amount: amount, from: from, to: to)
             }
         case .competition(let id, let name, let kind):
+            if kind == .next, let espn = await InfoFetcher.footballNext(title: name) { return espn }
             let urls = DirectSources.competitionDayURLs(id: id, kind: kind)
             let days = await withTaskGroup(of: (Int, Data?).self) { group -> [Data] in
                 for (i, url) in urls.enumerated() { group.addTask { (i, await Self.getData(url, session)) } }
@@ -112,10 +113,7 @@ struct SearchWebExecutor: ToolExecutor {
                 DiagnosticsLog.shared.record("weather", "place not found")
                 return nil
             }
-            let fahrenheit = Locale.current.measurementSystem == .us
-            guard let url = Weather.forecastURL(place, fahrenheit: fahrenheit) else { return nil }
-            let (data, response) = try await session.data(from: url)
-            guard (response as? HTTPURLResponse)?.statusCode == 200, let text = Weather.render(data, place: place) else {
+            guard let text = await InfoFetcher.weather(place: place) else {
                 DiagnosticsLog.shared.record("weather", "forecast unavailable")
                 return nil
             }
@@ -132,10 +130,17 @@ struct SearchWebExecutor: ToolExecutor {
         guard !asked.isEmpty else { return "Not done: no search words were given." }
         if let name = Weather.place(in: asked), let report = await Self.weather(for: name) { return report }
         if let request = Standings.request(for: asked), let text = await Self.standings(request) { return text }
+        if let request = SportsScores.request(for: asked), let text = await InfoFetcher.sports(request) { return text }
+        if let request = InfoFeeds.cryptoRequest(for: asked), let text = await InfoFetcher.crypto(request) { return text }
+        if let request = InfoFeeds.stockRequest(for: asked), let text = await InfoFetcher.stock(request) { return text }
+        if let request = InfoFeeds.holidayRequest(for: asked), let text = await InfoFetcher.holidays(request) { return text }
+        if let topic = InfoFeeds.newsTopic(for: asked), let text = await InfoFetcher.news(topic: topic) { return text }
         if let request = DirectSources.request(for: asked) {
-            if let text = await Self.direct(request) { return text }
+            if case .currency(let amount, let from, let to) = request, let text = await InfoFetcher.currency(amount: amount, from: from, to: to) { return text }
+            if case .currency = request {} else if let text = await Self.direct(request) { return text }
             DiagnosticsLog.shared.record("direct source", "no answer, using search")
         }
+        if let subject = InfoFeeds.referenceSubject(for: asked), let text = await InfoFetcher.reference(subject: subject) { return text }
 
         // Up to three rounds: search, read the top pages, and if they do not cover the question try better words.
         var query = WebSearch.queryFrom(asked)

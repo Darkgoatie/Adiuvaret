@@ -37,6 +37,15 @@ public enum Standings {
         return Request(code: league.code, name: league.title, wantsChart: words.contains(where: { chartWords.contains($0) }))
     }
 
+    /// The ESPN league code for a competition title used by DirectSources, or nil when ESPN has no table or scoreboard for it.
+    public static func code(forTitle title: String) -> String? { leagues.first { $0.title == title }?.code }
+
+    /// Today's scoreboard, or the next day with games when there are none today.
+    public static func scoreboardURL(code: String) -> URL? {
+        guard code.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." }), !code.isEmpty else { return nil }
+        return URL(string: "https://site.api.espn.com/apis/site/v2/sports/soccer/\(code)/scoreboard")
+    }
+
     public static func url(code: String) -> URL? {
         guard code.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." }), !code.isEmpty else { return nil }
         return URL(string: "https://site.api.espn.com/apis/v2/sports/soccer/\(code)/standings")
