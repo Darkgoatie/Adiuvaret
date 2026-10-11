@@ -23,6 +23,13 @@ struct SettingsView: View {
                         .frame(minHeight: 44)
                 }
                 .accessibilityIdentifier("settings.providers")
+                NavigationLink {
+                    ShortcutsView()
+                } label: {
+                    Label { Text("Shortcuts").font(DS.Typography.body) } icon: { Image(systemName: "keyboard") }
+                        .frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("settings.shortcuts")
             } footer: {
                 Text("Preferences: which source I ask first for weather, sports, news, prices and facts. Providers: connect an online model like Claude, ChatGPT or Gemini with your own key.").font(DS.Typography.caption)
             }

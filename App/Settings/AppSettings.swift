@@ -14,6 +14,8 @@ final class AppSettings {
     static let shared = AppSettings()
     private static let actionsOffKey = "settings.actionsOff"
     private static let strictKey = "settings.strictWeb"
+    private static let quickBarKey = "settings.quickBar"
+    private static let shortcutsKey = "settings.shortcuts"
 
     var actionsOff: Bool {
         didSet {
@@ -28,10 +30,40 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(strictWeb, forKey: Self.strictKey) }
     }
 
+    /// The row of shortcut buttons above the keyboard. Off until the user turns it on.
+    var quickBarOn: Bool {
+        didSet { UserDefaults.standard.set(quickBarOn, forKey: Self.quickBarKey) }
+    }
+
+    /// The user's own shortcuts: a short word on the button and the prompt it puts in the message field.
+    var shortcuts: [QuickShortcut] {
+        didSet { UserDefaults.standard.set(try? JSONEncoder().encode(shortcuts), forKey: Self.shortcutsKey) }
+    }
+
     private init() {
+        quickBarOn = UserDefaults.standard.bool(forKey: Self.quickBarKey)
+        if let data = UserDefaults.standard.data(forKey: Self.shortcutsKey),
+           let list = try? JSONDecoder().decode([QuickShortcut].self, from: data) {
+            shortcuts = list
+        } else {
+            shortcuts = QuickShortcut.starters
+        }
         strictWeb = UserDefaults.standard.bool(forKey: Self.strictKey)
         let stored = UserDefaults.standard.bool(forKey: Self.actionsOffKey)
         actionsOff = stored
         Task { await LiveEngine.shared.setKillSwitch(stored) }
+    }
+}
+
+struct QuickShortcut: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var word: String
+    var prompt: String
+
+    static var starters: [QuickShortcut] {
+        [QuickShortcut(word: String(localized: "Today"), prompt: String(localized: "What's on my calendar today?")),
+         QuickShortcut(word: String(localized: "Reminder"), prompt: String(localized: "Remind me to ")),
+         QuickShortcut(word: String(localized: "Draft"), prompt: String(localized: "Draft a message to ")),
+         QuickShortcut(word: String(localized: "Free time"), prompt: String(localized: "Find a free time for "))]
     }
 }

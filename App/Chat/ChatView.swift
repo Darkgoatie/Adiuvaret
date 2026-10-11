@@ -20,7 +20,7 @@ struct ChatView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Composer(text: $draft, focused: $focused, isGenerating: service.isGenerating,
-                     quickActions: service.items.isEmpty ? [] : quick,
+                     quickActions: AppSettings.shared.quickBarOn ? AppSettings.shared.shortcuts.filter { !$0.word.isEmpty } : [],
                      send: { let t = draft; draft = ""; Task { await service.send(t); turnFinished() } },
                      stop: service.stop)
         }
@@ -41,10 +41,6 @@ struct ChatView: View {
     private func hasItems(after id: UUID) -> Bool {
         guard let i = service.items.firstIndex(where: { $0.id == id }) else { return false }
         return i < service.items.count - 1
-    }
-
-    private var quick: [String] {
-        [String(localized: "Today"), String(localized: "Add reminder"), String(localized: "Draft message"), String(localized: "Find a time")]
     }
 
     private var header: some View {
@@ -190,7 +186,7 @@ struct Composer: View {
     @Binding var text: String
     var focused: FocusState<Bool>.Binding
     let isGenerating: Bool
-    let quickActions: [String]
+    let quickActions: [QuickShortcut]
     let send: () -> Void
     let stop: () -> Void
 
@@ -199,8 +195,8 @@ struct Composer: View {
             if !quickActions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Spacing.s) {
-                        ForEach(quickActions, id: \.self) { a in
-                            Button(a) { text = a }.buttonStyle(DSButtonStyle(.secondary)).font(DS.Typography.footnote)
+                        ForEach(quickActions) { a in
+                            Button(a.word) { text = a.prompt; focused.wrappedValue = true }.buttonStyle(DSButtonStyle(.secondary)).font(DS.Typography.footnote)
                         }
                     }.padding(.horizontal, Spacing.l)
                 }
