@@ -60,10 +60,15 @@ public struct SkillHit: Sendable, Equatable {
     public let id: String
     public let name: String
     public let description: String
+
+    public init(id: String, name: String, description: String) {
+        self.id = id; self.name = name; self.description = description
+    }
 }
 
 public struct SkillUse: Sendable, Equatable {
     public let id: String
+    public let name: String
     public let body: String
     /// The playbook's tools that exist and are switched on right now.
     public let tools: [String]

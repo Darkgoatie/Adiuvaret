@@ -39,6 +39,8 @@ targets:
         product: MemoryKit
       - package: AdiuvaretPackages
         product: BriefingKit
+      - package: AdiuvaretPackages
+        product: SkillKit
       - package: MLXLM
         product: MLXLLM
       - package: MLXLM

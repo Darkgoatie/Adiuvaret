@@ -2,6 +2,7 @@ import Foundation
 import FoundationModels
 import ToolKit
 import Diagnostics
+import SkillKit
 
 @Generable
 struct ToolRoute {
@@ -71,6 +72,11 @@ enum ToolRouter {
         if chosen.isEmpty, WebIntent.looksLikeWebRequest(prompt), let search = catalog.entry("searchWeb") {
             chosen = catalog.withRequirements([search])
             note += " web-intent"
+        }
+        // Asking for a skill by name or listing skills always offers skill_use, whatever the router said.
+        if SkillIntent.looksLikeSkillRequest(prompt), let entry = catalog.entry("skill_use") {
+            chosen = catalog.withRequirements(chosen + [entry])
+            note += " skill-intent"
         }
         return (chosen, note)
     }

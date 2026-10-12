@@ -28,7 +28,7 @@ let package = Package(
         .target(name: "MemoryKit", path: "MemoryKit/Sources"),
         .target(name: "BriefingKit", path: "BriefingKit/Sources"),
         .target(name: "SkillKit", path: "SkillKit/Sources"),
-        .testTarget(name: "SkillKitTests", dependencies: ["SkillKit"], path: "SkillKit/Tests"),
+        .testTarget(name: "SkillKitTests", dependencies: ["SkillKit", "ToolKit"], path: "SkillKit/Tests"),
         .testTarget(name: "BriefingKitTests", dependencies: ["BriefingKit"], path: "BriefingKit/Tests"),
         .testTarget(name: "MemoryKitTests", dependencies: ["MemoryKit"], path: "MemoryKit/Tests"),
         .testTarget(name: "ModelLibraryTests", dependencies: ["ModelLibrary"], path: "ModelLibrary/Tests"),

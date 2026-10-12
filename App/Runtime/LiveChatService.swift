@@ -7,6 +7,7 @@ import PolicyEngine
 import ToolKit
 import Diagnostics
 import ModelLibrary
+import SkillKit
 
 @MainActor @Observable
 final class LiveChatService: ChatService {
@@ -68,7 +69,7 @@ final class LiveChatService: ChatService {
                                          "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
                                          "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
-                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "listGitHubCommits": ListGitHubCommitsExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor()]
+                                         "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "listGitHubCommits": ListGitHubCommitsExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor(), "skill_use": SkillUseExecutor()]
         let gate = PolicyGate(engine: engine, approvals: bridge, executors: rawExecutors.mapValues { RecordingExecutor(inner: $0, ctx: ctx) as any ToolExecutor })
         let all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
@@ -94,7 +95,8 @@ final class LiveChatService: ChatService {
             "listGitHubRepos": LiveListGitHubReposTool(gate: gate, ctx: ctx, reporter: bridge),
             "listGitHubCommits": LiveListGitHubCommitsTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge),
-            "searchPastChats": LiveSearchPastChatsTool(gate: gate, ctx: ctx, reporter: bridge)]
+            "searchPastChats": LiveSearchPastChatsTool(gate: gate, ctx: ctx, reporter: bridge),
+            "skill_use": LiveSkillUseTool(gate: gate, ctx: ctx, reporter: bridge)]
         let tools = toolIDs.compactMap { all[$0] }
         let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .short
         let today = CalendarRange.iso.string(from: Date())
@@ -195,7 +197,9 @@ final class LiveChatService: ChatService {
         let prepared = AttachmentStore.prepare(items.currentTurnFiles(), support: support)
         let modelPrompt = AttachmentText.compose(prompt: prompt, documents: prepared.documents, imageNames: prepared.skippedImageNames, limit: support.documentChars)
         ctx.notePrivate(prepared.documents.map(\.text).joined(separator: " "))
-        let block = [MemoryHub.block(for: prompt), SkillHub.block(for: prompt)].filter { !$0.isEmpty }.joined(separator: "\n")
+        let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt)
+        if skill?.untrusted == true { ctx.markUntrusted(personal: false) }
+        let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill)].filter { !$0.isEmpty }.joined(separator: "\n")
         ctx.notePrivate(block)
         if block != memoryBlock { memoryBlock = block; session = nil }
         var prior = items
@@ -212,6 +216,12 @@ final class LiveChatService: ChatService {
         } else {
             let routed = await ToolRouter.chooseWithNote(prompt: prompt, previous: previousPrompt)
             chosen = routed.0; routeNote = routed.1
+        }
+        if let skill, fixedTools == nil {
+            // A matched skill brings the tools of its playbook, so the steps it names can actually run.
+            let wanted = skill.tools.compactMap { ToolCatalog.standard.entry($0) }
+            chosen = ToolCatalog.standard.withRequirements(chosen + wanted, cap: 6)
+            routeNote += " skill=\(skill.id)"
         }
         DiagnosticsLog.shared.record("route", "tools=[\(chosen.map(\.id).joined(separator: ","))] \(routeNote) \((clock.now - turnStart).milliseconds) ms")
         let ids = chosen.map(\.id)
@@ -319,7 +329,7 @@ final class LiveChatService: ChatService {
 
     func approve(_ id: UUID) {
         if let offer = skillOffers.removeValue(forKey: id) {
-            let saved = SkillHub.save(title: offer.title, whenToUse: offer.title, playbook: offer.playbook)
+            let saved = SkillHub.save(offer)
             setOffer(id, saved ? .saved : .dismissed, offer.title)
             return
         }

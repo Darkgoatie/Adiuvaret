@@ -8,6 +8,7 @@ import Diagnostics
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
+import SkillKit
 
 /// Chat with a downloaded MLX model. Chat only for now: calendar and reminder tools stay on the Apple model.
 @MainActor @Observable
@@ -113,10 +114,13 @@ final class MLXChatService: ChatService {
             let clock = ContinuousClock()
             let start = clock.now
             do {
-                let block = [MemoryHub.block(for: prompt), SkillHub.block(for: prompt)].filter { !$0.isEmpty }.joined(separator: "\n")
+                let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt)
+                let skillLine = AppSettings.shared.actionsOff || skill != nil ? "" : SkillCall.instruction(index: SkillHub.registry.index())
+                let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), skillLine].filter { !$0.isEmpty }.joined(separator: "\n")
                 if block != memoryBlock { memoryBlock = block; session = nil }
                 let chat = try await ensureSession()
-                let context = await gatherContext(for: prompt)
+                var context = await gatherContext(for: prompt)
+                if context == nil, let skill { context = await gatherSkillContext(skill, prompt: prompt) }
                 let support = fileSupport
                 let prepared = AttachmentStore.prepare(items.currentTurnFiles(), support: support)
                 let withFiles = AttachmentText.compose(prompt: prompt, documents: prepared.documents, imageNames: prepared.skippedImageNames, limit: support.documentChars)
@@ -125,17 +129,33 @@ final class MLXChatService: ChatService {
                 if !prepared.documents.isEmpty || !prepared.imageURLs.isEmpty { filesInSession = true }
                 var raw = ""
                 var started = false
-                for try await chunk in chat.streamResponse(to: message, images: prepared.imageURLs.map { UserInput.Image.url($0) }) {
-                    raw += chunk
-                    let shown = ThinkFilter.visible(TurnMarkers.clean(raw))
-                    guard !shown.isEmpty else { continue }
-                    if !started {
-                        started = true
-                        DiagnosticsLog.shared.record("first token", "\((clock.now - start).milliseconds) ms, model=\(modelID)")
-                        items.append(.assistant(id: replyID, text: shown, streaming: true))
-                    } else {
-                        replace(replyID, shown, streaming: true)
+                var outgoing = message
+                for round in 0..<2 {
+                    raw = ""
+                    for try await chunk in chat.streamResponse(to: outgoing, images: round == 0 ? prepared.imageURLs.map { UserInput.Image.url($0) } : []) {
+                        raw += chunk
+                        let shown = ThinkFilter.visible(TurnMarkers.clean(raw))
+                        guard !shown.isEmpty, started || !SkillCall.hidesPartial(shown) else { continue }
+                        if !started {
+                            started = true
+                            DiagnosticsLog.shared.record("first token", "\((clock.now - start).milliseconds) ms, model=\(modelID)")
+                            items.append(.assistant(id: replyID, text: shown, streaming: true))
+                        } else {
+                            replace(replyID, shown, streaming: true)
+                        }
                     }
+                    // The model asked for a skill by id: read it in code and let it answer again with the steps in front of it.
+                    if !started, round == 0, let id = SkillCall.parse(ThinkFilter.visible(TurnMarkers.clean(raw))), let used = try? SkillHub.registry.use(id) {
+                        DiagnosticsLog.shared.record("skills", "model asked for \(used.id), model=\(modelID)")
+                        outgoing = withFiles + "\n\n" + SkillHub.block(from: used)
+                        continue
+                    }
+                    break
+                }
+                if !started {
+                    // A reply that looked like a skill request but was not a valid one is shown as written.
+                    let text = ThinkFilter.visible(TurnMarkers.clean(raw))
+                    if !text.isEmpty { started = true; items.append(.assistant(id: replyID, text: text, streaming: true)) }
                 }
                 if started {
                     replace(replyID, ThinkFilter.visible(TurnMarkers.clean(raw)), streaming: false)
@@ -204,6 +224,29 @@ final class MLXChatService: ChatService {
         }
         DiagnosticsLog.shared.record("mlx context", "\(name) \(failed ? "failed" : "ok") \(result.count) chars")
         return String(result.prefix(3400))
+    }
+
+    /// Runs the read-only steps of a matched skill in code, because this model cannot call tools itself.
+    private func gatherSkillContext(_ skill: SkillUse, prompt: String) async -> String? {
+        guard !AppSettings.shared.actionsOff else { return nil }
+        var parts: [String] = []
+        for tool in skill.tools {
+            let executor: any ToolExecutor
+            let args: [String: Any]
+            switch tool {
+            case "readCalendar":
+                let r = CalendarIntent.range(for: prompt)
+                executor = LiveCalendarExecutor(handles: EventHandles()); args = ["startDate": r.startDate, "days": max(r.days, 7)]
+            case "listReminders": executor = ListRemindersExecutor(); args = ["search": ""]
+            case "searchWeb": executor = SearchWebExecutor(); args = ["query": prompt]
+            default: continue
+            }
+            let json = (try? JSONSerialization.data(withJSONObject: args)).map { String(decoding: $0, as: UTF8.self) } ?? "{}"
+            let out = (try? await executor.execute(ToolCall(toolName: tool, argumentsJSON: json))) ?? ""
+            if !out.isEmpty, !out.hasPrefix("Not done") { parts.append(out) }
+            DiagnosticsLog.shared.record("mlx context", "skill \(skill.id) \(tool) \(out.isEmpty ? "empty" : "ok")")
+        }
+        return parts.isEmpty ? nil : String(parts.joined(separator: "\n\n").prefix(3400))
     }
 
     private static func attach(_ info: String, to prompt: String) -> String {

@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import ModelLibrary
 import ToolKit
+import SkillKit
 import AdiuvaretCore
 import PolicyEngine
 import Diagnostics
@@ -88,7 +89,10 @@ final class CloudChatService: ChatService {
                 return
             }
             let clock = ContinuousClock(); let start = clock.now
-            let context = await gatherPublicContext(for: prompt)
+            let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt).flatMap { SkillHub.cloudSafe($0) ? $0 : nil }
+            let skillLine = AppSettings.shared.actionsOff || skill != nil ? "" : SkillCall.instruction(index: SkillHub.cloudIndex())
+            let skillBlock = [SkillHub.block(from: skill), skillLine].filter { !$0.isEmpty }.joined(separator: "\n")
+            let context = await gatherPublicContext(for: prompt, force: skill?.tools.contains("searchWeb") == true)
             var history: [ProviderWire.Message] = []
             var prior = items
             if case .user? = prior.last { prior.removeLast() }
@@ -108,8 +112,12 @@ final class CloudChatService: ChatService {
             history.append(.init(isUser: true, text: context.map { Self.attach($0, to: withFiles) } ?? withFiles, images: prepared.wireImages))
             var shown = ""; var started = false
             do {
-                for try await piece in CloudClient.stream(provider, model: model, key: key, system: Self.instructions(), messages: history) {
+                var system = Self.instructions() + (skillBlock.isEmpty ? "" : "\n" + skillBlock)
+                for round in 0..<2 {
+                  shown = ""
+                  for try await piece in CloudClient.stream(provider, model: model, key: key, system: system, messages: history) {
                     shown += piece
+                    guard started || !SkillCall.hidesPartial(shown) else { continue }
                     if !started {
                         started = true
                         DiagnosticsLog.shared.record("first token", "\((clock.now - start).milliseconds) ms, cloud=\(provider.id)")
@@ -117,7 +125,16 @@ final class CloudChatService: ChatService {
                     } else {
                         replace(replyID, shown, streaming: true)
                     }
+                  }
+                  // The model asked for a skill by id: read it in code and ask again with the steps added.
+                  if !started, round == 0, let id = SkillCall.parse(shown), let used = try? SkillHub.registry.use(id), SkillHub.cloudSafe(used) {
+                      DiagnosticsLog.shared.record("skills", "model asked for \(used.id), cloud=\(provider.id)")
+                      system = Self.instructions() + "\n" + SkillHub.block(from: used)
+                      continue
+                  }
+                  break
                 }
+                if !started, !shown.isEmpty { started = true; items.append(.assistant(id: replyID, text: shown, streaming: true)) }
                 if started {
                     replace(replyID, shown, streaming: false)
                     DiagnosticsLog.shared.record("reply done", "\((clock.now - start).milliseconds) ms, cloud=\(provider.id)")
@@ -136,8 +153,8 @@ final class CloudChatService: ChatService {
     }
 
     /// Public data only: the web, weather, prices, tables. Nothing from the calendar, reminders, notes, contacts or connected apps.
-    private func gatherPublicContext(for prompt: String) async -> String? {
-        guard !AppSettings.shared.actionsOff, WebIntent.looksLikeWebRequest(prompt), !CalendarIntent.looksLikeCalendarRequest(prompt), !CalendarIntent.looksLikeReminderRequest(prompt) else { return nil }
+    private func gatherPublicContext(for prompt: String, force: Bool = false) async -> String? {
+        guard !AppSettings.shared.actionsOff, force || WebIntent.looksLikeWebRequest(prompt), !CalendarIntent.looksLikeCalendarRequest(prompt), !CalendarIntent.looksLikeReminderRequest(prompt) else { return nil }
         let rowID = UUID()
         items.append(.tool(id: rowID, phase: .running, title: String(localized: "Searching the web…"), details: []))
         let json = (try? JSONSerialization.data(withJSONObject: ["query": prompt])).map { String(decoding: $0, as: UTF8.self) } ?? "{}"

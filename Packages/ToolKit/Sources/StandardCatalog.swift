@@ -131,5 +131,10 @@ public extension ToolCatalog {
             description: "Searches the titles of the user's Notion pages and databases and returns their names and last edit dates.",
             keywords: ["notion", "workspace", "wiki", "page in notion", "notion page"],
             examples: ["Find my roadmap page in Notion", "Search Notion for meeting notes", "Is there a Notion page about onboarding?"]),
+        CatalogEntry(
+            id: "skill_use", title: "Use a skill", category: "Skills",
+            description: "Lists or reads the user's saved skills, which are named sets of steps. Find one by words, then read it and follow it with the other tools.",
+            keywords: ["skill", "skills", "playbook"],
+            examples: ["Use my weekly review skill", "What skills do you have?", "Run the plan my day skill", "Which saved skills are available?"]),
     ])
 }

@@ -1,11 +1,12 @@
 import SwiftUI
 import DesignSystem
 import MemoryKit
+import SkillKit
 
 /// "What I know about you": every saved fact, editable and deletable.
 struct MemoryView: View {
     @State private var facts: [MemoryFact] = MemoryHub.store.all()
-    @State private var skills: [Skill] = SkillHub.store.all()
+    @State private var skillCount = SkillRegistryHub.shared.all().filter(\.enabled).count
     @State private var editing: MemoryFact?
     @State private var draft = ""
     @State private var confirmClear = false
@@ -53,29 +54,21 @@ struct MemoryView: View {
         } message: { Text("All saved facts will be deleted.") }
     }
 
-    private func reload() { facts = MemoryHub.store.all(); skills = SkillHub.store.all() }
+    private func reload() { facts = MemoryHub.store.all(); skillCount = SkillRegistryHub.shared.all().filter(\.enabled).count }
 
-    @ViewBuilder private var skillsSection: some View {
-        if !skills.isEmpty {
-            Section {
-                ForEach(skills) { skill in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Toggle(isOn: Binding(get: { skill.enabled }, set: { SkillHub.store.setEnabled(skill.id, $0); reload() })) {
-                            Text(verbatim: skill.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
-                        }
-                        Text(verbatim: skill.playbook).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
-                    }
-                    .frame(minHeight: 44).accessibilityIdentifier("memory.skill")
+    private var skillsSection: some View {
+        Section {
+            NavigationLink { SkillsView() } label: {
+                HStack {
+                    Text("Skills").font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
+                    Spacer()
+                    Text(verbatim: "\(skillCount)").font(DS.Typography.body).foregroundStyle(DS.Colors.textSecondary)
                 }
-                .onDelete { offsets in
-                    for i in offsets { SkillHub.store.remove(skills[i].id) }
-                    reload()
-                }
-            } header: {
-                Text("Routines")
-            } footer: {
-                Text("\(skills.count) of \(SkillLimits.maxSkills) routines. They only guide the steps. I still ask before anything changes. Swipe to delete.")
+                .frame(minHeight: 44)
             }
+            .accessibilityIdentifier("memory.skills")
+        } footer: {
+            Text("Skills are saved sets of steps. They only guide me. I still ask before anything changes.").font(DS.Typography.caption)
         }
     }
 }
