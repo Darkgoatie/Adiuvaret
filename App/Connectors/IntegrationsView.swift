@@ -2,31 +2,56 @@ import SwiftUI
 import DesignSystem
 import ToolKit
 
-/// Advanced, Integrations: one icon per connector, four to a row. Tapping an icon opens that connector's own window with what it reads, what it changes, where data goes, and its settings.
-struct IntegrationsView: View {
-    private enum Pick: Identifiable, Hashable {
-        case calendar
-        case connector(String)
-        var id: String { switch self { case .calendar: "calendar"; case .connector(let id): id } }
-    }
+/// What one icon stands for. Apps from the same company share one icon and one window.
+private struct AppGroup: Identifiable {
+    enum Member: Hashable { case appleCalendar, googleCalendar, gmail, connector(String) }
+    let id: String
+    let title: String
+    let icon: IntegrationIcon.Kind
+    let members: [Member]
 
-    @State private var picked: Pick?
-    @State private var states: [String: Bool] = IntegrationsView.readStates()
-    @State private var connected: Set<String> = IntegrationsView.readConnected()
+    static let all: [AppGroup] = [
+        AppGroup(id: "apple", title: String(localized: "Apple Apps"), icon: .symbol("apple.logo", .black),
+                 members: [.appleCalendar, .connector("contacts"), .connector("shortcuts"), .connector("mail")]),
+        AppGroup(id: "google", title: String(localized: "Google Apps"), icon: .brand("brand-google", Color(red: 0.26, green: 0.52, blue: 0.96)),
+                 members: [.googleCalendar, .gmail]),
+        AppGroup(id: "obsidian", title: String(localized: "Obsidian"), icon: .brand("brand-obsidian", Color(red: 0.49, green: 0.23, blue: 0.93)),
+                 members: [.connector("notes")]),
+        AppGroup(id: "todoist", title: String(localized: "Todoist"), icon: .brand("brand-todoist", Color(red: 0.89, green: 0.27, blue: 0.20)),
+                 members: [.connector("todoist")]),
+        AppGroup(id: "github", title: String(localized: "GitHub"), icon: .brand("brand-github", Color(red: 0.09, green: 0.09, blue: 0.09)),
+                 members: [.connector("github")]),
+        AppGroup(id: "notion", title: String(localized: "Notion"), icon: .brand("brand-notion", .black),
+                 members: [.connector("notion")]),
+    ]
+
+    /// True when any app in the group is switched on.
+    var isOn: Bool {
+        members.contains { m in
+            switch m {
+            case .appleCalendar, .googleCalendar: CalendarAccess.granted
+            case .gmail: false
+            case .connector(let id): ConnectorCatalog.isOn(id)
+            }
+        }
+    }
+}
+
+/// Advanced, Integrations: one icon per company, four to a row. Tapping an icon opens a window with every app of that company: what it reads and changes, where data goes, and its settings.
+struct IntegrationsView: View {
+    @State private var picked: AppGroup?
+    @State private var refreshID = UUID()
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.m, alignment: .top), count: 4)
 
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: Spacing.l) {
-                tile(.calendar, title: String(localized: "Calendar"), symbol: "calendar", color: IntegrationIcon.color("calendar"),
-                     on: EKAuthorized.calendar)
-                ForEach(ConnectorCatalog.all) { c in
-                    tile(.connector(c.id), title: Self.shortTitle(c), symbol: c.symbol, color: IntegrationIcon.color(c.id), on: states[c.id] ?? false)
-                }
+                ForEach(AppGroup.all) { g in tile(g) }
             }
+            .id(refreshID)
             .padding(.horizontal, Spacing.l).padding(.top, Spacing.l)
-            Text("Tap an app to see what it reads and changes, where data goes, and to set it up. A green dot means it is on.")
+            Text("Tap an icon to see what an app reads and changes, where data goes, and to set it up. A green dot means something in the group is on.")
                 .font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
                 .padding(.horizontal, Spacing.l).padding(.top, Spacing.l)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -34,107 +59,53 @@ struct IntegrationsView: View {
         .background(DS.Colors.background)
         .navigationTitle(String(localized: "Integrations"))
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $picked, onDismiss: refresh) { pick in
-            NavigationStack {
-                switch pick {
-                case .calendar: CalendarDetail()
-                case .connector(let id): if let c = ConnectorCatalog.connector(id) { ConnectorDetail(connector: c) }
-                }
-            }
-            .presentationDetents([.large])
+        .sheet(item: $picked, onDismiss: { refreshID = UUID() }) { g in
+            NavigationStack { GroupDetail(group: g) }.presentationDetents([.large])
         }
     }
 
-    private func tile(_ pick: Pick, title: String, symbol: String, color: Color, on: Bool) -> some View {
-        Button { picked = pick } label: {
+    private func tile(_ g: AppGroup) -> some View {
+        let on = g.isOn
+        return Button { picked = g } label: {
             VStack(spacing: Spacing.xs) {
                 ZStack(alignment: .topTrailing) {
-                    IntegrationIcon(symbol: symbol, color: color, size: 60)
+                    IntegrationIcon(kind: g.icon, size: 60)
                     if on {
                         Circle().fill(DS.Colors.success).frame(width: 14, height: 14)
                             .overlay(Circle().stroke(DS.Colors.background, lineWidth: 2))
                             .offset(x: 4, y: -4)
                     }
                 }
-                Text(verbatim: title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textPrimary)
+                Text(verbatim: g.title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textPrimary)
                     .lineLimit(2).multilineTextAlignment(.center).frame(maxWidth: .infinity)
             }
             .frame(minHeight: 44)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: "\(title), \(on ? String(localized: "on") : String(localized: "off"))"))
-        .accessibilityIdentifier("integration.tile.\(pick.id)")
-    }
-
-    private func refresh() {
-        states = Self.readStates()
-        connected = Self.readConnected()
-    }
-
-    private static func readStates() -> [String: Bool] { Dictionary(uniqueKeysWithValues: ConnectorCatalog.all.map { ($0.id, ConnectorCatalog.isOn($0.id)) }) }
-    private static func readConnected() -> Set<String> { Set(ServiceHost.hosts.keys.filter { SecretStore.has($0) }) }
-
-    /// Short names fit under a 60 pt icon.
-    private static func shortTitle(_ c: Connector) -> String {
-        switch c.id {
-        case "notes": String(localized: "Notes")
-        case "mail": String(localized: "Mail")
-        default: c.title
-        }
+        .accessibilityLabel(Text(verbatim: "\(g.title), \(on ? String(localized: "on") : String(localized: "off"))"))
+        .accessibilityIdentifier("integration.tile.\(g.id)")
     }
 }
 
-/// A rounded square in the app's colour with a white glyph, drawn from SF Symbols so no third-party logo is bundled.
+/// An app icon: Apple's own SF Symbol on black for Apple apps, otherwise the company's logo mark in its brand colour on a light tile.
 struct IntegrationIcon: View {
-    let symbol: String
-    let color: Color
+    enum Kind { case symbol(String, Color), brand(String, Color) }
+    let kind: Kind
     var size: CGFloat = 60
 
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.225, style: .continuous).fill(color)
-            .frame(width: size, height: size)
-            .overlay(Image(systemName: symbol).font(.system(size: size * 0.46, weight: .medium)).foregroundStyle(.white))
-            .accessibilityHidden(true)
-    }
-
-    static func color(_ id: String) -> Color {
-        switch id {
-        case "calendar": Color(red: 0.95, green: 0.26, blue: 0.21)
-        case "notes": Color(red: 0.49, green: 0.23, blue: 0.93)
-        case "contacts": Color(red: 0.56, green: 0.56, blue: 0.58)
-        case "shortcuts": Color(red: 0.93, green: 0.25, blue: 0.45)
-        case "mail": Color(red: 0.12, green: 0.55, blue: 0.96)
-        case "todoist": Color(red: 0.89, green: 0.27, blue: 0.20)
-        case "github": Color(red: 0.22, green: 0.24, blue: 0.27)
-        case "notion": Color(red: 0.30, green: 0.30, blue: 0.32)
-        default: Color(red: 0.16, green: 0.72, blue: 0.52)
+        let shape = RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
+        switch kind {
+        case .symbol(let name, let color):
+            shape.fill(color).frame(width: size, height: size)
+                .overlay(Image(systemName: name).font(.system(size: size * 0.5, weight: .medium)).foregroundStyle(.white))
+                .accessibilityHidden(true)
+        case .brand(let asset, let color):
+            shape.fill(Color.white).frame(width: size, height: size)
+                .overlay(shape.stroke(DS.Colors.separator, lineWidth: 1))
+                .overlay(Image(asset).renderingMode(.template).resizable().scaledToFit().frame(width: size * 0.5, height: size * 0.5).foregroundStyle(color))
+                .accessibilityHidden(true)
         }
-    }
-}
-
-private enum EKAuthorized {
-    static var calendar: Bool { CalendarAccess.granted }
-}
-
-private struct CalendarDetail: View {
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        List {
-            Section {
-                HStack(spacing: Spacing.m) {
-                    IntegrationIcon(symbol: "calendar", color: IntegrationIcon.color("calendar"), size: 56)
-                    Text("Calendar").font(DS.Typography.title).foregroundStyle(DS.Colors.textPrimary)
-                }
-                .listRowBackground(Color.clear)
-                info(String(localized: "Reads"), String(localized: "Events from every calendar on this iPhone, including Google and iCloud accounts you added in iOS Settings."))
-                info(String(localized: "Changes"), String(localized: "Creates, moves and deletes events, after you approve."))
-                info(String(localized: "Network"), String(localized: "None from Adiuvaret."))
-            }
-            CalendarChoiceSection()
-        }
-        .scrollContentBackground(.hidden).background(DS.Colors.background)
-        .navigationTitle(String(localized: "Calendar")).navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
     }
 }
 
@@ -146,10 +117,71 @@ private func info(_ label: String, _ value: String) -> some View {
     .padding(.vertical, 2)
 }
 
-/// The window for one connector: header, switch, the three facts, and its own settings.
-private struct ConnectorDetail: View {
-    let connector: Connector
+/// The window for one company: its icon and name, then a block for every app in it.
+private struct GroupDetail: View {
+    let group: AppGroup
     @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: Spacing.m) {
+                    IntegrationIcon(kind: group.icon, size: 56)
+                    Text(verbatim: group.title).font(DS.Typography.title).foregroundStyle(DS.Colors.textPrimary)
+                }
+                .listRowBackground(Color.clear)
+            }
+            ForEach(group.members, id: \.self) { m in
+                switch m {
+                case .appleCalendar: AppleCalendarBlock()
+                case .googleCalendar: GoogleCalendarBlock()
+                case .gmail: GmailBlock()
+                case .connector(let id): if let c = ConnectorCatalog.connector(id) { ConnectorBlock(connector: c) }
+                }
+            }
+        }
+        .scrollContentBackground(.hidden).background(DS.Colors.background)
+        .navigationTitle(group.title).navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+    }
+}
+
+private struct AppleCalendarBlock: View {
+    var body: some View {
+        Section {
+            Label { Text("Calendar and Reminders").font(DS.Typography.headline) } icon: { Image(systemName: "calendar") }
+            info(String(localized: "Reads"), String(localized: "Events from every calendar on this iPhone, and your open reminders."))
+            info(String(localized: "Changes"), String(localized: "Creates, moves and deletes events and creates reminders, after you approve."))
+            info(String(localized: "Network"), String(localized: "None from Adiuvaret."))
+        }
+        CalendarChoiceSection()
+    }
+}
+
+private struct GoogleCalendarBlock: View {
+    var body: some View {
+        Section {
+            Label { Text("Google Calendar").font(DS.Typography.headline) } icon: { Image(systemName: "calendar") }
+            info(String(localized: "Reads"), String(localized: "Events from your Google account, through the calendar on this iPhone."))
+            info(String(localized: "Changes"), String(localized: "Same as Apple Calendar: new events are saved where you chose above, after you approve."))
+            info(String(localized: "Network"), String(localized: "None from Adiuvaret. iOS syncs the account."))
+            info(String(localized: "Set up"), String(localized: "Add your Google account in the iOS Settings app under Calendar, Accounts, Add Account, and switch Calendars on."))
+        }
+    }
+}
+
+private struct GmailBlock: View {
+    var body: some View {
+        Section {
+            Label { Text("Gmail").font(DS.Typography.headline) } icon: { Image(systemName: "envelope") }
+            info(String(localized: "Status"), String(localized: "Not available yet. Reading mail needs a Google sign-in that is not set up."))
+        }
+    }
+}
+
+/// One connector inside a company window: switch, the three facts, and its own settings.
+private struct ConnectorBlock: View {
+    let connector: Connector
     @State private var on: Bool
     @State private var picking = false
     @State private var folder = NoteVault.shared.folderName
@@ -166,30 +198,21 @@ private struct ConnectorDetail: View {
     }
 
     var body: some View {
-        List {
+        Group {
             Section {
-                HStack(spacing: Spacing.m) {
-                    IntegrationIcon(symbol: connector.symbol, color: IntegrationIcon.color(connector.id), size: 56)
-                    Text(verbatim: connector.title).font(DS.Typography.title).foregroundStyle(DS.Colors.textPrimary)
-                }
-                .listRowBackground(Color.clear)
+                Label { Text(verbatim: connector.title).font(DS.Typography.headline) } icon: { Image(systemName: connector.symbol) }
                 Toggle(isOn: Binding(get: { on }, set: { on = $0; ConnectorCatalog.setOn($0, connector.id) })) {
                     Text("Use \(connector.title)").font(DS.Typography.body)
                 }
                 .tint(DS.Colors.accent).frame(minHeight: 44)
                 .accessibilityIdentifier("integration.\(connector.id)")
-            }
-            Section {
                 info(String(localized: "Reads"), connector.reads)
                 info(String(localized: "Changes"), connector.changes)
                 info(String(localized: "Network"), connector.network)
+                if connector.id == "notes" { folderRows }
+                if ServiceHost.hosts[connector.id] != nil { tokenRows }
             }
-            if connector.id == "notes" { Section("Folder") { folderRows } }
-            if ServiceHost.hosts[connector.id] != nil { Section("Token") { tokenRows } }
         }
-        .scrollContentBackground(.hidden).background(DS.Colors.background)
-        .navigationTitle(connector.title).navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { result in
             guard case .success(let url) = result else { return }
             do { try NoteVault.shared.connect(url); folder = NoteVault.shared.folderName; failed = false } catch { failed = true }
