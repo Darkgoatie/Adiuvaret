@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import DesignSystem
+import ModelLibrary
 
 @MainActor @Observable
 final class DemoChatService: ChatService {
@@ -33,8 +34,9 @@ final class DemoChatService: ChatService {
                   rows: [DetailRow(String(localized: "Title"), "Dentist"), DetailRow(String(localized: "When"), String(localized: "Tue 3:00-4:00 PM")), DetailRow(String(localized: "Calendar"), String(localized: "Personal"))]),
     ]
 
-    func send(_ text: String) async {
+    func send(_ text: String, attachments: [Attachment]) async {
         guard !isGenerating, !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        if !attachments.isEmpty { items.append(.userFiles(id: UUID(), files: attachments)) }
         items.append(.user(id: UUID(), text: text))
         isGenerating = true
         let toolID = UUID(), replyID = UUID()
@@ -66,8 +68,8 @@ final class DemoChatService: ChatService {
 
     func edit(_ id: UUID, text: String) async {
         guard !isGenerating, let i = items.firstIndex(where: { $0.id == id }), case .user = items[i] else { return }
-        items.removeSubrange(i...)
-        await send(text)
+        let files = items.truncate(beforeUser: i)
+        await send(text, attachments: files)
     }
 
     func regenerate(_ id: UUID) async {

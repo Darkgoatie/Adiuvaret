@@ -12,6 +12,8 @@ struct ChatSummary: Identifiable, Hashable {
 
 enum ThreadItem: Identifiable {
     case user(id: UUID, text: String)
+    /// Files that went with the user message right after this row.
+    case userFiles(id: UUID, files: [Attachment])
     case assistant(id: UUID, text: String, streaming: Bool)
     case tool(id: UUID, phase: ToolProgressRow.Phase, title: String, details: [String])
     case action(id: UUID, phase: ActionCard.Phase, title: String, detail: String, open: String?)
@@ -23,7 +25,7 @@ enum ThreadItem: Identifiable {
 
     var id: UUID {
         switch self {
-        case .user(let i, _), .assistant(let i, _, _), .tool(let i, _, _, _), .action(let i, _, _, _, _),
+        case .user(let i, _), .userFiles(let i, _), .assistant(let i, _, _), .tool(let i, _, _, _), .action(let i, _, _, _, _),
              .approval(let i, _, _, _), .draft(let i, _, _, _), .memory(let i, _), .skillOffer(let i, _, _), .error(let i, _): i
         }
     }
@@ -41,7 +43,7 @@ enum ChatBanner: Equatable {
     var title: String { get }
     var modelID: String { get }
     var modelName: String { get }
-    func send(_ text: String) async
+    func send(_ text: String, attachments: [Attachment]) async
     func stop()
     func approve(_ id: UUID)
     func deny(_ id: UUID)
@@ -54,6 +56,51 @@ enum ChatBanner: Equatable {
     func regenerate(_ id: UUID) async
     /// Removes one message. Tool rows and cards go with the chat, not one by one.
     func deleteMessage(_ id: UUID)
+}
+
+extension ChatService {
+    func send(_ text: String) async { await send(text, attachments: []) }
+
+    /// What the open model can take as attachments.
+    var fileSupport: AttachmentSupport { ModelCapabilities.support(for: modelID) }
+
+    /// The provider's name when attached files would leave the phone, nil for models that run on it.
+    var fileDestination: String? { Providers.parseModelID(modelID)?.provider.name }
+}
+
+extension Array where Element == ThreadItem {
+    /// The files of the newest user message, which the model is about to answer.
+    func currentTurnFiles() -> [Attachment] {
+        guard let i = lastIndex(where: { if case .user = $0 { true } else { false } }) else { return [] }
+        return attachments(beforeUser: i)
+    }
+
+    /// Removes one message and the row of files that went with it. The stored copies are deleted too.
+    mutating func removeMessage(at i: Int) {
+        guard indices.contains(i) else { return }
+        if i > 0, case .userFiles(_, let files) = self[i - 1], case .user = self[i] {
+            AttachmentStore.remove(files)
+            removeSubrange((i - 1)...i)
+        } else {
+            remove(at: i)
+        }
+    }
+
+    /// Cuts the thread back to just before the user message at `i`, files row included, and returns the files so an edit can send them again.
+    mutating func truncate(beforeUser i: Int) -> [Attachment] {
+        let files = attachments(beforeUser: i)
+        let start = files.isEmpty ? i : i - 1
+        let keep = Set(files.map(\.id))
+        for case .userFiles(_, let later) in self[start...] { AttachmentStore.remove(later.filter { !keep.contains($0.id) }) }
+        removeSubrange(start...)
+        return files
+    }
+
+    /// The files attached to the user message at `index`; they sit in the row just before it.
+    func attachments(beforeUser index: Int) -> [Attachment] {
+        guard index > 0, indices.contains(index), case .userFiles(_, let files) = self[index - 1] else { return [] }
+        return files
+    }
 }
 
 extension ThreadItem {

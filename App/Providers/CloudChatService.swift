@@ -6,7 +6,7 @@ import AdiuvaretCore
 import PolicyEngine
 import Diagnostics
 
-/// Chat with an online model through the user's own API key. Only the messages typed in this chat, and public data fetched for them, are sent.
+/// Chat with an online model through the user's own API key. Only the messages typed in this chat, files the user attaches to them, and public data fetched for them, are sent.
 /// Calendar and reminders, saved memory and routines stay on the phone and are never attached.
 @MainActor @Observable
 final class CloudChatService: ChatService {
@@ -34,9 +34,11 @@ final class CloudChatService: ChatService {
         if !c.isEmpty { title = String(c.prefix(60)) }
     }
 
-    func send(_ text: String) async {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    func send(_ text: String, attachments: [Attachment]) async {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty, !attachments.isEmpty { trimmed = String(localized: "Please read the attached file and tell me what it says.") }
         guard !isGenerating, !trimmed.isEmpty else { return }
+        if !attachments.isEmpty { items.append(.userFiles(id: UUID(), files: attachments)) }
         items.append(.user(id: UUID(), text: trimmed))
         if title == String(localized: "New chat") { title = String(trimmed.prefix(40)) }
         lastPrompt = trimmed
@@ -57,15 +59,15 @@ final class CloudChatService: ChatService {
     func deleteMessage(_ id: UUID) {
         let roles = items.map(\.editingRole)
         guard let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canDelete(roles, at: i, generating: isGenerating) else { return }
-        items.remove(at: i)
+        items.removeMessage(at: i)
     }
 
     func edit(_ id: UUID, text: String) async {
         let roles = items.map(\.editingRole)
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty, let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canEdit(roles, at: i, generating: isGenerating) else { return }
-        items.removeSubrange(i...)
-        await send(t)
+        let files = items.truncate(beforeUser: i)
+        await send(t, attachments: files)
     }
 
     func regenerate(_ id: UUID) async {
@@ -90,14 +92,20 @@ final class CloudChatService: ChatService {
             var history: [ProviderWire.Message] = []
             var prior = items
             if case .user? = prior.last { prior.removeLast() }
-            for item in prior.suffix(24) {
+            let support = fileSupport
+            for (n, item) in prior.enumerated().suffix(24) {
                 switch item {
-                case .user(_, let t): history.append(.init(isUser: true, text: t))
+                case .user(_, let t):
+                    // Earlier files are sent again as text so the model can still refer to them; earlier pictures are not resent.
+                    let old = AttachmentStore.prepare(prior.attachments(beforeUser: n).filter { $0.kind == .document }, support: support)
+                    history.append(.init(isUser: true, text: AttachmentText.compose(prompt: t, documents: old.documents, limit: support.documentChars / 2)))
                 case .assistant(_, let t, false): history.append(.init(isUser: false, text: t))
                 default: break
                 }
             }
-            history.append(.init(isUser: true, text: context.map { Self.attach($0, to: prompt) } ?? prompt))
+            let prepared = AttachmentStore.prepare(items.currentTurnFiles(), support: support)
+            let withFiles = AttachmentText.compose(prompt: prompt, documents: prepared.documents, imageNames: prepared.skippedImageNames, limit: support.documentChars)
+            history.append(.init(isUser: true, text: context.map { Self.attach($0, to: withFiles) } ?? withFiles, images: prepared.wireImages))
             var shown = ""; var started = false
             do {
                 for try await piece in CloudClient.stream(provider, model: model, key: key, system: Self.instructions(), messages: history) {
@@ -147,7 +155,7 @@ final class CloudChatService: ChatService {
 
     private static func instructions() -> String {
         let f = DateFormatter(); f.dateStyle = .full; f.timeStyle = .short
-        return "You are Adiuvaret, a warm, concise personal assistant. Now is \(f.string(from: Date())). In this chat you cannot use the user's calendar, reminders or notes and you cannot change anything. Public information fetched for the user arrives attached to their message. Answer from it; never guess dates, scores or news. Write plain, short sentences." + RichReplyRules.text
+        return "You are Adiuvaret, a warm, concise personal assistant. Now is \(f.string(from: Date())). In this chat you cannot use the user's calendar, reminders or notes and you cannot change anything. Public information fetched for the user arrives attached to their message, and so do the contents of files the user attaches. Answer from it; never guess dates, scores or news. Write plain, short sentences." + RichReplyRules.text
     }
 
     private func replace(_ id: UUID, _ text: String, streaming: Bool) {

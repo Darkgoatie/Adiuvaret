@@ -2,10 +2,18 @@ import Foundation
 
 /// Builds requests for a provider and reads its answers. Pure logic: the app sends the requests and attaches the key.
 public enum ProviderWire {
+    /// An image sent with a user message, already resized and encoded.
+    public struct Image: Sendable, Equatable {
+        public let mediaType: String
+        public let base64: String
+        public init(mediaType: String, base64: String) { self.mediaType = mediaType; self.base64 = base64 }
+    }
+
     public struct Message: Sendable, Equatable {
         public let isUser: Bool
         public let text: String
-        public init(isUser: Bool, text: String) { self.isUser = isUser; self.text = text }
+        public let images: [Image]
+        public init(isUser: Bool, text: String, images: [Image] = []) { self.isUser = isUser; self.text = text; self.images = images }
     }
 
     public static func url(_ provider: Provider, path: String) -> URL? {
@@ -24,11 +32,24 @@ public enum ProviderWire {
     public static func chatBody(_ provider: Provider, model: String, system: String, messages: [Message], maxTokens: Int = 2048) -> Data? {
         let turns = alternating(messages)
         guard turns.last?.isUser == true else { return nil }
-        let list = turns.map { ["role": $0.isUser ? "user" : "assistant", "content": $0.text] }
+        let list: [[String: Any]] = turns.map { m in
+            let role = m.isUser ? "user" : "assistant"
+            guard m.isUser, !m.images.isEmpty else { return ["role": role, "content": m.text] }
+            switch provider.api {
+            case .openAICompatible:
+                var parts: [[String: Any]] = [["type": "text", "text": m.text]]
+                for i in m.images { parts.append(["type": "image_url", "image_url": ["url": "data:\(i.mediaType);base64,\(i.base64)"]]) }
+                return ["role": role, "content": parts]
+            case .anthropic:
+                var parts: [[String: Any]] = m.images.map { ["type": "image", "source": ["type": "base64", "media_type": $0.mediaType, "data": $0.base64]] }
+                parts.append(["type": "text", "text": m.text])
+                return ["role": role, "content": parts]
+            }
+        }
         var body: [String: Any]
         switch provider.api {
         case .openAICompatible:
-            body = ["model": model, "stream": true, "messages": [["role": "system", "content": system]] + list]
+            body = ["model": model, "stream": true, "messages": [["role": "system", "content": system] as [String: Any]] + list]
             body["max_tokens"] = maxTokens
         case .anthropic:
             body = ["model": model, "stream": true, "max_tokens": maxTokens, "system": system, "messages": list]
@@ -45,9 +66,9 @@ public enum ProviderWire {
     /// Every provider needs a strict user, assistant, user order. Neighbours from the same side are merged and a leading assistant message is dropped.
     static func alternating(_ messages: [Message]) -> [Message] {
         var out: [Message] = []
-        for m in messages where !m.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        for m in messages where !m.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !m.images.isEmpty {
             if out.isEmpty && !m.isUser { continue }
-            if let last = out.last, last.isUser == m.isUser { out[out.count - 1] = Message(isUser: m.isUser, text: last.text + "\n" + m.text) } else { out.append(m) }
+            if let last = out.last, last.isUser == m.isUser { out[out.count - 1] = Message(isUser: m.isUser, text: last.text + "\n" + m.text, images: last.images + m.images) } else { out.append(m) }
         }
         return out
     }

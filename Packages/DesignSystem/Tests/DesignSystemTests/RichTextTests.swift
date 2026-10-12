@@ -1,6 +1,48 @@
 import Testing
 @testable import DesignSystem
 
+@Suite struct FileOutputTests {
+    @Test func fileFencesAreRecognised() {
+        #expect(FileOutput.name(fromFenceInfo: "file:report.md") == "report.md")
+        #expect(FileOutput.name(fromFenceInfo: "file report.csv") == "report.csv")
+        #expect(FileOutput.name(fromFenceInfo: "file: notes.txt") == "notes.txt")
+        #expect(FileOutput.name(fromFenceInfo: "file name=\"data.json\"") == "data.json")
+        #expect(FileOutput.name(fromFenceInfo: "csv") == nil)
+        #expect(FileOutput.name(fromFenceInfo: "filesystem") == nil)
+        #expect(FileOutput.name(fromFenceInfo: "file:") == nil)
+    }
+
+    @Test func namesCannotEscapeOrUseOddTypes() {
+        #expect(FileOutput.safeName("../../etc/passwd") == "passwd.txt")
+        #expect(FileOutput.safeName("a\\b\\c.csv") == "c.csv")
+        #expect(FileOutput.safeName("tool.exe") == "tool.txt")
+        #expect(FileOutput.safeName("..hidden.md") == "hidden.md")
+        #expect(FileOutput.safeName("") == "reply.txt")
+        #expect(FileOutput.safeName("My Plan.MD") == "My Plan.md")
+        #expect(FileOutput.safeName(String(repeating: "a", count: 200) + ".txt").count == 54)
+    }
+
+    @Test func aClosedFileFenceBecomesAFileBlock() {
+        let b = RichText.blocks(from: "Here you go.\n```file:todo.md\n- one\n- two\n```\nDone.")
+        #expect(b == [.paragraph("Here you go."), .file(GeneratedFile(name: "todo.md", text: "- one\n- two")), .paragraph("Done.")])
+    }
+
+    @Test func aFenceStillStreamingStaysPlainCode() {
+        let b = RichText.blocks(from: "```file:todo.md\n- one\n- tw")
+        #expect(b == [.code("- one\n- tw")])
+    }
+
+    @Test func ordinaryFencesAreUnchanged() {
+        #expect(RichText.blocks(from: "```swift\nlet x = 1\n```") == [.code("let x = 1")])
+        #expect(RichText.blocks(from: "```csv\na,b\n1,2\n```").count == 1)
+    }
+
+    @Test func sizeIsReadable() {
+        #expect(FileOutput.sizeText(GeneratedFile(name: "a.txt", text: "hello")) == "5 B")
+        #expect(FileOutput.sizeText(GeneratedFile(name: "a.txt", text: String(repeating: "x", count: 2048))) == "2.0 KB")
+    }
+}
+
 @Suite struct RichTextTests {
     @Test func bulletsAndBold() {
         let b = RichText.blocks(from: "Intro\n- **a** one\n* two\n\nEnd")

@@ -1,6 +1,7 @@
 import Foundation
 import DesignSystem
 import Persistence
+import ModelLibrary
 
 /// Converts thread items to and from stored form. Transient states are settled on save:
 /// a running tool row becomes failed and a pending approval times out, because nothing is running after a relaunch.
@@ -16,12 +17,14 @@ enum ThreadItemCoding {
         var rows: [Row]?
         var draftKind: String?
         var to: String?
+        var files: [Attachment]?
     }
 
     static func snapshot(_ item: ThreadItem) -> ItemSnapshot? {
         var f = Fields(); let kind: String
         switch item {
         case .user(_, let t): kind = "user"; f.text = t
+        case .userFiles(_, let files): kind = "userFiles"; f.files = files
         case .assistant(_, let t, _): kind = "assistant"; f.text = t
         case .tool(_, let p, let t, let d):
             kind = "tool"; f.title = t; f.details = d
@@ -45,6 +48,7 @@ enum ThreadItemCoding {
         guard let f = try? JSONDecoder().decode(Fields.self, from: s.payload) else { return nil }
         switch s.kind {
         case "user": return .user(id: s.id, text: f.text ?? "")
+        case "userFiles": return .userFiles(id: s.id, files: f.files ?? [])
         case "assistant": return .assistant(id: s.id, text: f.text ?? "", streaming: false)
         case "tool": return .tool(id: s.id, phase: f.phase == "finished" ? .finished : .failed, title: f.title ?? "", details: f.details ?? [])
         case "action":

@@ -11,6 +11,7 @@ public struct RichText: View {
         case subBullet(String)
         case numbered(Int, String)
         case code(String)
+        case file(GeneratedFile)
     }
 
     let text: String
@@ -32,6 +33,8 @@ public struct RichText: View {
             DataTableView(table: t)
         case .chart(let c):
             ChartBlockView(spec: c)
+        case .file(let f):
+            FileBlockView(file: f)
         case .paragraph(let s):
             Text(Self.inline(s)).font(DS.Typography.body)
         case .heading(let s):
@@ -83,6 +86,7 @@ public struct RichText: View {
         var paragraph: [String] = []
         var fence: [String]?
         var fenceLanguage = ""
+        var fenceInfo = ""
         var pipes: [String] = []
         func flush() {
             flushPipes()
@@ -94,8 +98,10 @@ public struct RichText: View {
             else { paragraph.append(contentsOf: pipes) }
             pipes = []
         }
-        func closeFence(_ lines: [String]) {
+        func closeFence(_ lines: [String], closed: Bool = true) {
             let body = lines.joined(separator: "\n")
+            if FileOutput.name(fromFenceInfo: fenceInfo) != nil, !closed { out.append(.code(body)); return }
+            if let name = FileOutput.name(fromFenceInfo: fenceInfo) { out.append(.file(GeneratedFile(name: name, text: body))); return }
             switch fenceLanguage {
             case "csv": if let t = RichData.csv(body) { out.append(.table(t)) } else { out.append(.code(body)) }
             case "chart": if let c = RichData.chart(body) { out.append(.chart(c)) } else { out.append(.code(body)) }
@@ -106,7 +112,7 @@ public struct RichText: View {
             let line = raw.trimmingCharacters(in: .whitespaces)
             if line.hasPrefix("```") {
                 if let open = fence { closeFence(open); fence = nil }
-                else { flush(); fence = []; fenceLanguage = line.dropFirst(3).trimmingCharacters(in: .whitespaces).lowercased() }
+                else { flush(); fence = []; fenceInfo = line.dropFirst(3).trimmingCharacters(in: .whitespaces); fenceLanguage = fenceInfo.lowercased() }
                 continue
             }
             if fence != nil { fence?.append(String(raw)); continue }
@@ -128,7 +134,7 @@ public struct RichText: View {
                 paragraph.append(line)
             }
         }
-        if let open = fence { closeFence(open) }
+        if let open = fence { closeFence(open, closed: false) }
         flush()
         return out
     }

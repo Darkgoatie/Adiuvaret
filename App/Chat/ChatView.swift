@@ -1,12 +1,16 @@
 import SwiftUI
 import DesignSystem
 import ModelLibrary
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     let service: any ChatService
     @State private var draft = ""
     @FocusState private var focused: Bool
     @State private var editing: EditTarget?
+    @State private var pending: [Attachment] = []
+    @State private var attachError: String?
     let openDrawer: () -> Void
     var turnFinished: () -> Void = {}
     var switchModel: (String) -> Void = { _ in }
@@ -21,7 +25,8 @@ struct ChatView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Composer(text: $draft, focused: $focused, isGenerating: service.isGenerating,
                      quickActions: AppSettings.shared.quickBarOn ? AppSettings.shared.shortcuts.filter { !$0.word.isEmpty } : [],
-                     send: { let t = draft; draft = ""; Task { await service.send(t); turnFinished() } },
+                     attachments: $pending, support: service.fileSupport, destination: service.fileDestination, error: $attachError,
+                     send: { let t = draft; let files = pending; draft = ""; pending = []; Task { await service.send(t, attachments: files); turnFinished() } },
                      stop: service.stop)
         }
         .onAppear { if CommandLine.arguments.contains("-focus") { focused = true } }
@@ -156,6 +161,7 @@ private struct ItemView: View {
     var body: some View {
         switch item {
         case .user(_, let t): MessageBubble(role: .user, text: t)
+        case .userFiles(_, let files): AttachmentRow(files: files)
         case .assistant(_, let t, let s): MessageBubble(role: .assistant, text: t, isStreaming: s)
         case .tool(_, let p, let t, let d): ToolProgressRow(phase: p, title: t, details: d)
         case .action(let id, let p, let t, let d, let o):
@@ -208,11 +214,58 @@ struct Composer: View {
     var focused: FocusState<Bool>.Binding
     let isGenerating: Bool
     let quickActions: [QuickShortcut]
+    @Binding var attachments: [Attachment]
+    let support: AttachmentSupport
+    let destination: String?
+    @Binding var error: String?
     let send: () -> Void
     let stop: () -> Void
 
+    @State private var pickingFile = false
+    @State private var pickingPhoto = false
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var takingPhoto = false
+
+    private var canSend: Bool { !text.trimmingCharacters(in: .whitespaces).isEmpty || !attachments.isEmpty }
+
+    private func add(_ a: Attachment) {
+        guard attachments.count < AttachmentRules.maxPerMessage else { AttachmentStore.remove([a]); error = String(localized: "You can attach up to \(AttachmentRules.maxPerMessage) files."); return }
+        attachments.append(a); error = nil
+    }
+
+    private func importFiles(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result else { return }
+        for url in urls {
+            do { add(try AttachmentStore.importFile(url)) } catch { self.error = (error as? AttachmentError)?.message ?? AttachmentError.unreadable.message }
+        }
+    }
+
+    private func importPhotos(_ items: [PhotosPickerItem]) async {
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self), let a = AttachmentStore.importPhoto(data: data) { add(a) }
+            else { error = AttachmentError.unreadable.message }
+        }
+        photoItems = []
+    }
+
     var body: some View {
         VStack(spacing: Spacing.s) {
+            if !attachments.isEmpty || error != nil {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    if !attachments.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: Spacing.s) {
+                                ForEach(attachments) { a in
+                                    AttachmentChip(attachment: a, onRemove: { attachments.removeAll { $0.id == a.id }; AttachmentStore.remove([a]) })
+                                }
+                            }
+                        }
+                    }
+                    if let note = fileNote { Text(verbatim: note).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
+                    if let error { Text(verbatim: error).font(DS.Typography.caption).foregroundStyle(DS.Colors.danger) }
+                }
+                .padding(.horizontal, Spacing.l).frame(maxWidth: .infinity, alignment: .leading)
+            }
             if !quickActions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Spacing.s) {
@@ -224,10 +277,17 @@ struct Composer: View {
             }
             HStack(alignment: .bottom, spacing: Spacing.s) {
                 Menu {
-                    Button("Attach clipboard", systemImage: "doc.on.clipboard") {}
-                    Button("Start a note", systemImage: "note.text.badge.plus") {}
+                    Button(String(localized: "Photo library"), systemImage: "photo.on.rectangle") { pickingPhoto = true }
+                    Button(String(localized: "Take a photo"), systemImage: "camera") { takingPhoto = true }
+                    Button(String(localized: "Choose a file"), systemImage: "doc") { pickingFile = true }
                 } label: { Image(systemName: "plus").imageScale(.large).foregroundStyle(DS.Colors.textPrimary).frame(width: 44, height: 44).background(DS.Colors.surfaceRaised, in: RoundedRectangle(cornerRadius: Radius.m)) }
-                    .accessibilityLabel(Text("Add"))
+                    .accessibilityLabel(Text("Attach")).accessibilityIdentifier("composer.attach")
+                    .photosPicker(isPresented: $pickingPhoto, selection: $photoItems, maxSelectionCount: AttachmentRules.maxPerMessage, matching: .images)
+                    .onChange(of: photoItems) { _, items in Task { await importPhotos(items) } }
+                    .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.item], allowsMultipleSelection: true, onCompletion: importFiles)
+                    .fullScreenCover(isPresented: $takingPhoto) {
+                        CameraPicker(isPresented: $takingPhoto) { data in if let a = AttachmentStore.importPhoto(data: data) { add(a) } }.ignoresSafeArea()
+                    }
                 TextField(String(localized: "Message Adiuvaret"), text: $text, axis: .vertical)
                     .font(DS.Typography.body).lineLimit(1...6).focused(focused)
                     .padding(.horizontal, Spacing.m).padding(.vertical, Spacing.m)
@@ -238,8 +298,8 @@ struct Composer: View {
                     Image(systemName: isGenerating ? "stop.fill" : "arrow.up").imageScale(.large).fontWeight(.semibold).frame(width: 44, height: 44)
                         .foregroundStyle(DS.Colors.onAccent).background(DS.Colors.accent, in: RoundedRectangle(cornerRadius: Radius.m))
                 }
-                .disabled(!isGenerating && text.trimmingCharacters(in: .whitespaces).isEmpty)
-                .opacity(!isGenerating && text.trimmingCharacters(in: .whitespaces).isEmpty ? 0.4 : 1)
+                .disabled(!isGenerating && !canSend)
+                .opacity(!isGenerating && !canSend ? 0.4 : 1)
                 .accessibilityLabel(Text(isGenerating ? "Stop" : "Send")).accessibilityIdentifier("composer.send")
                 .sensoryFeedback(.impact(weight: .light), trigger: isGenerating)
             }
@@ -247,5 +307,42 @@ struct Composer: View {
         }
         .padding(.vertical, Spacing.s)
         .background(DS.Colors.background)
+    }
+
+    /// Tells the user, before sending, what this model will and will not do with the files, and where they go.
+    private var fileNote: String? {
+        guard !attachments.isEmpty else { return nil }
+        var parts: [String] = []
+        if attachments.contains(where: { $0.kind == .image }), !support.images {
+            parts.append(String(localized: "This model can't view pictures. Pick another model to send them."))
+        }
+        if let destination { parts.append(String(localized: "Attached files are sent to \(destination).")) }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+}
+
+/// The camera, as a full-screen picker. Returns JPEG data.
+struct CameraPicker: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let picked: (Data) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let p = UIImagePickerController()
+        p.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
+        p.delegate = context.coordinator
+        return p
+    }
+
+    func updateUIViewController(_ vc: UIImagePickerController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraPicker
+        init(_ parent: CameraPicker) { self.parent = parent }
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage, let data = image.jpegData(compressionQuality: 0.9) { parent.picked(data) }
+            parent.isPresented = false
+        }
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.isPresented = false }
     }
 }

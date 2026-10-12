@@ -131,10 +131,12 @@ final class LiveChatService: ChatService {
         if !c.isEmpty { title = String(c.prefix(60)) }
     }
 
-    func send(_ text: String) async {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    func send(_ text: String, attachments: [Attachment]) async {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty, !attachments.isEmpty { trimmed = String(localized: "Please read the attached file and tell me what it says.") }
         guard !isGenerating, !trimmed.isEmpty else { return }
         refreshAvailability()
+        if !attachments.isEmpty { items.append(.userFiles(id: UUID(), files: attachments)) }
         items.append(.user(id: UUID(), text: trimmed))
         switch MemoryHub.learn(from: trimmed) {
         case .saved(let fact):
@@ -157,7 +159,7 @@ final class LiveChatService: ChatService {
     func deleteMessage(_ id: UUID) {
         let roles = items.map(\.editingRole)
         guard let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canDelete(roles, at: i, generating: isGenerating) else { return }
-        items.remove(at: i)
+        items.removeMessage(at: i)
         session = nil
     }
 
@@ -165,9 +167,9 @@ final class LiveChatService: ChatService {
         let roles = items.map(\.editingRole)
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty, let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canEdit(roles, at: i, generating: isGenerating) else { return }
-        items.removeSubrange(i...)
+        let files = items.truncate(beforeUser: i)
         session = nil
-        await send(t)
+        await send(t, attachments: files)
     }
 
     func regenerate(_ id: UUID) async {
@@ -189,6 +191,10 @@ final class LiveChatService: ChatService {
     private func run(_ prompt: String) async {
         isGenerating = true
         ctx.beginTask(message: prompt)
+        let support = fileSupport
+        let prepared = AttachmentStore.prepare(items.currentTurnFiles(), support: support)
+        let modelPrompt = AttachmentText.compose(prompt: prompt, documents: prepared.documents, imageNames: prepared.skippedImageNames, limit: support.documentChars)
+        ctx.notePrivate(prepared.documents.map(\.text).joined(separator: " "))
         let block = [MemoryHub.block(for: prompt), SkillHub.block(for: prompt)].filter { !$0.isEmpty }.joined(separator: "\n")
         ctx.notePrivate(block)
         if block != memoryBlock { memoryBlock = block; session = nil }
@@ -222,7 +228,7 @@ final class LiveChatService: ChatService {
             while let session {
                 var started = false
                 do {
-                    for try await partial in Self.stream(session, prompt, reasoning: wantReasoning) {
+                    for try await partial in Self.stream(session, modelPrompt, reasoning: wantReasoning) {
                         if !started {
                             DiagnosticsLog.shared.record("first token", "\((clock.now - turnStart).milliseconds) ms since send, reasoning=\(wantReasoning && Self.reasoningCompiled)")
                             items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true

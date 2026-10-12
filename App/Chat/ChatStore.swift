@@ -83,6 +83,7 @@ final class ChatStore {
 
     func delete(_ id: UUID) {
         entries.first { $0.id == id }?.service.stop()
+        for case .userFiles(_, let files) in entries.first(where: { $0.id == id })?.service.items ?? [] { AttachmentStore.remove(files) }
         entries.removeAll { $0.id == id }
         persistence?.delete(id: id)
         if entries.isEmpty {

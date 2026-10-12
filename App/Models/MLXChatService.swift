@@ -23,6 +23,7 @@ final class MLXChatService: ChatService {
     @ObservationIgnored private var lastPrompt = ""
     @ObservationIgnored private var memoryUndos: [UUID: UUID] = [:]
     @ObservationIgnored private var memoryBlock = ""
+    @ObservationIgnored private var filesInSession = false
 
     var modelName: String { ModelCatalog.model(modelID)?.name ?? modelID }
 
@@ -37,9 +38,11 @@ final class MLXChatService: ChatService {
         if !c.isEmpty { title = String(c.prefix(60)) }
     }
 
-    func send(_ text: String) async {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    func send(_ text: String, attachments: [Attachment]) async {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty, !attachments.isEmpty { trimmed = String(localized: "Please read the attached file and tell me what it says.") }
         guard !isGenerating, !trimmed.isEmpty else { return }
+        if !attachments.isEmpty { items.append(.userFiles(id: UUID(), files: attachments)) }
         items.append(.user(id: UUID(), text: trimmed))
         switch MemoryHub.learn(from: trimmed) {
         case .saved(let fact):
@@ -64,7 +67,7 @@ final class MLXChatService: ChatService {
     func deleteMessage(_ id: UUID) {
         let roles = items.map(\.editingRole)
         guard let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canDelete(roles, at: i, generating: isGenerating) else { return }
-        items.remove(at: i)
+        items.removeMessage(at: i)
         session = nil
     }
 
@@ -72,9 +75,9 @@ final class MLXChatService: ChatService {
         let roles = items.map(\.editingRole)
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty, let i = items.firstIndex(where: { $0.id == id }), ThreadEditing.canEdit(roles, at: i, generating: isGenerating) else { return }
-        items.removeSubrange(i...)
+        let files = items.truncate(beforeUser: i)
         session = nil
-        await send(t)
+        await send(t, attachments: files)
     }
 
     func regenerate(_ id: UUID) async {
@@ -114,10 +117,15 @@ final class MLXChatService: ChatService {
                 if block != memoryBlock { memoryBlock = block; session = nil }
                 let chat = try await ensureSession()
                 let context = await gatherContext(for: prompt)
-                let message = context.map { Self.attach($0, to: prompt) } ?? prompt
+                let support = fileSupport
+                let prepared = AttachmentStore.prepare(items.currentTurnFiles(), support: support)
+                let withFiles = AttachmentText.compose(prompt: prompt, documents: prepared.documents, imageNames: prepared.skippedImageNames, limit: support.documentChars)
+                let message = context.map { Self.attach($0, to: withFiles) } ?? withFiles
+                // A file makes the session hold a long message; the next turn starts again from the saved messages.
+                if !prepared.documents.isEmpty || !prepared.imageURLs.isEmpty { filesInSession = true }
                 var raw = ""
                 var started = false
-                for try await chunk in chat.streamResponse(to: message) {
+                for try await chunk in chat.streamResponse(to: message, images: prepared.imageURLs.map { UserInput.Image.url($0) }) {
                     raw += chunk
                     let shown = ThinkFilter.visible(TurnMarkers.clean(raw))
                     guard !shown.isEmpty else { continue }
@@ -132,7 +140,7 @@ final class MLXChatService: ChatService {
                 if started {
                     replace(replyID, ThinkFilter.visible(TurnMarkers.clean(raw)), streaming: false)
                     // The session holds the long message with the fetched data. Start the next turn from the plain saved messages.
-                    if context != nil { session = nil }
+                    if context != nil || filesInSession { session = nil; filesInSession = false }
                     DiagnosticsLog.shared.record("reply done", "\((clock.now - start).milliseconds) ms, model=\(modelID)")
                 } else {
                     session = nil
