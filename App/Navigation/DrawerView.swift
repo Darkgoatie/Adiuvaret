@@ -22,7 +22,7 @@ struct DrawerView: View {
                     .buttonStyle(DSButtonStyle(.primary))
                     .accessibilityIdentifier("drawer.newChat")
                 HStack(spacing: Spacing.s) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(DS.Colors.textSecondary)
+                    Image(systemName: "magnifyingglass").foregroundStyle(DS.Colors.textSecondary).accessibilityHidden(true)
                     TextField("Search", text: $query).font(DS.Typography.body)
                 }
                 .padding(.horizontal, Spacing.m).frame(minHeight: 44)

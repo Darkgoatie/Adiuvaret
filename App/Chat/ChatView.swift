@@ -10,6 +10,7 @@ struct ChatView: View {
     @FocusState private var focused: Bool
     @State private var editing: EditTarget?
     @State private var pending: [ChatFile] = []
+    @Bindable private var launch = LaunchRouter.shared
     @State private var attachError: String?
     let openDrawer: () -> Void
     var turnFinished: () -> Void = {}
@@ -29,7 +30,12 @@ struct ChatView: View {
                      send: { let t = draft; let files = pending; draft = ""; pending = []; Task { await service.send(t, attachments: files); turnFinished() } },
                      stop: service.stop)
         }
-        .onAppear { if CommandLine.arguments.contains("-focus") { focused = true } }
+        .onAppear {
+            if CommandLine.arguments.contains("-focus") { focused = true }
+            takeIncomingFiles()
+        }
+        .onChange(of: launch.incomingFiles) { _, _ in takeIncomingFiles() }
+        .onChange(of: launch.incomingError) { _, _ in takeIncomingFiles() }
         .onChange(of: service.isGenerating) { was, now in
             // VoiceOver users cannot see the stream finish, so say so; sighted users get a light tap.
             guard was, !now, case .assistant? = service.items.last else { return }
@@ -47,6 +53,16 @@ struct ChatView: View {
     private var chipKind: ModelPrivacyChip.Kind {
         if let (p, _) = Providers.parseModelID(service.modelID) { return .cloud(provider: p.name) }
         return service.modelID == "apple" ? .onDevice : .localModel
+    }
+
+    /// Files shared to the app are added to this composer, up to the per-message limit; the rest are removed again.
+    private func takeIncomingFiles() {
+        if let e = launch.incomingError { attachError = e; launch.incomingError = nil }
+        guard !launch.incomingFiles.isEmpty else { return }
+        for f in launch.incomingFiles {
+            if pending.count < AttachmentRules.maxPerMessage { pending.append(f) } else { AttachmentStore.remove([f]) }
+        }
+        launch.incomingFiles = []
     }
 
     private func hasItems(after id: UUID) -> Bool {
@@ -103,7 +119,7 @@ struct ChatView: View {
             HStack(spacing: Spacing.xs) {
                 ModelPrivacyChip(model: service.modelName, kind: chipKind, prominent: false)
                 ModelStatusDot(state: ModelSettings.shared.loadState(service.modelID))
-                Image(systemName: "chevron.down").imageScale(.small).foregroundStyle(DS.Colors.textSecondary)
+                Image(systemName: "chevron.down").imageScale(.small).foregroundStyle(DS.Colors.textSecondary).accessibilityHidden(true)
             }
             .frame(minHeight: 28)
         }
@@ -122,6 +138,7 @@ struct ChatView: View {
                     LazyVStack(alignment: .leading, spacing: Spacing.l) {
                         ForEach(service.items) { item in
                             ItemView(item: item, service: service)
+                                .equatable()
                                 .messageActions(item, service: service, editing: $editing, saved: turnFinished)
                                 .id(item.id)
                         }
@@ -154,9 +171,12 @@ private struct ScrollEdges: Equatable {
     var isAtBottom: Bool { offset + container >= content - 40 }
 }
 
-private struct ItemView: View {
+private struct ItemView: View, Equatable {
     let item: ThreadItem
     let service: any ChatService
+
+    /// Two rows are the same when their content is, so a streaming reply redraws only itself instead of every earlier message.
+    static func == (a: ItemView, b: ItemView) -> Bool { a.item.renderKey == b.item.renderKey }
 
     var body: some View {
         switch item {

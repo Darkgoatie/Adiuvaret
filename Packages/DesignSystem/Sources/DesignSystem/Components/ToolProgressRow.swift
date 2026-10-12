@@ -19,7 +19,7 @@ public struct ToolProgressRow: View {
                     icon
                     Text(verbatim: title).font(DS.Typography.subheadline).foregroundStyle(DS.Colors.textSecondary)
                     if canExpand {
-                        Image(systemName: "chevron.right").imageScale(.small)
+                        Image(systemName: "chevron.right").imageScale(.small).accessibilityHidden(true)
                             .foregroundStyle(DS.Colors.textSecondary)
                             .rotationEffect(.degrees(expanded ? 90 : 0))
                     }

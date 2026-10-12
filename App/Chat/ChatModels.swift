@@ -112,6 +112,22 @@ extension ThreadItem {
         }
     }
 
+    /// Changes whenever what a row shows changes. Used to skip redrawing rows that did not change.
+    var renderKey: String {
+        switch self {
+        case .user(let i, let t): "u\(i)\(t.count)\(t.hashValue)"
+        case .userFiles(let i, let f): "f\(i)\(f.map(\.id))"
+        case .assistant(let i, let t, let s): "a\(i)\(s)\(t.count)\(t.hashValue)"
+        case .tool(let i, let p, let t, let d): "t\(i)\(p)\(t)\(d)"
+        case .action(let i, let p, let t, let d, let o): "x\(i)\(p)\(t)\(d)\(o ?? "")"
+        case .approval(let i, let p, let t, let r): "p\(i)\(p)\(t)\(r.map { $0.label + $0.value })"
+        case .draft(let i, let k, let to, let t): "d\(i)\(k)\(to)\(t.hashValue)"
+        case .memory(let i, let t): "m\(i)\(t)"
+        case .skillOffer(let i, let p, let t): "s\(i)\(p)\(t)"
+        case .error(let i, let t): "e\(i)\(t)"
+        }
+    }
+
     var messageText: String? {
         switch self {
         case .user(_, let t), .assistant(_, let t, _): t

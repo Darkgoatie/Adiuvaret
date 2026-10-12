@@ -17,3 +17,5 @@ Append only. Newest at the bottom. Detail for each lives in docs/decisions/NNN-*
 | 11 | 2026-10-07 | Local MLX models (8 mlx-community models) downloadable on request; chat only; model switch per chat. Replaces the Phase 3 default of decision 003 | User request | - |
 | 13 | 2026-10-09 | Connectors for popular tools: easy ones (Obsidian folder, Contacts, Shortcuts, mail draft, Google Calendar via iOS accounts) first; token and OAuth ones wait for the network rule | User request | proposed |
 | 12 | 2026-10-08 | Web tools: in-app WKWebView driven by openWebsite, lookAtPage, actOnPage; code-enforced site allow list, approvals for risky clicks, no password typing | User request (ios-web-agent walkthrough) | - |
+| 16 | 2026-10-12 | Integrations are an icon grid; apps from one company (Google) share a menu, Apple apps stay separate; logos are simple-icons marks (CC0) and SF Symbols, not copied app icons | User request | - |
+| 17 | 2026-10-12 | Files in chat: documents are read to text in code for every model; pictures go only to models that can view them; generated files are plain-text formats only, shown as a card with a share button | User request | - |

@@ -40,6 +40,7 @@ struct DrawerContainer<Content: View, Drawer: View>: View {
                     .background(DS.Colors.background.ignoresSafeArea())
                     .offset(x: offset)
                     .accessibilityAddTraits(.isModal)
+                    .accessibilityAction(.escape) { isOpen = false }
                     .accessibilityHidden(!isOpen)
                     .gesture(closeGesture(width: width))
             }

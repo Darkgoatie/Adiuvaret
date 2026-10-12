@@ -173,7 +173,7 @@ public struct SettingsRow<Trailing: View>: View {
             }
             Spacer(minLength: Spacing.s)
             trailing
-            if kind == .navigation { Image(systemName: "chevron.right").imageScale(.small).foregroundStyle(DS.Colors.textSecondary) }
+            if kind == .navigation { Image(systemName: "chevron.right").imageScale(.small).foregroundStyle(DS.Colors.textSecondary).accessibilityHidden(true) }
         }
         .frame(minHeight: 44)
         .contentShape(Rectangle())

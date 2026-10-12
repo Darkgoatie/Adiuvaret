@@ -27,7 +27,7 @@ struct WebPanel: View {
                 .disabled(!session.canGoBack).accessibilityLabel(Text("Back")).accessibilityIdentifier("web.back")
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Spacing.xs) {
-                    Image(systemName: "lock.fill").imageScale(.small).foregroundStyle(DS.Colors.accentText)
+                    Image(systemName: "lock.fill").imageScale(.small).foregroundStyle(DS.Colors.accentText).accessibilityHidden(true)
                     Text(verbatim: session.host).font(DS.Typography.subheadline).lineLimit(1)
                 }
                 Text(session.agentActing ? String(localized: "Adiuvaret is using this page") : session.title)

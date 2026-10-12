@@ -43,6 +43,7 @@ struct RootView: View {
         .onChange(of: launch.pendingQuestion) { _, text in if let text { launch.pendingQuestion = nil; ask(text) } }
         .onChange(of: drawerOpen) { _, open in if open { store.persistCurrent() } }
         .onOpenURL { url in
+            if url.isFileURL { LaunchRouter.shared.receive(file: url); openChatForIncomingFile(); return }
             if let q = Self.question(from: url) { LaunchRouter.shared.ask(q) }
             else if let id = Self.briefingID(from: url) { LaunchRouter.shared.open(briefing: id) }
             else if let r = Self.route(from: url) { handle(r) }
@@ -75,6 +76,12 @@ struct RootView: View {
         store.open(service)
         let prompt = BriefingPrompt.text(for: b)
         Task { await service.send(prompt); store.persistCurrent() }
+    }
+
+    /// A file shared to Adiuvaret lands in the composer of a fresh chat, so the user adds a question and sends.
+    private func openChatForIncomingFile() {
+        drawerOpen = false; path = []
+        store.newChat()
     }
 
     /// A question from Siri, Shortcuts or the share sheet starts in a fresh chat.
