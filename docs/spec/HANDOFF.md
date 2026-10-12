@@ -27,3 +27,6 @@ Catalog in Packages/ToolKit, router in App/Runtime/ToolRouter.swift, session reb
 
 ## Next
 Wait for the user to say build, then device results. After that: 21 (activity log), 19 (memory), 22 (integrations), 35 (reasoning, needs iOS version), 36 (needs user).
+
+## Skill system (decision 18, tasks 55-61)
+Spec written, nothing coded. Next: task 55 SkillKit. Waiting for the user to confirm the core model and the playbook question.
