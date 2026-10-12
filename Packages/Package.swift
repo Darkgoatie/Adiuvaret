@@ -15,6 +15,7 @@ let package = Package(
         .library(name: "ModelLibrary", targets: ["ModelLibrary"]),
         .library(name: "MemoryKit", targets: ["MemoryKit"]),
         .library(name: "BriefingKit", targets: ["BriefingKit"]),
+        .library(name: "SkillKit", targets: ["SkillKit"]),
     ],
     targets: [
         .target(name: "AdiuvaretCore", path: "AdiuvaretCore/Sources"),
@@ -26,6 +27,8 @@ let package = Package(
         .target(name: "ModelLibrary", path: "ModelLibrary/Sources"),
         .target(name: "MemoryKit", path: "MemoryKit/Sources"),
         .target(name: "BriefingKit", path: "BriefingKit/Sources"),
+        .target(name: "SkillKit", path: "SkillKit/Sources"),
+        .testTarget(name: "SkillKitTests", dependencies: ["SkillKit"], path: "SkillKit/Tests"),
         .testTarget(name: "BriefingKitTests", dependencies: ["BriefingKit"], path: "BriefingKit/Tests"),
         .testTarget(name: "MemoryKitTests", dependencies: ["MemoryKit"], path: "MemoryKit/Tests"),
         .testTarget(name: "ModelLibraryTests", dependencies: ["ModelLibrary"], path: "ModelLibrary/Tests"),
