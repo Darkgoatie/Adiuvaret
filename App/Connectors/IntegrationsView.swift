@@ -19,7 +19,7 @@ private struct AppItem: Identifiable, Hashable {
     }
 }
 
-/// A company. Apps from the same company share one icon on the first screen and open an apps menu of their own.
+/// A company. Apps from the same company share one icon on the first screen and open an apps menu of their own. Apple apps are the exception: each one has its own icon.
 private struct AppGroup: Identifiable, Hashable {
     let id: String
     let title: String
@@ -31,13 +31,16 @@ private struct AppGroup: Identifiable, Hashable {
     private static let red = Color(red: 0.95, green: 0.26, blue: 0.21)
     private static let blue = Color(red: 0.12, green: 0.55, blue: 0.96)
 
+    /// A company with one app: its icon opens the app directly.
+    private static func single(_ id: String, _ title: String, _ icon: IntegrationIcon.Kind, _ kind: AppItem.Kind) -> AppGroup {
+        AppGroup(id: id, title: title, icon: icon, apps: [AppItem(id: id, title: title, icon: icon, kind: kind)])
+    }
+
     static let all: [AppGroup] = [
-        AppGroup(id: "apple", title: String(localized: "Apple Apps"), icon: .symbol("apple.logo", .black), apps: [
-            AppItem(id: "appleCalendar", title: String(localized: "Calendar"), icon: .symbol("calendar", red), kind: .appleCalendar),
-            AppItem(id: "contacts", title: String(localized: "Contacts"), icon: .symbol("person.crop.circle", Color(red: 0.56, green: 0.56, blue: 0.58)), kind: .connector("contacts")),
-            AppItem(id: "shortcuts", title: String(localized: "Shortcuts"), icon: .symbol("square.stack.3d.up.fill", Color(red: 0.93, green: 0.25, blue: 0.45)), kind: .connector("shortcuts")),
-            AppItem(id: "mail", title: String(localized: "Mail"), icon: .symbol("envelope.fill", blue), kind: .connector("mail")),
-        ]),
+        single("appleCalendar", String(localized: "Calendar"), .symbol("calendar", red), .appleCalendar),
+        single("contacts", String(localized: "Contacts"), .symbol("person.crop.circle", Color(red: 0.56, green: 0.56, blue: 0.58)), .connector("contacts")),
+        single("shortcuts", String(localized: "Shortcuts"), .symbol("square.stack.3d.up.fill", Color(red: 0.93, green: 0.25, blue: 0.45)), .connector("shortcuts")),
+        single("mail", String(localized: "Mail"), .symbol("envelope.fill", blue), .connector("mail")),
         AppGroup(id: "google", title: String(localized: "Google Apps"), icon: .brand("brand-google", Color(red: 0.26, green: 0.52, blue: 0.96)), apps: [
             AppItem(id: "googleCalendar", title: String(localized: "Google Calendar"), icon: .brand("brand-googlecalendar", Color(red: 0.26, green: 0.52, blue: 0.96)), kind: .googleCalendar),
             AppItem(id: "gmail", title: String(localized: "Gmail"), icon: .brand("brand-gmail", Color(red: 0.92, green: 0.26, blue: 0.21)), kind: .gmail),
