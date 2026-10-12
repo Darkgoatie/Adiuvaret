@@ -2,6 +2,39 @@ import Testing
 import Foundation
 @testable import ToolKit
 
+@Suite struct ConnectorVisibilityTests {
+    private func defaults() -> UserDefaults {
+        let d = UserDefaults(suiteName: "connector-visibility-\(UUID().uuidString)")!
+        return d
+    }
+
+    @Test func everyOwnerIsARealConnector() {
+        for (category, owner) in ConnectorCatalog.categoryOwner {
+            #expect(ConnectorCatalog.connector(owner) != nil, Comment(rawValue: "\(category) -> \(owner)"))
+            #expect(ToolCatalog.standard.entries.contains { $0.category == category }, Comment(rawValue: category))
+        }
+    }
+
+    @Test func switchedOffConnectorsLoseTheirTools() {
+        let d = defaults()
+        for c in ConnectorCatalog.all { ConnectorCatalog.setOn(false, c.id, defaults: d) }
+        let ids = Set(ConnectorCatalog.visible(.standard, defaults: d).entries.map(\.id))
+        for id in ["searchNotes", "writeNote", "findContact", "runShortcut", "draftEmail", "addTodoistTask", "listGitHubIssues", "searchNotion"] {
+            #expect(!ids.contains(id), Comment(rawValue: id))
+        }
+        for id in ["readCalendar", "createReminder", "searchWeb", "searchPastChats"] { #expect(ids.contains(id), Comment(rawValue: id)) }
+    }
+
+    @Test func switchingOneOnBringsOnlyItsToolsBack() {
+        let d = defaults()
+        for c in ConnectorCatalog.all { ConnectorCatalog.setOn(false, c.id, defaults: d) }
+        ConnectorCatalog.setOn(true, "todoist", defaults: d)
+        let ids = Set(ConnectorCatalog.visible(.standard, defaults: d).entries.map(\.id))
+        #expect(ids.contains("listTodoistTasks") && ids.contains("addTodoistTask"))
+        #expect(!ids.contains("listGitHubIssues") && !ids.contains("writeNote"))
+    }
+}
+
 @Suite struct NoteNameTests {
     @Test func titlesBecomeSafeFileNames() {
         #expect(NoteName.fileName(for: "Packing list") == "Packing list.md")

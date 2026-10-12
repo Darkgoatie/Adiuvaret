@@ -32,7 +32,9 @@ enum ToolRouter {
     }
 
     /// Same as `choose`, plus a short note for diagnostics: what the router decided and whether it failed.
-    static func chooseWithNote(prompt: String, previous: String?, catalog: ToolCatalog = .standard) async -> ([CatalogEntry], String) {
+    static func chooseWithNote(prompt: String, previous: String?, catalog full: ToolCatalog = .standard) async -> ([CatalogEntry], String) {
+        // Tools of a connector the user switched off do not exist for this message.
+        let catalog = ConnectorCatalog.visible(full)
         var needsTool = true
         var words = ""
         var note = "router ok"

@@ -45,6 +45,20 @@ public enum ConnectorCatalog {
 
     public static func connector(_ id: String) -> Connector? { all.first { $0.id == id } }
 
+    /// Which connector owns a catalog category. Categories not listed here (Calendar, Reminders, Web, Chats) belong to the app itself and are always offered.
+    public static let categoryOwner: [String: String] = [
+        "Notes": "notes", "Contacts": "contacts", "Shortcuts": "shortcuts", "Email": "mail",
+        "Todoist": "todoist", "GitHub": "github", "Notion": "notion",
+    ]
+
+    /// The catalog with every tool of a switched-off connector removed, so the router can neither pick nor describe it.
+    public static func visible(_ catalog: ToolCatalog, defaults: UserDefaults = .standard) -> ToolCatalog {
+        ToolCatalog(entries: catalog.entries.filter { e in
+            guard let owner = categoryOwner[e.category] else { return true }
+            return isOn(owner, defaults: defaults)
+        })
+    }
+
     private static func key(_ id: String) -> String { "connector.on.\(id)" }
 
     public static func isOn(_ id: String, defaults: UserDefaults = .standard) -> Bool {
