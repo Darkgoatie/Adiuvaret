@@ -2,56 +2,105 @@ import SwiftUI
 import DesignSystem
 import ToolKit
 
-/// What one icon stands for. Apps from the same company share one icon and one window.
-private struct AppGroup: Identifiable {
-    enum Member: Hashable { case appleCalendar, googleCalendar, gmail, connector(String) }
+/// One app inside a company, with its own icon and settings window.
+private struct AppItem: Identifiable, Hashable {
+    enum Kind: Hashable { case appleCalendar, googleCalendar, gmail, connector(String) }
     let id: String
     let title: String
     let icon: IntegrationIcon.Kind
-    let members: [Member]
+    let kind: Kind
 
-    static let all: [AppGroup] = [
-        AppGroup(id: "apple", title: String(localized: "Apple Apps"), icon: .symbol("apple.logo", .black),
-                 members: [.appleCalendar, .connector("contacts"), .connector("shortcuts"), .connector("mail")]),
-        AppGroup(id: "google", title: String(localized: "Google Apps"), icon: .brand("brand-google", Color(red: 0.26, green: 0.52, blue: 0.96)),
-                 members: [.googleCalendar, .gmail]),
-        AppGroup(id: "obsidian", title: String(localized: "Obsidian"), icon: .brand("brand-obsidian", Color(red: 0.49, green: 0.23, blue: 0.93)),
-                 members: [.connector("notes")]),
-        AppGroup(id: "todoist", title: String(localized: "Todoist"), icon: .brand("brand-todoist", Color(red: 0.89, green: 0.27, blue: 0.20)),
-                 members: [.connector("todoist")]),
-        AppGroup(id: "github", title: String(localized: "GitHub"), icon: .brand("brand-github", Color(red: 0.09, green: 0.09, blue: 0.09)),
-                 members: [.connector("github")]),
-        AppGroup(id: "notion", title: String(localized: "Notion"), icon: .brand("brand-notion", .black),
-                 members: [.connector("notion")]),
-    ]
-
-    /// True when any app in the group is switched on.
     var isOn: Bool {
-        members.contains { m in
-            switch m {
-            case .appleCalendar, .googleCalendar: CalendarAccess.granted
-            case .gmail: false
-            case .connector(let id): ConnectorCatalog.isOn(id)
-            }
+        switch kind {
+        case .appleCalendar, .googleCalendar: CalendarAccess.granted
+        case .gmail: false
+        case .connector(let id): ConnectorCatalog.isOn(id)
         }
     }
 }
 
-/// Advanced, Integrations: one icon per company, four to a row. Tapping an icon opens a window with every app of that company: what it reads and changes, where data goes, and its settings.
-struct IntegrationsView: View {
-    @State private var picked: AppGroup?
-    @State private var refreshID = UUID()
+/// A company. Apps from the same company share one icon on the first screen and open an apps menu of their own.
+private struct AppGroup: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let icon: IntegrationIcon.Kind
+    let apps: [AppItem]
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: Spacing.m, alignment: .top), count: 4)
+    var isOn: Bool { apps.contains(where: \.isOn) }
+
+    private static let red = Color(red: 0.95, green: 0.26, blue: 0.21)
+    private static let blue = Color(red: 0.12, green: 0.55, blue: 0.96)
+
+    static let all: [AppGroup] = [
+        AppGroup(id: "apple", title: String(localized: "Apple Apps"), icon: .symbol("apple.logo", .black), apps: [
+            AppItem(id: "appleCalendar", title: String(localized: "Calendar"), icon: .symbol("calendar", red), kind: .appleCalendar),
+            AppItem(id: "contacts", title: String(localized: "Contacts"), icon: .symbol("person.crop.circle", Color(red: 0.56, green: 0.56, blue: 0.58)), kind: .connector("contacts")),
+            AppItem(id: "shortcuts", title: String(localized: "Shortcuts"), icon: .symbol("square.stack.3d.up.fill", Color(red: 0.93, green: 0.25, blue: 0.45)), kind: .connector("shortcuts")),
+            AppItem(id: "mail", title: String(localized: "Mail"), icon: .symbol("envelope.fill", blue), kind: .connector("mail")),
+        ]),
+        AppGroup(id: "google", title: String(localized: "Google Apps"), icon: .brand("brand-google", Color(red: 0.26, green: 0.52, blue: 0.96)), apps: [
+            AppItem(id: "googleCalendar", title: String(localized: "Google Calendar"), icon: .brand("brand-googlecalendar", Color(red: 0.26, green: 0.52, blue: 0.96)), kind: .googleCalendar),
+            AppItem(id: "gmail", title: String(localized: "Gmail"), icon: .brand("brand-gmail", Color(red: 0.92, green: 0.26, blue: 0.21)), kind: .gmail),
+        ]),
+        AppGroup(id: "obsidian", title: String(localized: "Obsidian"), icon: .brand("brand-obsidian", Color(red: 0.49, green: 0.23, blue: 0.93)), apps: [
+            AppItem(id: "notes", title: String(localized: "Obsidian"), icon: .brand("brand-obsidian", Color(red: 0.49, green: 0.23, blue: 0.93)), kind: .connector("notes"))]),
+        AppGroup(id: "todoist", title: String(localized: "Todoist"), icon: .brand("brand-todoist", Color(red: 0.89, green: 0.27, blue: 0.20)), apps: [
+            AppItem(id: "todoist", title: String(localized: "Todoist"), icon: .brand("brand-todoist", Color(red: 0.89, green: 0.27, blue: 0.20)), kind: .connector("todoist"))]),
+        AppGroup(id: "github", title: String(localized: "GitHub"), icon: .brand("brand-github", Color(red: 0.09, green: 0.09, blue: 0.09)), apps: [
+            AppItem(id: "github", title: String(localized: "GitHub"), icon: .brand("brand-github", Color(red: 0.09, green: 0.09, blue: 0.09)), kind: .connector("github"))]),
+        AppGroup(id: "notion", title: String(localized: "Notion"), icon: .brand("brand-notion", .black), apps: [
+            AppItem(id: "notion", title: String(localized: "Notion"), icon: .brand("brand-notion", .black), kind: .connector("notion"))]),
+    ]
+
+}
+
+/// A tile in a four-column grid: icon, optional green dot, name underneath.
+private struct IconTile: View {
+    let title: String
+    let icon: IntegrationIcon.Kind
+    let on: Bool
+    let identifier: String
 
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: Spacing.l) {
-                ForEach(AppGroup.all) { g in tile(g) }
+        VStack(spacing: Spacing.xs) {
+            ZStack(alignment: .topTrailing) {
+                IntegrationIcon(kind: icon, size: 60)
+                if on {
+                    Circle().fill(DS.Colors.success).frame(width: 14, height: 14)
+                        .overlay(Circle().stroke(DS.Colors.background, lineWidth: 2))
+                        .offset(x: 4, y: -4)
+                }
             }
-            .id(refreshID)
+            Text(verbatim: title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textPrimary)
+                .lineLimit(2).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+        }
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(title), \(on ? String(localized: "on") : String(localized: "off"))"))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier(identifier)
+    }
+}
+
+private let gridColumns = Array(repeating: GridItem(.flexible(), spacing: Spacing.m, alignment: .top), count: 4)
+
+/// Advanced, Integrations: one icon per company, four to a row. A company with several apps opens its own apps menu in the same layout; a single app opens its window directly.
+struct IntegrationsView: View {
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: gridColumns, spacing: Spacing.l) {
+                ForEach(AppGroup.all) { g in
+                    NavigationLink {
+                        if g.apps.count == 1 { AppDetail(app: g.apps[0]) } else { GroupMenu(group: g) }
+                    } label: {
+                        IconTile(title: g.title, icon: g.icon, on: g.isOn, identifier: "integration.tile.\(g.id)")
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             .padding(.horizontal, Spacing.l).padding(.top, Spacing.l)
-            Text("Tap an icon to see what an app reads and changes, where data goes, and to set it up. A green dot means something in the group is on.")
+            Text("Tap an icon to open it. A green dot means something in it is on.")
                 .font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
                 .padding(.horizontal, Spacing.l).padding(.top, Spacing.l)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -59,37 +108,36 @@ struct IntegrationsView: View {
         .background(DS.Colors.background)
         .navigationTitle(String(localized: "Integrations"))
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $picked, onDismiss: { refreshID = UUID() }) { g in
-            NavigationStack { GroupDetail(group: g) }.presentationDetents([.large])
-        }
     }
+}
 
-    private func tile(_ g: AppGroup) -> some View {
-        let on = g.isOn
-        return Button { picked = g } label: {
-            VStack(spacing: Spacing.xs) {
-                ZStack(alignment: .topTrailing) {
-                    IntegrationIcon(kind: g.icon, size: 60)
-                    if on {
-                        Circle().fill(DS.Colors.success).frame(width: 14, height: 14)
-                            .overlay(Circle().stroke(DS.Colors.background, lineWidth: 2))
-                            .offset(x: 4, y: -4)
+/// The apps menu of one company: only its apps, four to a row.
+private struct GroupMenu: View {
+    let group: AppGroup
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: gridColumns, spacing: Spacing.l) {
+                ForEach(group.apps) { a in
+                    NavigationLink {
+                        AppDetail(app: a)
+                    } label: {
+                        IconTile(title: a.title, icon: a.icon, on: a.isOn, identifier: "integration.app.\(a.id)")
                     }
+                    .buttonStyle(.plain)
                 }
-                Text(verbatim: g.title).font(DS.Typography.caption).foregroundStyle(DS.Colors.textPrimary)
-                    .lineLimit(2).multilineTextAlignment(.center).frame(maxWidth: .infinity)
             }
-            .frame(minHeight: 44)
+            .padding(.horizontal, Spacing.l).padding(.top, Spacing.l)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: "\(g.title), \(on ? String(localized: "on") : String(localized: "off"))"))
-        .accessibilityIdentifier("integration.tile.\(g.id)")
+        .background(DS.Colors.background)
+        .navigationTitle(group.title)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 /// An app icon: Apple's own SF Symbol on black for Apple apps, otherwise the company's logo mark in its brand colour on a light tile.
 struct IntegrationIcon: View {
-    enum Kind { case symbol(String, Color), brand(String, Color) }
+    enum Kind: Hashable { case symbol(String, Color), brand(String, Color) }
     let kind: Kind
     var size: CGFloat = 60
 
@@ -117,39 +165,34 @@ private func info(_ label: String, _ value: String) -> some View {
     .padding(.vertical, 2)
 }
 
-/// The window for one company: its icon and name, then a block for every app in it.
-private struct GroupDetail: View {
-    let group: AppGroup
-    @Environment(\.dismiss) private var dismiss
+/// The window for one app: icon and name, then what it reads and changes, and its settings.
+private struct AppDetail: View {
+    let app: AppItem
 
     var body: some View {
         List {
             Section {
                 HStack(spacing: Spacing.m) {
-                    IntegrationIcon(kind: group.icon, size: 56)
-                    Text(verbatim: group.title).font(DS.Typography.title).foregroundStyle(DS.Colors.textPrimary)
+                    IntegrationIcon(kind: app.icon, size: 56)
+                    Text(verbatim: app.title).font(DS.Typography.title).foregroundStyle(DS.Colors.textPrimary)
                 }
                 .listRowBackground(Color.clear)
             }
-            ForEach(group.members, id: \.self) { m in
-                switch m {
-                case .appleCalendar: AppleCalendarBlock()
-                case .googleCalendar: GoogleCalendarBlock()
-                case .gmail: GmailBlock()
-                case .connector(let id): if let c = ConnectorCatalog.connector(id) { ConnectorBlock(connector: c) }
-                }
+            switch app.kind {
+            case .appleCalendar: AppleCalendarBlock()
+            case .googleCalendar: GoogleCalendarBlock()
+            case .gmail: GmailBlock()
+            case .connector(let id): if let c = ConnectorCatalog.connector(id) { ConnectorBlock(connector: c) }
             }
         }
         .scrollContentBackground(.hidden).background(DS.Colors.background)
-        .navigationTitle(group.title).navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        .navigationTitle(app.title).navigationBarTitleDisplayMode(.inline)
     }
 }
 
 private struct AppleCalendarBlock: View {
     var body: some View {
         Section {
-            Label { Text("Calendar and Reminders").font(DS.Typography.headline) } icon: { Image(systemName: "calendar") }
             info(String(localized: "Reads"), String(localized: "Events from every calendar on this iPhone, and your open reminders."))
             info(String(localized: "Changes"), String(localized: "Creates, moves and deletes events and creates reminders, after you approve."))
             info(String(localized: "Network"), String(localized: "None from Adiuvaret."))
@@ -161,7 +204,6 @@ private struct AppleCalendarBlock: View {
 private struct GoogleCalendarBlock: View {
     var body: some View {
         Section {
-            Label { Text("Google Calendar").font(DS.Typography.headline) } icon: { Image(systemName: "calendar") }
             info(String(localized: "Reads"), String(localized: "Events from your Google account, through the calendar on this iPhone."))
             info(String(localized: "Changes"), String(localized: "Same as Apple Calendar: new events are saved where you chose above, after you approve."))
             info(String(localized: "Network"), String(localized: "None from Adiuvaret. iOS syncs the account."))
@@ -173,7 +215,6 @@ private struct GoogleCalendarBlock: View {
 private struct GmailBlock: View {
     var body: some View {
         Section {
-            Label { Text("Gmail").font(DS.Typography.headline) } icon: { Image(systemName: "envelope") }
             info(String(localized: "Status"), String(localized: "Not available yet. Reading mail needs a Google sign-in that is not set up."))
         }
     }
@@ -200,7 +241,6 @@ private struct ConnectorBlock: View {
     var body: some View {
         Group {
             Section {
-                Label { Text(verbatim: connector.title).font(DS.Typography.headline) } icon: { Image(systemName: connector.symbol) }
                 Toggle(isOn: Binding(get: { on }, set: { on = $0; ConnectorCatalog.setOn($0, connector.id) })) {
                     Text("Use \(connector.title)").font(DS.Typography.body)
                 }
