@@ -4,7 +4,7 @@ import ModelLibrary
 
 /// One attached file: a thumbnail for pictures, an icon and the name for documents.
 struct AttachmentChip: View {
-    let attachment: Attachment
+    let attachment: ChatFile
     var onRemove: (() -> Void)?
 
     var body: some View {
@@ -35,7 +35,7 @@ struct AttachmentChip: View {
 
 /// The files that went with one of the user's messages, shown above it.
 struct AttachmentRow: View {
-    let files: [Attachment]
+    let files: [ChatFile]
 
     var body: some View {
         VStack(alignment: .trailing, spacing: Spacing.xs) {

@@ -17,7 +17,7 @@ enum ThreadItemCoding {
         var rows: [Row]?
         var draftKind: String?
         var to: String?
-        var files: [Attachment]?
+        var files: [ChatFile]?
     }
 
     static func snapshot(_ item: ThreadItem) -> ItemSnapshot? {

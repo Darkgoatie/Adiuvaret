@@ -13,7 +13,7 @@ struct ChatSummary: Identifiable, Hashable {
 enum ThreadItem: Identifiable {
     case user(id: UUID, text: String)
     /// Files that went with the user message right after this row.
-    case userFiles(id: UUID, files: [Attachment])
+    case userFiles(id: UUID, files: [ChatFile])
     case assistant(id: UUID, text: String, streaming: Bool)
     case tool(id: UUID, phase: ToolProgressRow.Phase, title: String, details: [String])
     case action(id: UUID, phase: ActionCard.Phase, title: String, detail: String, open: String?)
@@ -43,7 +43,7 @@ enum ChatBanner: Equatable {
     var title: String { get }
     var modelID: String { get }
     var modelName: String { get }
-    func send(_ text: String, attachments: [Attachment]) async
+    func send(_ text: String, attachments: [ChatFile]) async
     func stop()
     func approve(_ id: UUID)
     func deny(_ id: UUID)
@@ -70,7 +70,7 @@ extension ChatService {
 
 extension Array where Element == ThreadItem {
     /// The files of the newest user message, which the model is about to answer.
-    func currentTurnFiles() -> [Attachment] {
+    func currentTurnFiles() -> [ChatFile] {
         guard let i = lastIndex(where: { if case .user = $0 { true } else { false } }) else { return [] }
         return attachments(beforeUser: i)
     }
@@ -87,7 +87,7 @@ extension Array where Element == ThreadItem {
     }
 
     /// Cuts the thread back to just before the user message at `i`, files row included, and returns the files so an edit can send them again.
-    mutating func truncate(beforeUser i: Int) -> [Attachment] {
+    mutating func truncate(beforeUser i: Int) -> [ChatFile] {
         let files = attachments(beforeUser: i)
         let start = files.isEmpty ? i : i - 1
         let keep = Set(files.map(\.id))
@@ -97,7 +97,7 @@ extension Array where Element == ThreadItem {
     }
 
     /// The files attached to the user message at `index`; they sit in the row just before it.
-    func attachments(beforeUser index: Int) -> [Attachment] {
+    func attachments(beforeUser index: Int) -> [ChatFile] {
         guard index > 0, indices.contains(index), case .userFiles(_, let files) = self[index - 1] else { return [] }
         return files
     }

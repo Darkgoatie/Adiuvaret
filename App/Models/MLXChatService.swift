@@ -38,7 +38,7 @@ final class MLXChatService: ChatService {
         if !c.isEmpty { title = String(c.prefix(60)) }
     }
 
-    func send(_ text: String, attachments: [Attachment]) async {
+    func send(_ text: String, attachments: [ChatFile]) async {
         var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty, !attachments.isEmpty { trimmed = String(localized: "Please read the attached file and tell me what it says.") }
         guard !isGenerating, !trimmed.isEmpty else { return }

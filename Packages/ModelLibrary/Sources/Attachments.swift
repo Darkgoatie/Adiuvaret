@@ -1,7 +1,7 @@
 import Foundation
 
 /// A file the user attached to a message. The app keeps a copy on the phone; this record only names it.
-public struct Attachment: Codable, Equatable, Identifiable, Sendable {
+public struct ChatFile: Codable, Equatable, Identifiable, Sendable {
     public enum Kind: String, Codable, Sendable { case image, document }
 
     public let id: UUID
@@ -34,7 +34,7 @@ public enum AttachmentRules {
         "swift", "py", "js", "ts", "jsx", "tsx", "java", "kt", "c", "h", "cpp", "hpp", "cs", "go", "rs", "rb", "php", "sh", "sql", "css",
     ]
 
-    public static func kind(forFileName name: String) -> Attachment.Kind? {
+    public static func kind(forFileName name: String) -> ChatFile.Kind? {
         let ext = (name as NSString).pathExtension.lowercased()
         if imageExtensions.contains(ext) { return .image }
         if documentExtensions.contains(ext) { return .document }

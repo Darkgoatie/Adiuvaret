@@ -9,7 +9,7 @@ struct ChatView: View {
     @State private var draft = ""
     @FocusState private var focused: Bool
     @State private var editing: EditTarget?
-    @State private var pending: [Attachment] = []
+    @State private var pending: [ChatFile] = []
     @State private var attachError: String?
     let openDrawer: () -> Void
     var turnFinished: () -> Void = {}
@@ -214,7 +214,7 @@ struct Composer: View {
     var focused: FocusState<Bool>.Binding
     let isGenerating: Bool
     let quickActions: [QuickShortcut]
-    @Binding var attachments: [Attachment]
+    @Binding var attachments: [ChatFile]
     let support: AttachmentSupport
     let destination: String?
     @Binding var error: String?
@@ -228,7 +228,7 @@ struct Composer: View {
 
     private var canSend: Bool { !text.trimmingCharacters(in: .whitespaces).isEmpty || !attachments.isEmpty }
 
-    private func add(_ a: Attachment) {
+    private func add(_ a: ChatFile) {
         guard attachments.count < AttachmentRules.maxPerMessage else { AttachmentStore.remove([a]); error = String(localized: "You can attach up to \(AttachmentRules.maxPerMessage) files."); return }
         attachments.append(a); error = nil
     }

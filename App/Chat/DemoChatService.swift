@@ -34,7 +34,7 @@ final class DemoChatService: ChatService {
                   rows: [DetailRow(String(localized: "Title"), "Dentist"), DetailRow(String(localized: "When"), String(localized: "Tue 3:00-4:00 PM")), DetailRow(String(localized: "Calendar"), String(localized: "Personal"))]),
     ]
 
-    func send(_ text: String, attachments: [Attachment]) async {
+    func send(_ text: String, attachments: [ChatFile]) async {
         guard !isGenerating, !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         if !attachments.isEmpty { items.append(.userFiles(id: UUID(), files: attachments)) }
         items.append(.user(id: UUID(), text: text))

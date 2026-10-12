@@ -38,10 +38,10 @@ enum AttachmentStore {
         return dir
     }
 
-    static func url(_ a: Attachment) -> URL { folder.appendingPathComponent(a.stored) }
+    static func url(_ a: ChatFile) -> URL { folder.appendingPathComponent(a.stored) }
 
     /// Copies a file chosen in the file picker. Images are resized and stored as JPEG.
-    static func importFile(_ source: URL) throws -> Attachment {
+    static func importFile(_ source: URL) throws -> ChatFile {
         let scoped = source.startAccessingSecurityScopedResource()
         defer { if scoped { source.stopAccessingSecurityScopedResource() } }
         let name = source.lastPathComponent
@@ -55,17 +55,17 @@ enum AttachmentStore {
         case .document:
             let stored = "\(UUID().uuidString).\((name as NSString).pathExtension.lowercased())"
             do { try data.write(to: folder.appendingPathComponent(stored), options: .atomic) } catch { throw AttachmentError.unreadable }
-            return Attachment(name: name, kind: .document, stored: stored, bytes: data.count)
+            return ChatFile(name: name, kind: .document, stored: stored, bytes: data.count)
         }
     }
 
     /// A picked photo or image file, resized so a send stays small.
-    static func importPhoto(data: Data, name: String = "") -> Attachment? {
+    static func importPhoto(data: Data, name: String = "") -> ChatFile? {
         guard let image = UIImage(data: data), let jpeg = resized(image).jpegData(compressionQuality: 0.8) else { return nil }
         let stored = "\(UUID().uuidString).jpg"
         guard (try? jpeg.write(to: folder.appendingPathComponent(stored), options: .atomic)) != nil else { return nil }
         let label = name.isEmpty ? String(localized: "Photo") + ".jpg" : (((name as NSString).deletingPathExtension) + ".jpg")
-        return Attachment(name: label, kind: .image, stored: stored, bytes: jpeg.count)
+        return ChatFile(name: label, kind: .image, stored: stored, bytes: jpeg.count)
     }
 
     private static func resized(_ image: UIImage) -> UIImage {
@@ -77,10 +77,10 @@ enum AttachmentStore {
         return UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
     }
 
-    static func thumbnail(_ a: Attachment) -> UIImage? { a.kind == .image ? UIImage(contentsOfFile: url(a).path) : nil }
+    static func thumbnail(_ a: ChatFile) -> UIImage? { a.kind == .image ? UIImage(contentsOfFile: url(a).path) : nil }
 
     /// The text of a document. PDF and RTF are read by the system; everything else is read as text.
-    static func text(of a: Attachment) -> String {
+    static func text(of a: ChatFile) -> String {
         let file = url(a)
         switch (a.name as NSString).pathExtension.lowercased() {
         case "pdf": return String((PDFDocument(url: file)?.string ?? "").prefix(maxTextChars))
@@ -94,7 +94,7 @@ enum AttachmentStore {
         }
     }
 
-    static func prepare(_ files: [Attachment], support: AttachmentSupport) -> PreparedFiles {
+    static func prepare(_ files: [ChatFile], support: AttachmentSupport) -> PreparedFiles {
         var out = PreparedFiles()
         for a in files {
             switch a.kind {
@@ -109,7 +109,7 @@ enum AttachmentStore {
         return out
     }
 
-    static func remove(_ files: [Attachment]) {
+    static func remove(_ files: [ChatFile]) {
         for a in files { try? FileManager.default.removeItem(at: url(a)) }
     }
 }
