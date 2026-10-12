@@ -25,7 +25,12 @@ struct CalendarChoiceSection: View {
         } header: {
             Text("Calendar")
         } footer: {
-            Text("Events keep the account they come from, for example Google or iCloud. This only decides where new ones are saved.")
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Events keep the account they come from, for example Google or iCloud. This only decides where new ones are saved.")
+                if options.allSatisfy({ !$0.label.localizedCaseInsensitiveContains("google") }) && !needsAccess {
+                    Text("To use Google Calendar, add your Google account in the iOS Settings app under Calendar, Accounts, Add Account, and switch Calendars on. It then appears in this list.")
+                }
+            }
         }
         .task { await load(ask: false) }
     }
