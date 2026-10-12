@@ -15,6 +15,7 @@ final class AppSettings {
     private static let actionsOffKey = "settings.actionsOff"
     private static let strictKey = "settings.strictWeb"
     private static let quickBarKey = "settings.quickBar"
+    private static let reasoningKey = "settings.deepReasoning"
     private static let shortcutsKey = "settings.shortcuts"
 
     var actionsOff: Bool {
@@ -30,6 +31,11 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(strictWeb, forKey: Self.strictKey) }
     }
 
+    /// Ask the on-device model to reason before it answers. Only has an effect on iOS 27 or later; on by default.
+    var deepReasoning: Bool {
+        didSet { UserDefaults.standard.set(deepReasoning, forKey: Self.reasoningKey) }
+    }
+
     /// The row of shortcut buttons above the keyboard. Off until the user turns it on.
     var quickBarOn: Bool {
         didSet { UserDefaults.standard.set(quickBarOn, forKey: Self.quickBarKey) }
@@ -41,6 +47,7 @@ final class AppSettings {
     }
 
     private init() {
+        deepReasoning = UserDefaults.standard.object(forKey: Self.reasoningKey) as? Bool ?? true
         quickBarOn = UserDefaults.standard.bool(forKey: Self.quickBarKey)
         if let data = UserDefaults.standard.data(forKey: Self.shortcutsKey),
            let list = try? JSONDecoder().decode([QuickShortcut].self, from: data) {

@@ -52,6 +52,14 @@ struct SettingsView: View {
                     }
                 }
             }
+            if LiveChatService.reasoningCompiled {
+                Section {
+                    Toggle(isOn: $settings.deepReasoning) { Text("Think before answering").font(DS.Typography.body) }
+                        .tint(DS.Colors.accent).frame(minHeight: 44).accessibilityIdentifier("settings.reasoning")
+                } footer: {
+                    Text("Lets the on-device model reason before it replies. Answers can take a little longer. Needs iOS 27.").font(DS.Typography.caption)
+                }
+            }
             Section {
                 Button(role: .destructive) { confirmClear = true } label: { Text("Clear browsing data").font(DS.Typography.body) }
                     .frame(minHeight: 44).accessibilityIdentifier("settings.clearWeb")

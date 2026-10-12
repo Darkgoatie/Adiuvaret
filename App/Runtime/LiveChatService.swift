@@ -28,6 +28,8 @@ final class LiveChatService: ChatService {
     @ObservationIgnored private var memoryBlock = ""
     @ObservationIgnored private let handles = EventHandles()
     @ObservationIgnored private var useReasoning = !UserDefaults.standard.bool(forKey: "reasoning.unsupported")
+    /// The user's switch and the chat's own fallback flag together.
+    private var wantReasoning: Bool { useReasoning && AppSettings.shared.deepReasoning }
     @ObservationIgnored private var toolIDs: [String] = []
     @ObservationIgnored private var lastPrompt = ""
     @ObservationIgnored private let engine = LiveEngine.shared
@@ -220,9 +222,9 @@ final class LiveChatService: ChatService {
             while let session {
                 var started = false
                 do {
-                    for try await partial in Self.stream(session, prompt, reasoning: useReasoning) {
+                    for try await partial in Self.stream(session, prompt, reasoning: wantReasoning) {
                         if !started {
-                            DiagnosticsLog.shared.record("first token", "\((clock.now - turnStart).milliseconds) ms since send, reasoning=\(useReasoning && Self.reasoningCompiled)")
+                            DiagnosticsLog.shared.record("first token", "\((clock.now - turnStart).milliseconds) ms since send, reasoning=\(wantReasoning && Self.reasoningCompiled)")
                             items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true
                         }
                         else { replace(replyID, with: .assistant(id: replyID, text: partial.content, streaming: true)) }
@@ -235,9 +237,9 @@ final class LiveChatService: ChatService {
                     finishStreaming(replyID)
                     return
                 } catch {
-                    DiagnosticsLog.shared.record("model error", "\(type(of: error)): \(String(describing: error)) started=\(started) reasoning=\(useReasoning && Self.reasoningCompiled)")
+                    DiagnosticsLog.shared.record("model error", "\(type(of: error)): \(String(describing: error)) started=\(started) reasoning=\(wantReasoning && Self.reasoningCompiled)")
                     // If the request with a reasoning level fails before any text, retry once on a fresh session without it.
-                    if useReasoning, Self.reasoningCompiled, !started, !Self.isLimit(error) {
+                    if wantReasoning, Self.reasoningCompiled, !started, !Self.isLimit(error) {
                         useReasoning = false
                         if String(describing: error).contains("does not support reasoning") { UserDefaults.standard.set(true, forKey: Self.reasoningUnsupportedKey) }
                         DiagnosticsLog.shared.record("fallback", "reasoning off for this chat, retrying")
