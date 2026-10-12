@@ -80,6 +80,8 @@ targets:
       path: Widgets/Info.plist
       properties:
         CFBundleDisplayName: Adiuvaret
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
