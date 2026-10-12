@@ -174,9 +174,15 @@ private struct ScrollEdges: Equatable {
 private struct ItemView: View, Equatable {
     let item: ThreadItem
     let service: any ChatService
+    /// A snapshot of what the row shows, a plain string so it can be compared from any thread.
+    let key: String
+
+    init(item: ThreadItem, service: any ChatService) {
+        self.item = item; self.service = service; self.key = item.renderKey
+    }
 
     /// Two rows are the same when their content is, so a streaming reply redraws only itself instead of every earlier message.
-    static func == (a: ItemView, b: ItemView) -> Bool { a.item.renderKey == b.item.renderKey }
+    nonisolated static func == (a: ItemView, b: ItemView) -> Bool { a.key == b.key }
 
     var body: some View {
         switch item {
