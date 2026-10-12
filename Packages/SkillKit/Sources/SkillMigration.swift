@@ -29,6 +29,6 @@ public enum SkillMigration {
     }
 
     public static func learnedID(_ uuid: UUID) -> String {
-        "learned-" + String(uuid.uuidString.replacingOccurrences(of: "-", with: "").lowercased().prefix(12))
+        "learned-" + uuid.uuidString.replacingOccurrences(of: "-", with: "").lowercased()
     }
 }

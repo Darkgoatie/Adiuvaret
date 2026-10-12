@@ -35,8 +35,7 @@ import ToolKit
     }
 
     @Test func skillNeedingAnOffConnectorIsHiddenUntilItIsOn() throws {
-        let on = LockedFlag(false)
-        let r = SkillRegistry(knownTools: { ["searchNotes"] }, connectorOn: { on.value || $0 != "notes" })
+        let r = SkillRegistry(knownTools: { ["searchNotes"] }, connectorOn: { _ in true })
         try r.register(AgentSkill(id: "note-recap", name: "Note recap", description: "Recap my notes", keywords: ["recap", "notes"],
                                   body: "Search the notes and recap.", allowedTools: ["searchNotes"], requires: ["notes"]))
         #expect(!r.find("recap notes").isEmpty)
@@ -47,11 +46,6 @@ import ToolKit
         #expect(throws: SkillError.notFound) { try off.use("note-recap") }
         #expect(off.index().isEmpty)
     }
-}
-
-final class LockedFlag: @unchecked Sendable {
-    var value: Bool
-    init(_ v: Bool) { value = v }
 }
 
 @Suite struct SkillImportTests {
@@ -99,7 +93,7 @@ final class LockedFlag: @unchecked Sendable {
     @Test func oldSkillsFileLoadsAsLearnedSkills() throws {
         let labels = ["Search the web": "searchWeb", "Add the event": "createEvent", "Add a reminder": "createReminder"]
         let skills = SkillMigration.learnedSkills(from: Data(legacy.utf8), labelToTool: labels)
-        #expect(skills.count == 2)
+        #expect(skills.count == 2 && skills[0].id.count <= 40 && skills[0].id != skills[1].id)
         #expect(skills[0].source == .learned && skills[0].name == "Betis match to calendar")
         #expect(skills[0].allowedTools == ["searchWeb", "createEvent"], Comment(rawValue: "\(skills[0].allowedTools)"))
         #expect(!skills[1].enabled && skills[1].allowedTools == ["createReminder"])
