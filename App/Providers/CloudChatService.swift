@@ -215,7 +215,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
     }
 
     /// Picks the tools for this message. An online model sees every visible tool the router and the code-side rules select,
-    /// plus what a matched skill names, so a long catalog does not eat its context.
+    /// plus what a matched skill names. No router model call runs for online chats, so there is no pause before the reply; so a long catalog does not eat its context.
     private func chooseTools(prompt: String, prior: [ThreadItem], skill: SkillUse?) async -> [String] {
         guard !AppSettings.shared.actionsOff else { return [] }
         if let fixed = fixedTools {
@@ -225,7 +225,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
             return ids
         }
         let previous = prior.reversed().compactMap { item -> String? in if case .user(_, let t) = item { return t } else { return nil } }.first
-        let routed = await ToolRouter.chooseWithNote(prompt: prompt, previous: previous)
+        let routed = await ToolRouter.chooseWithNote(prompt: prompt, previous: previous, askModel: false)
         var chosen = routed.0
         if let skill {
             let wanted = skill.tools.compactMap { ToolCatalog.standard.entry($0) }

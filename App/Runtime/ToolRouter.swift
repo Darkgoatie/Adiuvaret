@@ -33,15 +33,17 @@ enum ToolRouter {
         await chooseWithNote(prompt: prompt, previous: previous, catalog: catalog).0
     }
 
-    /// Same as `choose`, plus a short note for diagnostics: what the router decided and whether it failed.
-    static func chooseWithNote(prompt: String, previous: String?, catalog full: ToolCatalog = .standard) async -> ([CatalogEntry], String) {
+    /// Same as `choose`, plus (askModel false skips the on-device router call: keyword search and the code-side rules pick the tools) a short note for diagnostics: what the router decided and whether it failed.
+    static func chooseWithNote(prompt: String, previous: String?, catalog full: ToolCatalog = .standard, askModel: Bool = true) async -> ([CatalogEntry], String) {
         // Tools of a connector the user switched off do not exist for this message.
         let catalog = ConnectorCatalog.visible(full)
         var needsTool = true
         var words = ""
         var note = "router ok"
         // Apple's model, when this iPhone has it, reads the message first. Without it the raw message searches the catalog directly.
-        if #available(iOS 26.0, *), AppleModel.isAvailable {
+        if !askModel {
+            note = "router skipped, online chat"
+        } else if #available(iOS 26.0, *), AppleModel.isAvailable {
             do {
                 let session = LanguageModelSession(instructions: instructions(catalog))
                 var text = ""
