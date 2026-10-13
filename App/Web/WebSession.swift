@@ -40,6 +40,9 @@ final class WebSession: NSObject {
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored private let world = WKContentWorld.world(name: "adiuvaret-agent")
     @ObservationIgnored private var allowed: [String] = []
+    @ObservationIgnored private var trailHost = ""
+    @ObservationIgnored private var trail: [String] = []
+    @ObservationIgnored private let siteNotes = SiteNoteStore.standard()
     @ObservationIgnored private var owner: UUID?
     @ObservationIgnored private var elements: [Int: PageElement] = [:]
     @ObservationIgnored private var lastHasPassword = false
@@ -88,6 +91,8 @@ final class WebSession: NSObject {
         blocked = nil
         lastLoadError = nil
         elements = [:]
+        trailHost = host
+        trail = []
         return await busy {
             webView.load(URLRequest(url: url, timeoutInterval: 30))
             await waitForLoad(seconds: 25)
@@ -96,7 +101,8 @@ final class WebSession: NSObject {
                 summarize(callID, String(localized: "Couldn't open \(host)"), [], failed: true)
                 return "Could not open the page: \(error)"
             }
-            return await observe(callID, title: String(localized: "Opened \(host)"), budget: 1200)
+            let known = SiteNoteRules.render(siteNotes.note(for: host))
+            return await observe(callID, title: String(localized: "Opened \(host)"), budget: 1200, extra: known)
         }
     }
 
@@ -159,6 +165,10 @@ final class WebSession: NSObject {
             } else if let error = lastLoadError {
                 extra = "The page reported an error: \(error)"
             }
+            if action == .click, !trailHost.isEmpty {
+                trail.append(label)
+                siteNotes.record(host: trailHost, steps: trail)
+            }
             let title = Self.actionTitle(action, label: label, value: value, message: message)
             return await observe(callID, title: title, budget: 900, extra: extra)
         }
@@ -182,6 +192,7 @@ final class WebSession: NSObject {
     func clearWebsiteData() async {
         await WKWebsiteDataStore.default().removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast)
         allowed = []; owner = nil; elements = [:]; blocked = nil
+        siteNotes.clear(); trail = []; trailHost = ""
         webView.load(URLRequest(url: URL(string: "about:blank")!))
         DiagnosticsLog.shared.record("web", "website data cleared")
     }
