@@ -98,7 +98,7 @@ public enum SnapshotFormat {
         max(1, (collapse(raw).count + size - 1) / size)
     }
 
-    static func collapse(_ s: String) -> String {
+    public static func collapse(_ s: String) -> String {
         s.split(whereSeparator: \.isNewline)
             .map { $0.split(whereSeparator: { $0 == " " || $0 == "\t" }).joined(separator: " ") }
             .filter { !$0.isEmpty }
