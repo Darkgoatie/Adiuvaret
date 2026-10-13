@@ -45,3 +45,6 @@ Built, committed, not compiled and not pushed. Order of commits: c087116 site no
 - 20: SavedItem store in ToolKit; tools saveItem (reversibleWrite, approval card, Undo) and findSavedItems; Advanced > Notes and Tasks with a Send to Reminders swipe. The catalog wording was tuned in a Python port of the scorer so every example still finds its own tool.
 - 26: Packages/Evals with 64 cases, EvalsTests, and Settings > Testing > Evals. The package is a new library in Package.swift and project.yml.
 Open: every Swift file here compiles for the first time in the next Xcode Cloud run; the catalog test and the new package tests run only on a runner. Nothing was tested on the phone. The blueprint in Obsidian does not mention these screens yet.
+
+## Standard connector format (2026-10-13)
+Designed, not built: decision 29, docs/spec/modules/Connectors.md, tasks 78 to 85. Core model: one ConnectorManifest per connector, everything else derived. Order: 78 spike, 79, 80, 81, 82, 83 (migrate the three existing), 84, 85. Open: whether the Apple model accepts runtime tool schemas (task 78). Needs the user's yes on the core model before code. Catalog scorer port: scratch catsim.py. Nothing compiled; tasks 20, 21, 26, 70 and Privacy still await run 13.
