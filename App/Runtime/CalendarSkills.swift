@@ -157,8 +157,10 @@ enum EventUndo {
             return (try? store.save(e, span: .thisEvent, commit: true)) != nil
         case .removeReminder(let id):
             return await ReminderUndo.remove(id: id)
-        case .removeTodoist(let id):
-            return (try? await ServiceClient.send(ServiceRequest.todoistDelete(id: id), to: "todoist")) != nil
+        case .undoConnector(let connector, let tool, let id):
+            guard let m = ConnectorRegistry.manifest(connector), let t = m.tool(tool),
+                  let request = ConnectorEngine.undoRequest(m, t, id: id) else { return false }
+            return (try? await ServiceClient.send(request, to: connector)) != nil
         case .removeSavedItem:
             return false
         }

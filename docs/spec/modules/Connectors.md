@@ -1,6 +1,6 @@
 # Connectors (standard format)
 
-Status: design, decision 29. Nothing here is built or compiled yet. Tasks 78 to 85.
+Status: built, not compiled. Tasks 78 to 85 (see TASKS.md). The text below is the design; the as-built notes are at the end.
 
 ## Core model
 
@@ -115,3 +115,17 @@ OAuth flows (Gmail, Drive, Slack; stay with the private-vs-public decision), use
 ## Owned files (planned)
 
 Packages/ToolKit/Sources/Connectors/ (Manifest.swift, Registry.swift, GenericRequest.swift, GenericParse.swift, IntentRules.swift, one file per connector), Packages/ToolKit/Tests/ManifestTests.swift, Tests/Fixtures/, App/Connectors/GenericConnectorTools.swift, scripts/connector_check.py.
+
+## As built
+
+Adding a connector now takes these steps:
+1. Probe the API with curl; save a response shape as a fixture under Packages/ToolKit/Tests/Fixtures/<id>/.
+2. Write Packages/ToolKit/Sources/Connectors/<Name>Manifest.swift and add it to `ConnectorRegistry.manifests`.
+3. Add the logo: `App/Assets.xcassets/Brand/brand-<id>.imageset` from simple-icons (copy another imageset's Contents.json). With no mark available, set `brandAsset: ""` and the tile uses the SF Symbol.
+4. `python scripts/gen_connector_tools.py` (writes App/Connectors/Generated/ConnectorTools.generated.swift) and `python scripts/connector_check.py`.
+5. A `<Name>ManifestTests.swift` with the validator, one fixture parse and the host check.
+
+Auth: `ConnectorAuth` per manifest (`.bearer`, `.scheme("Bot")`, `.rawAuthorization`, `.header("PRIVATE-TOKEN")`); `ServiceClient` applies it.
+Rules the validator and engine enforce beyond the design: no auth header names in `headers`; an intent rule can only fill a free-text argument, never an id; `requires` must name a tool of the same connector; an intent fires only when the message names the service; list lines need `requiredField`; `itemsKey` is a dotted path with array indexes; one object under it counts as one item; a 200 answer carrying `ok:false` or GraphQL `errors` is turned into an error sentence.
+Writes: `ConnectorToolSpec.isWrite` makes the descriptor `reversibleWrite` when an `undo` request exists and `irreversible` (always asks) when not.
+Still hand-written: GitHub (commits need a native step), Notion, and the device connectors.

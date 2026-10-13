@@ -36,7 +36,7 @@ public enum BriefingLimits {
 /// Tools a briefing chat may use. Everything here only reads; nothing that writes, sends or clicks is on the list.
 public enum BriefingTools {
     public static let allowed: Set<String> = ["readCalendar", "findFreeTime", "listReminders", "searchWeb", "searchNotes", "readNote",
-                                               "listTodoistTasks", "listGitHubIssues", "searchNotion"]
+                                               "listGitHubIssues", "searchNotion"]
 
     public static func filter(_ ids: [String]) -> [String] { ids.filter(allowed.contains) }
 

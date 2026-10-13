@@ -12,7 +12,7 @@ public struct Connector: Sendable, Identifiable, Equatable {
 }
 
 public enum ConnectorCatalog {
-    public static let all: [Connector] = [
+    private static let native: [Connector] = [
         Connector(id: "notes", title: "Notes folder (Obsidian)", symbol: "doc.text",
                   reads: "Note names and text in the folder you choose.",
                   changes: "Creates notes and adds text to notes, after you approve.",
@@ -29,10 +29,6 @@ public enum ConnectorCatalog {
                   reads: "Nothing.",
                   changes: "Opens a draft in Mail. You press send.",
                   network: "None from Adiuvaret.", defaultOn: true),
-        Connector(id: "todoist", title: "Todoist", symbol: "checklist",
-                  reads: "Your open tasks and their due dates.",
-                  changes: "Adds a task, after you approve.",
-                  network: "Requests go to api.todoist.com with your own token. Only the words of the task leave the iPhone.", defaultOn: false),
         Connector(id: "github", title: "GitHub", symbol: "chevron.left.forwardslash.chevron.right",
                   reads: "Issues and pull requests assigned to you, created by you, or waiting for your review.",
                   changes: "Nothing. Read only.",
@@ -43,12 +39,16 @@ public enum ConnectorCatalog {
                   network: "Requests go to api.notion.com with your own token. Only your search words leave the iPhone.", defaultOn: false)
     ]
 
+    /// Hand-wired connectors first, then every manifest in the registry.
+    public static let all: [Connector] = native + ConnectorRegistry.manifests.map(\.connector)
+
     public static func connector(_ id: String) -> Connector? { all.first { $0.id == id } }
 
     /// Which connector owns a catalog category. Categories not listed here (Calendar, Reminders, Web, Chats) belong to the app itself and are always offered.
-    public static let categoryOwner: [String: String] = [
-        "Notes": "notes", "Contacts": "contacts", "Shortcuts": "shortcuts", "Email": "mail",
-        "Todoist": "todoist", "GitHub": "github", "Notion": "notion",
+    public static let categoryOwner: [String: String] = nativeOwners.merging(ConnectorRegistry.manifests.map { ($0.category, $0.id) }) { a, _ in a }
+
+    private static let nativeOwners: [String: String] = [
+        "Notes": "notes", "Contacts": "contacts", "Shortcuts": "shortcuts", "Email": "mail", "GitHub": "github", "Notion": "notion",
     ]
 
     /// The catalog with every tool of a switched-off connector removed, so the router can neither pick nor describe it.

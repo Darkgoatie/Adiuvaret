@@ -4,7 +4,7 @@ import Foundation
 
 @Suite struct ServiceConnectorTests {
     @Test func tokensOnlyGoToTheirOwnHost() throws {
-        let todoist = try #require(ServiceRequest.todoistTasks()?.url)
+        let todoist = try #require(URL(string: "https://api.todoist.com/api/v1/tasks"))
         #expect(ServiceHost.isAllowed(todoist, for: "todoist"))
         #expect(!ServiceHost.isAllowed(todoist, for: "github"))
         #expect(!ServiceHost.isAllowed(URL(string: "https://api.todoist.com.evil.net/api/v1/tasks")!, for: "todoist"))
@@ -15,8 +15,7 @@ import Foundation
     }
 
     @Test func everyBuiltRequestStaysOnItsHost() throws {
-        let all: [(String, URLRequest?)] = [("todoist", ServiceRequest.todoistTasks()), ("todoist", ServiceRequest.todoistAdd(content: "Milk", due: "tomorrow")),
-            ("todoist", ServiceRequest.todoistDelete(id: "abc123")), ("github", ServiceRequest.githubSearch(query: "is:open assignee:@me")), ("notion", ServiceRequest.notionSearch(query: "roadmap"))]
+        let all: [(String, URLRequest?)] = [("github", ServiceRequest.githubSearch(query: "is:open assignee:@me")), ("notion", ServiceRequest.notionSearch(query: "roadmap"))]
         for (id, r) in all {
             let url = try #require(r?.url, Comment(rawValue: id))
             #expect(ServiceHost.isAllowed(url, for: id), Comment(rawValue: url.absoluteString))
@@ -30,43 +29,6 @@ import Foundation
         #expect(!ServiceToken.isPlausible("0123456789abcdef 0123456789abcdef"))
         #expect(!ServiceToken.isPlausible("0123456789abcdef\r\nX-Evil: 1"))
         #expect(ServiceToken.clean("  Bearer abc123def456ghi789 \n") == "abc123def456ghi789")
-    }
-
-    @Test func todoistAddBuildsAJsonBody() throws {
-        let r = try #require(ServiceRequest.todoistAdd(content: "Buy milk", due: "tomorrow 9am"))
-        #expect(r.httpMethod == "POST")
-        let raw = try #require(r.httpBody)
-        let object = try JSONSerialization.jsonObject(with: raw)
-        let body = try #require(object as? [String: String])
-        #expect(body == ["content": "Buy milk", "due_string": "tomorrow 9am"])
-        #expect(ServiceRequest.todoistAdd(content: "  ", due: "") == nil)
-        #expect(ServiceRequest.todoistAdd(content: String(repeating: "a", count: 301), due: "") == nil)
-        let noDue = try #require(ServiceRequest.todoistAdd(content: "Milk", due: ""))
-        let noDueBody = try #require(noDue.httpBody)
-        #expect(!String(decoding: noDueBody, as: UTF8.self).contains("due_string"))
-    }
-
-    @Test func todoistDeleteRefusesOddIds() {
-        #expect(ServiceRequest.todoistDelete(id: "6X7rM8997g3RQmvh")?.httpMethod == "DELETE")
-        #expect(ServiceRequest.todoistDelete(id: "../projects") == nil)
-        #expect(ServiceRequest.todoistDelete(id: "") == nil)
-    }
-
-    @Test func todoistTasksAreListedAndFiltered() {
-        let json = Data(#"{"results":[{"id":"1","content":"Buy milk","priority":1,"due":{"date":"2026-10-12","string":"tomorrow"}},{"id":"2","content":"Call the bank","priority":4,"due":null},{"id":"3","content":"Renew passport","due":{"date":"2026-11-01"}}],"next_cursor":null}"#.utf8)
-        #expect(TodoistParse.tasks(json) == ["Buy milk (due tomorrow)", "Call the bank [urgent]", "Renew passport (due 2026-11-01)"], Comment(rawValue: "\(TodoistParse.tasks(json))"))
-        #expect(TodoistParse.tasks(json, search: "bank") == ["Call the bank [urgent]"])
-        #expect(TodoistParse.tasks(json, search: "zebra").isEmpty)
-        #expect(TodoistParse.tasks(json, limit: 1).count == 1)
-        let plain = Data(#"[{"id":"9","content":"Plain array"}]"#.utf8)
-        #expect(TodoistParse.tasks(plain) == ["Plain array"])
-        #expect(TodoistParse.tasks(Data("not json".utf8)).isEmpty)
-    }
-
-    @Test func todoistCreatedIdsAreRead() {
-        #expect(TodoistParse.createdID(Data(#"{"id":"abc","content":"x"}"#.utf8)) == "abc")
-        #expect(TodoistParse.createdID(Data(#"{"id":42}"#.utf8)) == "42")
-        #expect(TodoistParse.createdID(Data("[]".utf8)) == nil)
     }
 
     @Test func githubQueriesCannotCarryQualifiers() {

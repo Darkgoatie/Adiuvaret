@@ -211,14 +211,37 @@ public enum ConnectorEngine {
         return rows
     }
 
+    /// The success sentence of a write, with the argument slots filled.
+    public static func successText(_ tool: ConnectorToolSpec, args: [String: String]) -> String {
+        fill(tool.successText ?? "Done.", args)
+    }
+
+    /// An error the service reported inside a successful HTTP answer (`{"ok":false,"error":"..."}` or GraphQL `errors`), as a sentence for the model.
+    /// Nil when there is none. Only plain characters of the service's text are kept.
+    public static func apiError(_ data: Data, service: String) -> String? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        var reason: String?
+        if (root["ok"] as? Bool) == false { reason = (root["error"] as? String) ?? "unknown" }
+        else if let errors = root["errors"] as? [[String: Any]], let first = errors.first { reason = (first["message"] as? String) ?? "unknown" }
+        guard let reason else { return nil }
+        let plain = String(String.UnicodeScalarView(reason.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) || $0 == " " || $0 == "_" || $0 == "-" || $0 == ":" || $0 == "." ? $0 : " " }))
+        return "Not done: \(service) reported an error (\(clip(plain, 80))). Tell the user; a missing token permission is the usual cause."
+    }
+
     // MARK: intent
+
+    /// True when the message names the service: its id or a word of its title. Code-side routing never fires without it.
+    public static func mentions(_ words: Set<String>, _ m: ConnectorManifest) -> Bool {
+        if words.contains(m.id) { return true }
+        return m.title.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).contains { $0.count >= 4 && words.contains($0) }
+    }
 
     /// The read tool a message is about, from the manifests' own rules. Writes have no rule, so they never match.
     public static func detect(_ text: String, in manifests: [ConnectorManifest]) -> ConnectorIntent.Match? {
         let w = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
         guard !w.isEmpty else { return nil }
         let set = Set(w)
-        for m in manifests {
+        for m in manifests where mentions(set, m) {
             for t in m.tools where !t.isWrite {
                 guard let rule = t.intent, !set.isDisjoint(with: rule.triggers), set.isDisjoint(with: rule.blockers) else { continue }
                 let arg = w.filter { !rule.skip.contains($0) && !rule.triggers.contains($0) }.prefix(rule.maxWords).joined(separator: " ")
@@ -266,7 +289,12 @@ public enum ConnectorValidator {
                 if t.request.method != "GET" && t.request.method != "POST" { p.append("\(n): a read must be GET or POST") }
                 if t.undo != nil || t.approvalTitle != nil { p.append("\(n): a read has no undo or approval") }
             }
-            if let i = t.intent, !names.contains(i.argument) { p.append("\(n): intent argument \(i.argument) is not an argument") }
+            if let i = t.intent {
+                if let a = t.arguments.first(where: { $0.name == i.argument }) {
+                    if a.rule == .identifier || a.rule == .number { p.append("\(n): an intent cannot fill an id argument (\(i.argument)); ids come from an earlier tool") }
+                } else { p.append("\(n): intent argument \(i.argument) is not an argument") }
+            }
+            for r in t.requires where m.tool(r) == nil { p.append("\(n): requires \(r), which is not a tool of this connector") }
         }
         return p
     }
@@ -275,10 +303,10 @@ public enum ConnectorValidator {
 /// Every connector written as a manifest. A new connector is one file with one value, added here.
 public enum ConnectorRegistry {
     public static let manifests: [ConnectorManifest] = [
+        TodoistManifest.manifest, SlackManifest.manifest, DiscordManifest.manifest, FigmaManifest.manifest, MondayManifest.manifest,
         LinearManifest.manifest, AsanaManifest.manifest, ClickUpManifest.manifest, AirtableManifest.manifest,
-        SentryManifest.manifest, VercelManifest.manifest, DropboxManifest.manifest, CalendlyManifest.manifest,
-        SlackManifest.manifest, DiscordManifest.manifest, FigmaManifest.manifest,
-        MondayManifest.manifest, GitLabManifest.manifest, BitbucketManifest.manifest,
+        GitLabManifest.manifest, BitbucketManifest.manifest, SentryManifest.manifest, VercelManifest.manifest,
+        DropboxManifest.manifest, CalendlyManifest.manifest,
     ]
 
     public static func manifest(_ id: String) -> ConnectorManifest? { manifests.first { $0.id == id } }

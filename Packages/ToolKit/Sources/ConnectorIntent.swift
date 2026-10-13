@@ -12,13 +12,13 @@ public enum ConnectorIntent {
         text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
     }
 
-    private static let writeVerbs: Set<String> = ["add", "create", "put", "new"]
-
     /// The read tool that answers this message, or nil. Only read tools are matched here: writes stay with the model and the approval card.
     public static func detect(_ text: String) -> Match? {
         let w = words(text)
         guard !w.isEmpty else { return nil }
         let set = Set(w)
+        // Apps described by a manifest are routed by their own rules, and only when the message names them.
+        if let m = ConnectorEngine.detect(text, in: ConnectorRegistry.manifests) { return m }
         if set.contains("commit") || set.contains("commits") {
             let numberWords: [String: Int] = ["one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10]
             let count = w.compactMap { Int($0) ?? numberWords[$0] }.first.map { max(1, min($0, 10)) } ?? 3
@@ -38,11 +38,6 @@ public enum ConnectorIntent {
             else if set.contains("created") || set.contains("mine") || set.contains("opened") || set.contains("author") { what = "created" }
             else { what = "assigned" }
             return Match(connector: "github", tool: "listGitHubIssues", arguments: ["what": what, "words": ""])
-        }
-        if set.contains("todoist") && set.isDisjoint(with: writeVerbs) {
-            let skip: Set<String> = ["todoist", "tasks", "task", "list", "what", "whats", "is", "on", "my", "the", "show", "do", "i", "have", "any", "in", "a", "about", "for", "me", "open", "today"]
-            let search = w.filter { !skip.contains($0) }.prefix(3).joined(separator: " ")
-            return Match(connector: "todoist", tool: "listTodoistTasks", arguments: ["search": search])
         }
         if set.contains("notion") {
             let skip: Set<String> = ["notion", "find", "search", "my", "the", "in", "for", "page", "pages", "a", "is", "there", "about", "on", "look", "up", "me", "workspace", "open", "go", "to", "check", "show", "get", "what", "whats", "do", "i", "have", "any"]

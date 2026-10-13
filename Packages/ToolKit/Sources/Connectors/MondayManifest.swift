@@ -6,7 +6,7 @@ public enum MondayManifest {
 
     public static let manifest = ConnectorManifest(
         id: "monday", title: "Monday", category: "Monday", symbol: "tablecells",
-        brandAsset: "brand-monday", brandRGB: [0.97, 0.57, 0.12],
+        brandAsset: "", brandRGB: [0.97, 0.57, 0.12],
         reads: "Your monday boards and board items.",
         changes: "No writes.",
         networkNote: "Only board and item listing queries are sent.",

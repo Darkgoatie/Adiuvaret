@@ -45,7 +45,9 @@ import Testing
     }
 
     @Test func categoriesKeepOrder() {
-        #expect(catalog.categories == ["Calendar", "Reminders", "Web", "Notes", "Saved", "Contacts", "Shortcuts", "Email", "Todoist", "GitHub", "Chats", "Notion", "Skills"])
+        let hand = ["Calendar", "Reminders", "Web", "Notes", "Saved", "Contacts", "Shortcuts", "Email", "GitHub", "Chats", "Notion", "Skills"]
+        #expect(Array(catalog.categories.prefix(hand.count)) == hand)
+        #expect(Array(catalog.categories.dropFirst(hand.count)) == ConnectorRegistry.manifests.map(\.category))
     }
 
     @Test func tokensSplitCamelCaseAndDropNoise() {

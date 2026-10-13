@@ -6,15 +6,21 @@ import Diagnostics
 
 /// What each tool is called in a saved routine's steps. Anything unlisted falls back to its id.
 enum SkillLabels {
-    static let labels: [String: String] = [
+    static var labels: [String: String] { base.merging(manifestLabels) { a, _ in a } }
+
+    private static var manifestLabels: [String: String] {
+        Dictionary(ConnectorRegistry.manifests.flatMap { $0.tools.map { ($0.name, $0.title) } }) { a, _ in a }
+    }
+
+    private static let base: [String: String] = [
         "readCalendar": "Check the calendar", "findFreeTime": "Find free time", "createEvent": "Add the event", "moveEvent": "Move the event",
         "deleteEvent": "Delete the event", "createReminder": "Add a reminder", "listReminders": "Look at the reminders", "searchWeb": "Search the web",
         "openWebsite": "Open the website", "lookAtPage": "Read the page", "searchNotes": "Search the notes", "readNote": "Read the note",
         "writeNote": "Write the note", "findContact": "Find the contact", "runShortcut": "Run the shortcut", "draftEmail": "Draft the email",
-        "listTodoistTasks": "Check Todoist", "addTodoistTask": "Add a Todoist task", "listGitHubIssues": "Check GitHub issues",
+        "listGitHubIssues": "Check GitHub issues",
         "listGitHubRepos": "Check GitHub repositories", "searchNotion": "Search Notion", "searchPastChats": "Look through earlier chats"]
 
-    static var labelToTool: [String: String] { Dictionary(uniqueKeysWithValues: labels.map { ($0.value, $0.key) }) }
+    static var labelToTool: [String: String] { Dictionary(labels.map { ($0.value, $0.key) }) { a, _ in a } }
 }
 
 /// The app's one skill registry: builtin skills, skills the user added or imported, and routines learned from finished tasks.

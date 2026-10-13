@@ -36,7 +36,28 @@ private struct AppGroup: Identifiable, Hashable {
         AppGroup(id: id, title: title, icon: icon, apps: [AppItem(id: id, title: title, icon: icon, kind: kind)])
     }
 
-    static let all: [AppGroup] = [
+    /// One tile per company for every manifest connector, in registry order. Apps of one company share a tile.
+    private static var fromManifests: [AppGroup] {
+        var order: [String] = []
+        var byCompany: [String: [ConnectorManifest]] = [:]
+        for m in ConnectorRegistry.manifests {
+            if byCompany[m.company] == nil { order.append(m.company) }
+            byCompany[m.company, default: []].append(m)
+        }
+        func icon(_ m: ConnectorManifest) -> IntegrationIcon.Kind {
+            let c = m.brandRGB.count == 3 ? Color(red: m.brandRGB[0], green: m.brandRGB[1], blue: m.brandRGB[2]) : Color.gray
+            return m.brandAsset.isEmpty ? .symbol(m.symbol, c) : .brand(m.brandAsset, c)
+        }
+        return order.compactMap { company in
+            guard let list = byCompany[company], let first = list.first else { return nil }
+            let apps = list.map { AppItem(id: $0.id, title: $0.title, icon: icon($0), kind: .connector($0.id)) }
+            return AppGroup(id: company, title: list.count == 1 ? first.title : company.capitalized, icon: icon(first), apps: apps)
+        }
+    }
+
+    static let all: [AppGroup] = nativeGroups + fromManifests
+
+    private static let nativeGroups: [AppGroup] = [
         single("appleCalendar", String(localized: "Calendar"), .symbol("calendar", red), .appleCalendar),
         single("contacts", String(localized: "Contacts"), .symbol("person.crop.circle", Color(red: 0.56, green: 0.56, blue: 0.58)), .connector("contacts")),
         single("shortcuts", String(localized: "Shortcuts"), .symbol("square.stack.3d.up.fill", Color(red: 0.93, green: 0.25, blue: 0.45)), .connector("shortcuts")),
@@ -47,8 +68,6 @@ private struct AppGroup: Identifiable, Hashable {
         ]),
         AppGroup(id: "obsidian", title: String(localized: "Obsidian"), icon: .brand("brand-obsidian", Color(red: 0.49, green: 0.23, blue: 0.93)), apps: [
             AppItem(id: "notes", title: String(localized: "Obsidian"), icon: .brand("brand-obsidian", Color(red: 0.49, green: 0.23, blue: 0.93)), kind: .connector("notes"))]),
-        AppGroup(id: "todoist", title: String(localized: "Todoist"), icon: .brand("brand-todoist", Color(red: 0.89, green: 0.27, blue: 0.20)), apps: [
-            AppItem(id: "todoist", title: String(localized: "Todoist"), icon: .brand("brand-todoist", Color(red: 0.89, green: 0.27, blue: 0.20)), kind: .connector("todoist"))]),
         AppGroup(id: "github", title: String(localized: "GitHub"), icon: .brand("brand-github", Color(red: 0.09, green: 0.09, blue: 0.09)), apps: [
             AppItem(id: "github", title: String(localized: "GitHub"), icon: .brand("brand-github", Color(red: 0.09, green: 0.09, blue: 0.09)), kind: .connector("github"))]),
         AppGroup(id: "notion", title: String(localized: "Notion"), icon: .brand("brand-notion", .black), apps: [
@@ -277,6 +296,9 @@ private struct ConnectorBlock: View {
         .accessibilityIdentifier("integration.\(connector.id).token")
         if hasToken {
             Button(String(localized: "Remove token"), role: .destructive) { SecretStore.delete(connector.id); hasToken = false }.frame(minHeight: 44)
+        }
+        if let help = ConnectorRegistry.manifest(connector.id)?.tokenHelp, !help.isEmpty {
+            Text(verbatim: help).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
         }
         if tokenRejected { Text("That does not look like a token.").font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
     }

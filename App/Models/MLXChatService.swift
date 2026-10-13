@@ -206,8 +206,10 @@ final class MLXChatService: ChatService {
             case "listGitHubIssues": executor = ListGitHubExecutor()
             case "listGitHubRepos": executor = ListGitHubReposExecutor()
             case "listGitHubCommits": executor = ListGitHubCommitsExecutor()
-            case "listTodoistTasks": executor = ListTodoistExecutor()
-            default: executor = SearchNotionExecutor()
+            case "searchNotion": executor = SearchNotionExecutor()
+            default:
+                guard let owner = ConnectorRegistry.owner(ofTool: match.tool) else { return nil }
+                executor = ManifestExecutor(manifest: owner.manifest, tool: owner.tool, reporter: nil)
             }
             name = match.tool; args = match.arguments
             running = String(localized: "Checking \(match.connector.capitalized)…"); finished = String(localized: "Checked \(match.connector.capitalized)")

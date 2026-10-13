@@ -22,9 +22,6 @@ public enum FigmaManifest {
                 list: ConnectorListSpec(itemsKey: "projects", line: "{name|100} (project {id})",
                                         requiredField: "id", limit: 30,
                                         header: "Figma team projects", empty: "No Figma projects were returned for that team."),
-                intent: ConnectorIntentRule(triggers: ["team"], blockers: ["add", "create", "post", "delete", "edit", "update"],
-                                            skip: ["figma", "project", "projects", "list", "show", "what", "are", "in", "the", "my", "team", "for"],
-                                            argument: "team", maxWords: 1, needsArgument: true),
                 keywords: ["figma team projects", "figma projects in team", "figma team id projects"],
                 examples: [
                     "List Figma projects in team 1170245155647481265",
@@ -41,9 +38,6 @@ public enum FigmaManifest {
                 list: ConnectorListSpec(itemsKey: "files", line: "{name|100} (file {key})[[, updated {last_modified|25}]]",
                                         requiredField: "key", limit: 30,
                                         header: "Figma project files", empty: "No files were returned for that Figma project."),
-                intent: ConnectorIntentRule(triggers: ["project"], blockers: ["add", "create", "post", "delete", "edit", "update", "comment", "comments"],
-                                            skip: ["figma", "files", "file", "list", "show", "what", "are", "in", "the", "project", "for"],
-                                            argument: "project", maxWords: 1, needsArgument: true),
                 keywords: ["figma project files", "figma files in project", "figma project id files"],
                 examples: [
                     "List Figma files in project 1234567890",
@@ -61,9 +55,6 @@ public enum FigmaManifest {
                 list: ConnectorListSpec(itemsKey: "comments", line: "#{order_id,id} by {user.handle,user.id|40}: {message,id|140}[[ ({created_at|25})]]",
                                         requiredField: "id", limit: 40,
                                         header: "Figma file comments", empty: "No comments were returned for that Figma file."),
-                intent: ConnectorIntentRule(triggers: ["comment", "comments"], blockers: ["add", "create", "post", "delete", "edit", "update", "reply"],
-                                            skip: ["figma", "comments", "comment", "list", "show", "what", "are", "on", "in", "the", "file", "for"],
-                                            argument: "file", maxWords: 1, needsArgument: true),
                 keywords: ["figma file comments", "figma comments list", "figma feedback comments"],
                 examples: [
                     "List Figma comments in file AbCdEF123456",

@@ -2,7 +2,7 @@ import Foundation
 
 /// Where each token connector may send requests. A token is only ever attached to its own host.
 public enum ServiceHost {
-    private static let builtIn: [String: String] = ["todoist": "api.todoist.com", "github": "api.github.com", "notion": "api.notion.com"]
+    private static let builtIn: [String: String] = ["github": "api.github.com", "notion": "api.notion.com"]
 
     /// Hand-wired connectors plus every manifest in the registry.
     public static let hosts: [String: String] = builtIn.merging(ConnectorRegistry.manifests.map { ($0.id, $0.host) }) { a, _ in a }
@@ -40,24 +40,6 @@ public enum ServiceRequest {
             r.httpBody = try? JSONSerialization.data(withJSONObject: body)
         }
         return r
-    }
-
-    public static func todoistTasks() -> URLRequest? {
-        make(URL(string: "https://api.todoist.com/api/v1/tasks?limit=100"))
-    }
-
-    public static func todoistAdd(content: String, due: String) -> URLRequest? {
-        let c = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !c.isEmpty, c.count <= 300 else { return nil }
-        var body: [String: Any] = ["content": c]
-        let d = due.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !d.isEmpty { body["due_string"] = String(d.prefix(60)) }
-        return make(URL(string: "https://api.todoist.com/api/v1/tasks"), method: "POST", body: body)
-    }
-
-    public static func todoistDelete(id: String) -> URLRequest? {
-        guard !id.isEmpty, id.count <= 40, id.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }) else { return nil }
-        return make(URL(string: "https://api.todoist.com/api/v1/tasks/" + id), method: "DELETE")
     }
 
     public static func githubSearch(query: String) -> URLRequest? {
@@ -115,31 +97,6 @@ private func objects(_ data: Data, key: String) -> [[String: Any]] {
 private func clip(_ s: String, _ n: Int) -> String {
     let flat = s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     return flat.count <= n ? flat : String(flat.prefix(n - 1)) + "…"
-}
-
-public enum TodoistParse {
-    public static func tasks(_ data: Data, search: String = "", limit: Int = 25) -> [String] {
-        let words = search.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init).filter { $0.count >= 2 }
-        var lines: [String] = []
-        for t in objects(data, key: "results") {
-            guard let content = t["content"] as? String, !content.isEmpty else { continue }
-            if !words.isEmpty, !words.contains(where: { content.lowercased().contains($0) }) { continue }
-            let due = (t["due"] as? [String: Any]).flatMap { ($0["string"] as? String) ?? ($0["date"] as? String) } ?? ""
-            var line = clip(content, 100)
-            if !due.isEmpty { line += " (due \(clip(due, 30)))" }
-            if (t["priority"] as? Int) == 4 { line += " [urgent]" }
-            lines.append(line)
-            if lines.count == limit { break }
-        }
-        return lines
-    }
-
-    public static func createdID(_ data: Data) -> String? {
-        guard let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-        if let s = o["id"] as? String { return s }
-        if let n = o["id"] as? Int { return String(n) }
-        return nil
-    }
 }
 
 public enum GitHubParse {

@@ -107,16 +107,6 @@ public extension ToolCatalog {
             keywords: ["email", "draft", "compose", "mail", "message to", "write an email"],
             examples: ["Draft an email to ana@example.com about dinner", "Write an email to my landlord saying the heater is broken", "Compose a mail to bob@example.org with the meeting notes"]),
         CatalogEntry(
-            id: "listTodoistTasks", title: "List Todoist tasks", category: "Todoist",
-            description: "Lists the user's open Todoist tasks with due dates, optionally filtered by words.",
-            keywords: ["todoist", "tasks", "task list", "todos", "due today"],
-            examples: ["What is on my Todoist today?", "List my Todoist tasks", "Do I have a Todoist task about the bank?"]),
-        CatalogEntry(
-            id: "addTodoistTask", title: "Add Todoist task", category: "Todoist",
-            description: "Adds a task to the user's Todoist inbox, with an optional due date in plain words, after the user approves.",
-            keywords: ["todoist", "add task", "new task", "put on todoist", "create task"],
-            examples: ["Add buy milk to my Todoist", "Put renew passport on Todoist for next Friday", "Create a Todoist task to call the bank"]),
-        CatalogEntry(
             id: "listGitHubIssues", title: "List GitHub work", category: "GitHub",
             description: "Lists open GitHub issues and pull requests, not repositories, that are assigned to the user, created by the user, or waiting for the user's review.",
             keywords: ["github", "pull request", "pull requests", "issues", "code review", "assigned"],
@@ -146,5 +136,5 @@ public extension ToolCatalog {
             description: "Lists or reads the user's saved skills, which are named sets of steps. Find one by words, then read it and follow it with the other tools.",
             keywords: ["skill", "skills", "playbook"],
             examples: ["Use my weekly review skill", "What skills do you have?", "Run the plan my day skill", "Which saved skills are available?"]),
-    ])
+    ] + ConnectorRegistry.manifests.flatMap(\.catalogEntries))
 }

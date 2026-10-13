@@ -43,7 +43,7 @@ enum UndoAction: Sendable {
     case removeReminder(id: String)
     case removeEvent(id: String)
     case restoreEvent(id: String, start: Date, end: Date)
-    case removeTodoist(id: String)
+    case undoConnector(connector: String, tool: String, id: String)
     case removeSavedItem(id: UUID)
 }
 
@@ -69,8 +69,6 @@ enum LiveDescriptors {
     static let findContact = ToolDescriptor(name: "findContact", summary: "Looks up a contact.", permission: .readOnly, outputSensitivity: .sensitive)
     static let runShortcut = ToolDescriptor(name: "runShortcut", summary: "Runs a shortcut.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let draftEmail = ToolDescriptor(name: "draftEmail", summary: "Opens a mail draft.", permission: .reversibleWrite, outputSensitivity: .personal)
-    static let listTodoistTasks = ToolDescriptor(name: "listTodoistTasks", summary: "Lists Todoist tasks.", permission: .readOnly, outputSensitivity: .personal)
-    static let addTodoistTask = ToolDescriptor(name: "addTodoistTask", summary: "Adds a Todoist task.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let listGitHubIssues = ToolDescriptor(name: "listGitHubIssues", summary: "Lists GitHub issues and pull requests.", permission: .readOnly, outputSensitivity: .personal)
     static let listGitHubCommits = ToolDescriptor(name: "listGitHubCommits", summary: "Lists GitHub commits.", permission: .readOnly, outputSensitivity: .personal)
     static let listGitHubRepos = ToolDescriptor(name: "listGitHubRepos", summary: "Lists GitHub repositories.", permission: .readOnly, outputSensitivity: .personal)
@@ -79,11 +77,11 @@ enum LiveDescriptors {
     static let saveItem = ToolDescriptor(name: "saveItem", summary: "Keeps a note or task inside the app.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let findSavedItems = ToolDescriptor(name: "findSavedItems", summary: "Searches the notes and tasks kept inside the app.", permission: .readOnly, outputSensitivity: .personal)
     static let skillUse = ToolDescriptor(name: "skill_use", summary: "Finds and reads saved skills.", permission: .readOnly, outputSensitivity: .personal)
-    static let all = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
+    static let all: [ToolDescriptor] = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
                       searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky,
                       searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail,
-                      listTodoistTasks, addTodoistTask, listGitHubIssues, listGitHubRepos, listGitHubCommits, searchNotion, searchPastChats, skillUse,
-                      saveItem, findSavedItems]
+                      listGitHubIssues, listGitHubRepos, listGitHubCommits, searchNotion, searchPastChats, skillUse,
+                      saveItem, findSavedItems] + manifest
 }
 
 enum CalendarRange {

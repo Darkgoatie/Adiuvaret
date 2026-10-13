@@ -40,7 +40,7 @@ final class ToolHost {
         let bridge = Bridge(host: self)
         let handles = self.handles
         let ctx = self.ctx
-        let rawExecutors: [String: any ToolExecutor] = ["readCalendar": LiveCalendarExecutor(handles: handles),
+        var rawExecutors: [String: any ToolExecutor] = ["readCalendar": LiveCalendarExecutor(handles: handles),
                                          "findFreeTime": FreeTimeExecutor(),
                                          "createEvent": CreateEventExecutor(reporter: bridge),
                                          "moveEvent": MoveEventExecutor(reporter: bridge, handles: handles),
@@ -55,11 +55,11 @@ final class ToolHost {
                                          "saveItem": SaveItemExecutor(reporter: bridge), "findSavedItems": FindSavedItemsExecutor(),
                                          "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
-                                         "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
                                          "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "listGitHubCommits": ListGitHubCommitsExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor(), "skill_use": SkillUseExecutor()]
+        rawExecutors.merge(ManifestExecutors.make(reporter: bridge)) { a, _ in a }
         let gate = PolicyGate(engine: engine, approvals: bridge, executors: rawExecutors.mapValues { RecordingExecutor(inner: $0, ctx: ctx) as any ToolExecutor },
                               observer: { call, outcome, asked, ms in ActivityStore.shared.record(ActivityEntry.make(call, outcome, asked: asked, milliseconds: ms)) })
-        let all: [String: any Tool] = [
+        var all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
             "findFreeTime": LiveFreeTimeTool(gate: gate, ctx: ctx),
             "createEvent": LiveCreateEventTool(gate: gate, ctx: ctx),
@@ -79,14 +79,13 @@ final class ToolHost {
             "findContact": LiveFindContactTool(gate: gate, ctx: ctx, reporter: bridge),
             "runShortcut": LiveRunShortcutTool(gate: gate, ctx: ctx),
             "draftEmail": LiveDraftEmailTool(gate: gate, ctx: ctx),
-            "listTodoistTasks": LiveListTodoistTool(gate: gate, ctx: ctx, reporter: bridge),
-            "addTodoistTask": LiveAddTodoistTool(gate: gate, ctx: ctx),
             "listGitHubIssues": LiveListGitHubTool(gate: gate, ctx: ctx, reporter: bridge),
             "listGitHubRepos": LiveListGitHubReposTool(gate: gate, ctx: ctx, reporter: bridge),
             "listGitHubCommits": LiveListGitHubCommitsTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchPastChats": LiveSearchPastChatsTool(gate: gate, ctx: ctx, reporter: bridge),
             "skill_use": LiveSkillUseTool(gate: gate, ctx: ctx, reporter: bridge)]
+        all.merge(makeConnectorTools(gate: gate, ctx: ctx, reporter: bridge)) { a, _ in a }
         built = all
         return all
     }
@@ -108,6 +107,11 @@ final class ToolHost {
         let args = CalendarStore.args(call)
         let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .short
         func when(_ key: String) -> String { CalendarMath.dateTime((args[key] as? String) ?? "").map { f.string(from: $0) } ?? ((args[key] as? String) ?? "") }
+        if let owner = ConnectorRegistry.owner(ofTool: call.toolName), owner.tool.isWrite {
+            let raw = ManifestExecutor.strings(args)
+            let rows = ConnectorEngine.approvalRows(owner.manifest, owner.tool, raw).map { DetailRow($0.label, String($0.value.prefix(300))) }
+            return await present(title: owner.tool.approvalTitle ?? "Allow this?", rows: rows)
+        }
         let title: String; var rows: [DetailRow]
         switch call.toolName {
         case "createEvent":
@@ -126,11 +130,6 @@ final class ToolHost {
             title = String(localized: "Open another website?")
             rows = [DetailRow(String(localized: "Site"), WebPolicy.normalize((args["url"] as? String) ?? "").hostText),
                     DetailRow(String(localized: "Why I'm asking"), String(localized: "You asked to confirm new sites."))]
-        case "addTodoistTask":
-            title = String(localized: "Add this task to Todoist?")
-            rows = [DetailRow(String(localized: "Task"), (args["content"] as? String) ?? ""),
-                    DetailRow(String(localized: "Due"), ((args["due"] as? String) ?? "").isEmpty ? String(localized: "No date") : (args["due"] as? String) ?? ""),
-                    DetailRow(String(localized: "Sent to"), "api.todoist.com")]
         case "writeNote":
             let target = (args["appendTo"] as? String) ?? ""
             title = target.isEmpty ? String(localized: "Save this note?") : String(localized: "Add to this note?")
@@ -169,6 +168,10 @@ final class ToolHost {
                     DetailRow(String(localized: "Due"), f.string(from: Date().addingTimeInterval(Double(minutes) * 60))),
                     DetailRow(String(localized: "List"), String(localized: "Reminders"))]
         }
+        return await present(title: title, rows: rows)
+    }
+
+    private func present(title: String, rows: [DetailRow]) async -> ApprovalResponse {
         let id = UUID()
         surface?.surfaceAppend(.approval(id: id, phase: .pending, title: title, rows: rows))
         return await withCheckedContinuation { pending[id] = $0 }
