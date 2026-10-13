@@ -15,6 +15,7 @@ echo "Build number $BUILD"
 
 xcodebuild -downloadComponent MetalToolchain || true
 # Xcode Cloud will not resolve packages itself, so the versions pinned in ci_scripts/Package.resolved are used.
-# Regenerate that file with the "Resolve packages" GitHub workflow whenever project.yml dependencies change.
+# Regenerate it after any dependency change: xcodegen generate, then xcodebuild -resolvePackageDependencies -project Adiuvaret.xcodeproj -scheme Adiuvaret, then copy the Package.resolved from xcshareddata/swiftpm.
+[ -f ci_scripts/Package.resolved ] || { echo "ci_scripts/Package.resolved is missing; resolve packages and commit it"; exit 1; }
 mkdir -p Adiuvaret.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
 cp ci_scripts/Package.resolved Adiuvaret.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
