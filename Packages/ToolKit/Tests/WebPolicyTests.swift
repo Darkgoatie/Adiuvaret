@@ -120,6 +120,12 @@ import Foundation
         #expect(!line.contains("\n") && line.contains("line 'two'") && line.hasSuffix("…\""))
     }
 
+    @Test func offscreenElementsAreMarked() {
+        let text = SnapshotFormat.render(snap([PageElement(id: 5, role: "link", label: "Calendar", offscreen: true)]))
+        #expect(text.contains("[5] link \"Calendar\" (not in view, clicking scrolls to it)"))
+        #expect(text.contains("find"))
+    }
+
     @Test func listSaysContentIsNotListed() {
         let text = SnapshotFormat.render(snap([PageElement(id: 1, role: "button", label: "Close")]))
         #expect(text.contains("readText true"))

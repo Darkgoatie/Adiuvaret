@@ -226,7 +226,7 @@ struct LookAtPageExecutor: ToolExecutor {
     func execute(_ call: ToolCall) async throws -> String {
         let a = CalendarStore.args(call)
         guard let chat = (a["chat"] as? String).flatMap(UUID.init(uuidString:)) else { return "Not done: no chat." }
-        return await WebSession.shared.look(controls: !((a["readText"] as? Bool) ?? false), part: (a["part"] as? Int) ?? 1, chat: chat, callID: call.id)
+        return await WebSession.shared.look(controls: !((a["readText"] as? Bool) ?? false), part: (a["part"] as? Int) ?? 1, find: (a["find"] as? String) ?? "", chat: chat, callID: call.id)
     }
 }
 
@@ -384,10 +384,12 @@ struct LiveLookAtPageTool: Tool {
         var readText: Bool
         @Guide(description: "Which part of the text to read, starting at 1. Only used when readText is true.")
         var part: Int
+        @Guide(description: "Words from the label of a button or link to search the whole page for, including parts out of view and menus. Empty for the normal list. Use it when the item you want is not listed.")
+        var find: String
     }
 
     func call(arguments a: Arguments) async throws -> String {
-        await runWebStep(gate, ctx, reporter, name: "lookAtPage", json: ["readText": a.readText, "part": a.part],
+        await runWebStep(gate, ctx, reporter, name: "lookAtPage", json: ["readText": a.readText, "part": a.part, "find": a.find],
                          title: String(localized: "Looking at the page…"), rowID: UUID())
     }
 }

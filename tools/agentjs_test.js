@@ -108,5 +108,19 @@ big.window.eval(script);
 const s2 = JSON.parse(big.window.__agent.snapshot(60));
 check("limit respected", s2.elements.length === 60 && s2.more === 90, [s2.elements.length, s2.more]);
 
+const menu = new JSDOM('<body><a href="/h">Home</a><a href="/c" id="c">Calendar</a><a href="/g">Grades</a></body>', { runScripts: "outside-only", pretendToBeVisual: true, url: "https://portal.example.com/" });
+let nth = 0;
+menu.window.Element.prototype.getBoundingClientRect = function () { const top = this.tagName === "A" ? 20 + 1500 * (this.id === "c" ? 1 : 0) : 0; return { top, bottom: top + 18, left: 0, right: 200, width: 200, height: 18 }; };
+menu.window.document.elementFromPoint = () => null;
+menu.window.Element.prototype.scrollIntoView = function () {};
+menu.window.eval(script);
+const plain = JSON.parse(menu.window.__agent.snapshot(60));
+check("out-of-view link is not in the plain list", !plain.elements.some(e => e.label === "Calendar"), plain.elements.map(e => e.label));
+const found = JSON.parse(menu.window.__agent.snapshot(60, "calend"));
+check("find returns the out-of-view link", found.elements.length === 1 && found.elements[0].label === "Calendar" && found.elements[0].offscreen === true, found.elements);
+const clicked = JSON.parse(menu.window.__agent.act(found.elements[0].id, "click", "", false));
+check("found link can be clicked", clicked.ok === true && clicked.label === "Calendar", clicked);
+check("find with no match is empty", JSON.parse(menu.window.__agent.snapshot(60, "zzz")).elements.length === 0);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

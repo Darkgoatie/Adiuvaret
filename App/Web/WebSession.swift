@@ -109,10 +109,11 @@ final class WebSession: NSObject {
         }
     }
 
-    func look(controls: Bool, part: Int, chat: UUID, callID: UUID) async -> String {
+    func look(controls: Bool, part: Int, find: String = "", chat: UUID, callID: UUID) async -> String {
         if let problem = notReady(chat) { summarize(callID, String(localized: "No website is open"), [], failed: true); return problem }
         return await busy {
-            if controls { return await observe(callID, title: nil, budget: 1500) }
+            let query = find.trimmingCharacters(in: .whitespacesAndNewlines)
+            if controls || !query.isEmpty { return await observe(callID, title: nil, budget: 1500, query: query) }
             let raw = (try? await webView.callAsyncJavaScript("return window.__agent ? window.__agent.readText() : ''", contentWorld: world)) as? String ?? ""
             let parts = SnapshotFormat.partCount(of: raw)
             let shown = min(max(part, 1), parts)
@@ -226,13 +227,14 @@ final class WebSession: NSObject {
         summaries[id] = WebSummary(title: title, details: details, failed: failed)
     }
 
-    private func observe(_ callID: UUID, title: String?, budget: Int, extra: String = "") async -> String {
-        guard let snap = await snapshot() else {
+    private func observe(_ callID: UUID, title: String?, budget: Int, extra: String = "", query: String = "") async -> String {
+        guard let snap = await snapshot(query: query) else {
             summarize(callID, String(localized: "Couldn't read the page"), [], failed: true)
             return "The page could not be read. It may still be loading; try lookAtPage again."
         }
         let lines = snap.elements.prefix(8).map { SnapshotFormat.elementLine($0) }
-        summarize(callID, title ?? String(localized: "Looked at the page · \(snap.elements.count) items"), lines, failed: false)
+        let looked = query.isEmpty ? String(localized: "Looked at the page · \(snap.elements.count) items") : String(localized: "Searched the page · \(snap.elements.count) found")
+        summarize(callID, title ?? looked, lines, failed: false)
         let body = SnapshotFormat.render(snap, budget: budget)
         if body == lastBody { sameBody += 1 } else { sameBody = 0; lastBody = body }
         var notes = extra
@@ -242,9 +244,9 @@ final class WebSession: NSObject {
         return notes.isEmpty ? body : notes + "\n" + body
     }
 
-    private func snapshot() async -> PageSnapshot? {
+    private func snapshot(query: String = "") async -> PageSnapshot? {
         let raw = try? await webView.callAsyncJavaScript(
-            "return window.__agent ? window.__agent.snapshot(max) : null", arguments: ["max": 60], contentWorld: world)
+            "return window.__agent ? window.__agent.snapshot(max, query) : null", arguments: ["max": 60, "query": query], contentWorld: world)
         guard let json = raw as? String, let snap = try? JSONDecoder().decode(PageSnapshot.self, from: Data(json.utf8)) else { return nil }
         elements = Dictionary(snap.elements.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         lastHasPassword = snap.hasPassword

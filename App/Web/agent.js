@@ -116,8 +116,9 @@
     return { top, bottom, inView, covered };
   }
 
-  function snapshot(max) {
+  function snapshot(max, query) {
     const limit = max || 60;
+    const want = clean(query, 60).toLowerCase();
     const all = [];
     collect(document, 0, 0, all, 0);
     const seen = new Set();
@@ -128,9 +129,10 @@
       seen.add(item.el);
       const m = measure(item);
       if (!m) continue;
-      if (!m.inView) { if (m.bottom <= 0) above++; else below++; continue; }
-      if (m.covered) continue;
       const el = item.el;
+      if (want && !labelOf(el).toLowerCase().includes(want)) continue;
+      if (!m.inView && !want) { if (m.bottom <= 0) above++; else below++; continue; }
+      if (m.covered) continue;
       if (el.type && el.type.toLowerCase() === 'password') hasPassword = true;
       if (elements.length >= limit) { more++; continue; }
       let id = ids.get(el);
@@ -152,7 +154,8 @@
         id, role, label: labelOf(el), value,
         type: el.type ? String(el.type).toLowerCase() : null,
         auto: el.getAttribute('autocomplete') || null,
-        checked, disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true'
+        checked, disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true',
+        offscreen: m.inView ? null : true
       });
     }
     return JSON.stringify({

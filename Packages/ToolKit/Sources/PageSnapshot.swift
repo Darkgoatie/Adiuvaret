@@ -10,10 +10,12 @@ public struct PageElement: Codable, Sendable, Equatable {
     public let auto: String?
     public let checked: Bool?
     public let disabled: Bool?
+    /// Set when the element was found by a label search and is outside the part of the page in view.
+    public let offscreen: Bool?
 
-    public init(id: Int, role: String, label: String, value: String? = nil, type: String? = nil, auto: String? = nil, checked: Bool? = nil, disabled: Bool? = nil) {
+    public init(id: Int, role: String, label: String, value: String? = nil, type: String? = nil, auto: String? = nil, checked: Bool? = nil, disabled: Bool? = nil, offscreen: Bool? = nil) {
         self.id = id; self.role = role; self.label = label; self.value = value
-        self.type = type; self.auto = auto; self.checked = checked; self.disabled = disabled
+        self.type = type; self.auto = auto; self.checked = checked; self.disabled = disabled; self.offscreen = offscreen
     }
 }
 
@@ -52,9 +54,9 @@ public enum SnapshotFormat {
             lines.append("This page has a password field. Never type it. Ask the user to sign in themselves in the browser, then continue.")
         }
         if s.elements.isEmpty {
-            lines.append("No buttons, links or fields in view. Use readPage to read the text, or scroll.")
+            lines.append("No buttons, links or fields in view. Use readPage to read the text, scroll, or search the whole page with find.")
         }
-        lines.append("This list holds only buttons, links and fields. The information itself (events, tables, article text) is not listed: call lookAtPage with readText true to read it.")
+        lines.append("This list holds only buttons, links and fields. The information itself (events, tables, article text) is not listed: call lookAtPage with readText true to read it. A button or link that is not listed may be out of view or in a menu: call lookAtPage with find set to words from its label.")
         var used = lines.reduce(0) { $0 + $1.count + 1 }
         var shown = 0
         for e in s.elements {
@@ -75,6 +77,7 @@ public enum SnapshotFormat {
         if let v = e.value, !v.isEmpty, !WebPolicy.isSensitiveField(type: e.type, auto: e.auto) { s += " = \"\(clip(v, 30))\"" }
         if e.checked == true { s += " (checked)" } else if e.checked == false { s += " (unchecked)" }
         if e.disabled == true { s += " (disabled)" }
+        if e.offscreen == true { s += " (not in view, clicking scrolls to it)" }
         return s
     }
 
