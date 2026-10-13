@@ -1,0 +1,88 @@
+workflows:
+  testflight:
+    name: TestFlight
+    instance_type: mac_mini_m4
+    max_build_duration: 60
+    environment:
+      xcode: "27.0"
+      groups:
+        - appstore_credentials
+      vars:
+        KEY_ID: A4C267SY9T
+        ISSUER_ID: 66854a67-a093-43c2-a3c2-d3910dbbdbd9
+        ASC_APP_ID: "6820034520"
+        FIRST_BUILD: "11"
+        UPLOAD: "false"
+    scripts:
+      - name: Xcode and Metal toolchain
+        script: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i "iOS "
+          xcrun metal --version 2>&1 | head -2 || true
+          xcodebuild -downloadComponent MetalToolchain 2>&1 | tail -3 || true
+
+      - name: Install XcodeGen and App Store Connect key
+        script: |
+          brew install xcodegen
+          mkdir -p ~/.appstoreconnect/private_keys
+          printf '%s\n' "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+
+      - name: Generate project
+        script: xcodegen generate
+
+      - name: Package tests
+        script: |
+          mkdir -p build
+          cd Packages
+          set +e
+          xcodebuild test -scheme AdiuvaretPackages-Package -destination 'platform=macOS' > ../build/test.log 2>&1
+          STATUS=$?
+          grep -E "✘|error:|Expectation failed|Test run with|TEST (SUCCEEDED|FAILED)" ../build/test.log | cut -c1-300 | head -60
+          exit $STATUS
+
+      - name: Archive
+        script: |
+          python3 -m venv /tmp/venv && /tmp/venv/bin/pip install --quiet pyjwt cryptography
+          export MARKETING_VERSION=$(grep -m1 MARKETING_VERSION project.yml | sed 's/.*"\(.*\)".*/\1/')
+          BUILD=$(/tmp/venv/bin/python scripts/next_build_number.py)
+          echo "Version $MARKETING_VERSION build $BUILD"
+          xcodebuild -project Adiuvaret.xcodeproj -scheme Adiuvaret -destination 'generic/platform=iOS' \
+            -configuration Release -archivePath build/Adiuvaret.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CURRENT_PROJECT_VERSION=$BUILD \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) REASONING_API' archive > build/archive.log 2>&1 || {
+              grep -E '\.swift:[0-9]+:[0-9]+: error' build/archive.log | sort -u | head -20
+              grep -E 'error:|fatal error' build/archive.log | grep -v '\.swift:' | head -10
+              tail -5 build/archive.log
+              exit 1
+            }
+          tail -3 build/archive.log
+
+      - name: Embed entitlements in the archive
+        script: |
+          codesign --force -s - --entitlements Config/Adiuvaret.entitlements build/Adiuvaret.xcarchive/Products/Applications/Adiuvaret.app
+          codesign -d --entitlements :- build/Adiuvaret.xcarchive/Products/Applications/Adiuvaret.app 2>/dev/null | tr -d '\n' | head -c 600; echo
+
+      - name: Export and sign
+        script: |
+          P8=$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          xcodebuild -exportArchive -archivePath build/Adiuvaret.xcarchive -exportOptionsPlist signing/ExportOptions.plist \
+            -exportPath build/ipa -allowProvisioningUpdates \
+            -authenticationKeyPath "$P8" -authenticationKeyID $KEY_ID -authenticationKeyIssuerID $ISSUER_ID | tail -5
+          ls -l build/ipa
+
+      - name: Upload to TestFlight
+        script: |
+          if [ "$UPLOAD" = "true" ]; then
+            xcrun altool --upload-app --type ios -f build/ipa/Adiuvaret.ipa --apiKey $KEY_ID --apiIssuer $ISSUER_ID 2>&1 | tail -5
+          else
+            echo "UPLOAD is not true, skipping the upload"
+          fi
+
+      - name: Remove key
+        ignore_failure: true
+        script: rm -f ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+
+    artifacts:
+      - build/test.log
+      - build/archive.log
