@@ -143,7 +143,9 @@ final class LiveChatService: ChatService, FixedToolsChat {
         ctx.notePrivate(prepared.documents.map(\.text).joined(separator: " "))
         let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt)
         if skill?.untrusted == true { ctx.markUntrusted(personal: false) }
-        let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill)].filter { !$0.isEmpty }.joined(separator: "\n")
+        let taught = AppSettings.shared.actionsOff ? nil : TaughtSkillHub.match(for: prompt)
+        if taught?.untrusted == true { ctx.markUntrusted(personal: false) }
+        let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), TaughtSkillHub.block(from: taught)].filter { !$0.isEmpty }.joined(separator: "\n")
         ctx.notePrivate(block)
         if block != memoryBlock { memoryBlock = block; session = nil }
         var prior = items
@@ -166,6 +168,11 @@ final class LiveChatService: ChatService, FixedToolsChat {
             let wanted = skill.tools.compactMap { ToolCatalog.standard.entry($0) }
             chosen = ToolCatalog.standard.withRequirements(chosen + wanted, cap: 6)
             routeNote += " skill=\(skill.id)"
+        }
+        if let taught, fixedTools == nil {
+            let wanted = taught.tools.compactMap { ToolCatalog.standard.entry($0) }
+            chosen = ToolCatalog.standard.withRequirements(chosen + wanted, cap: 7)
+            routeNote += " taught=\(taught.id)"
         }
         DiagnosticsLog.shared.record("route", "tools=[\(chosen.map(\.id).joined(separator: ","))] \(routeNote) \((clock.now - turnStart).milliseconds) ms")
         let ids = chosen.map(\.id)

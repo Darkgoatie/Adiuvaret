@@ -42,6 +42,7 @@ final class ToolHost {
         var rawExecutors: [String: any ToolExecutor] = ["readCalendar": LiveCalendarExecutor(handles: handles),
                                          "findFreeTime": FreeTimeExecutor(),
                                          "callAPI": CallAPIExecutor(), "callAPIWrite": CallAPIExecutor(), "approveAPIHost": ApproveAPIHostExecutor(),
+                                         "saveSkill": SaveSkillExecutor(reporter: bridge), "runScript": RunScriptExecutor(),
                                          "createEvent": CreateEventExecutor(reporter: bridge),
                                          "moveEvent": MoveEventExecutor(reporter: bridge, handles: handles),
                                          "deleteEvent": DeleteEventExecutor(reporter: bridge, handles: handles),
@@ -85,6 +86,8 @@ final class ToolHost {
             "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchPastChats": LiveSearchPastChatsTool(gate: gate, ctx: ctx, reporter: bridge),
             "callAPI": LiveCallAPITool(gate: gate, ctx: ctx, reporter: bridge),
+            "saveSkill": LiveSaveSkillTool(gate: gate, ctx: ctx, reporter: bridge),
+            "runScript": LiveRunScriptTool(gate: gate, ctx: ctx, reporter: bridge),
             "skill_use": LiveSkillUseTool(gate: gate, ctx: ctx, reporter: bridge)]
         all.merge(makeConnectorTools(gate: gate, ctx: ctx, reporter: bridge)) { a, _ in a }
         built = all
@@ -127,6 +130,15 @@ final class ToolHost {
         case "deleteEvent":
             title = String(localized: "Delete this event?")
             rows = [DetailRow(String(localized: "Event"), eventName(args["event"])), DetailRow(String(localized: "Note"), String(localized: "This can't be undone."))]
+        case "saveSkill":
+            title = String(localized: "Save this as a skill?")
+            let skill = SaveSkillExecutor.skill(from: ManifestExecutor.strings(args))
+            rows = [DetailRow(String(localized: "Name"), skill.name),
+                    DetailRow(String(localized: "What it does"), skill.description),
+                    DetailRow(String(localized: "Hosts"), skill.hosts.isEmpty ? String(localized: "None") : skill.hosts.joined(separator: ", ")),
+                    DetailRow(String(localized: "Tools"), skill.tools.isEmpty ? String(localized: "None") : skill.tools.joined(separator: ", ")),
+                    DetailRow(String(localized: "Instructions"), String(skill.instructions.prefix(500))),
+                    DetailRow(String(localized: "Note"), String(localized: "Tokens are not stored in a skill. Delete it any time in Advanced, Skills."))]
         case "approveAPIHost":
             title = String(localized: "Allow calls to this host?")
             rows = [DetailRow(String(localized: "Host"), (args["host"] as? String) ?? ""),

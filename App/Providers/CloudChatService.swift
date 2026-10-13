@@ -122,11 +122,13 @@ final class CloudChatService: ChatService, FixedToolsChat {
             // Memory, skills and the tools for this message: the same steps as the on-device chat.
             let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt)
             if skill?.untrusted == true { ctx.markUntrusted(personal: false) }
-            memoryBlock = [MemoryHub.block(for: prompt), SkillHub.block(from: skill)].filter { !$0.isEmpty }.joined(separator: "\n")
+            let taught = AppSettings.shared.actionsOff ? nil : TaughtSkillHub.match(for: prompt)
+            if taught?.untrusted == true { ctx.markUntrusted(personal: false) }
+            memoryBlock = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), TaughtSkillHub.block(from: taught)].filter { !$0.isEmpty }.joined(separator: "\n")
             ctx.notePrivate(memoryBlock)
             var prior = items
             if case .user? = prior.last { prior.removeLast() }
-            let toolIDs = await chooseTools(prompt: prompt, prior: prior, skill: skill)
+            let toolIDs = await chooseTools(prompt: prompt, prior: prior, skill: skill, taught: taught)
             var system = AssistantPrompt.instructions(ids: toolIDs, memory: memoryBlock.isEmpty ? "" : " " + memoryBlock, online: true)
             let wireTools = host.tools(for: toolIDs).map { ToolBridge.wireTool($0) }
             var useTools = !wireTools.isEmpty && !toolsRefused && !AppSettings.shared.actionsOff
@@ -216,7 +218,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
 
     /// Picks the tools for this message. An online model sees every visible tool the router and the code-side rules select,
     /// plus what a matched skill names. No router model call runs for online chats, so there is no pause before the reply; so a long catalog does not eat its context.
-    private func chooseTools(prompt: String, prior: [ThreadItem], skill: SkillUse?) async -> [String] {
+    private func chooseTools(prompt: String, prior: [ThreadItem], skill: SkillUse?, taught: TaughtUse? = nil) async -> [String] {
         guard !AppSettings.shared.actionsOff else { return [] }
         if let fixed = fixedTools {
             let visible = Set(host.visibleToolIDs())
@@ -230,6 +232,10 @@ final class CloudChatService: ChatService, FixedToolsChat {
         if let skill {
             let wanted = skill.tools.compactMap { ToolCatalog.standard.entry($0) }
             chosen = ToolCatalog.standard.withRequirements(chosen + wanted, cap: 6)
+        }
+        if let taught {
+            let wanted = taught.tools.compactMap { ToolCatalog.standard.entry($0) }
+            chosen = ToolCatalog.standard.withRequirements(chosen + wanted, cap: 7)
         }
         let visible = Set(host.visibleToolIDs())
         let ids = chosen.map(\.id).filter(visible.contains)

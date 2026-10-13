@@ -79,12 +79,15 @@ enum LiveDescriptors {
     /// Any method but GET. Always asks, whatever the chat has been allowed before.
     static let callAPIWrite = ToolDescriptor(name: "callAPIWrite", summary: "Sends or changes data through a web API.", permission: .irreversible, outputSensitivity: .personal)
     static let approveAPIHost = ToolDescriptor(name: "approveAPIHost", summary: "Allows calls to a new API host.", permission: .reversibleWrite, outputSensitivity: .personal)
+    /// Stores a taught skill. Always asks, so a skill is never saved from text the assistant read.
+    static let saveSkill = ToolDescriptor(name: "saveSkill", summary: "Saves a taught skill.", permission: .irreversible, outputSensitivity: .personal)
+    static let runScript = ToolDescriptor(name: "runScript", summary: "Runs a sandboxed script.", permission: .readOnly, outputSensitivity: .personal)
     static let skillUse = ToolDescriptor(name: "skill_use", summary: "Finds and reads saved skills.", permission: .readOnly, outputSensitivity: .personal)
     static let all: [ToolDescriptor] = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
                       searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky,
                       searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail,
                       listGitHubIssues, listGitHubRepos, listGitHubCommits, searchNotion, searchPastChats, skillUse,
-                      saveItem, findSavedItems, callAPI, callAPIWrite, approveAPIHost] + manifest
+                      saveItem, findSavedItems, callAPI, callAPIWrite, approveAPIHost, saveSkill, runScript] + manifest
 }
 
 enum CalendarRange {

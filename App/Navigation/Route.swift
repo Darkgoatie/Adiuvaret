@@ -12,6 +12,7 @@ enum Route: Hashable {
     case activity
     case integrations
     case apiAccess
+    case taughtSkills
     case models
     case privacy
     case settings
@@ -20,13 +21,14 @@ enum Route: Hashable {
 
 /// Rows of the Advanced and Settings sub-screens. Each opens its own screen.
 enum SubItem: Identifiable {
-    case integrations, apiAccess, models, activity, memory, privacy, briefings, notes
+    case integrations, apiAccess, taughtSkills, models, activity, memory, privacy, briefings, notes
     var id: Self { self }
 
     var title: String {
         switch self {
         case .integrations: String(localized: "Integrations")
         case .apiAccess: String(localized: "API access")
+        case .taughtSkills: String(localized: "Skills")
         case .models: String(localized: "Models")
         case .activity: String(localized: "Activity log")
         case .memory: String(localized: "What I know about you")
@@ -40,6 +42,7 @@ enum SubItem: Identifiable {
         switch self {
         case .integrations: "puzzlepiece.extension"
         case .apiAccess: "network"
+        case .taughtSkills: "graduationcap"
         case .models: "cpu"
         case .activity: "list.bullet.rectangle"
         case .memory: "brain.head.profile"
@@ -53,6 +56,7 @@ enum SubItem: Identifiable {
         switch self {
         case .integrations: .integrations
         case .apiAccess: .apiAccess
+        case .taughtSkills: .taughtSkills
         case .models: .models
         case .activity: .activity
         case .memory: .memory
@@ -62,6 +66,6 @@ enum SubItem: Identifiable {
         }
     }
 
-    static let advanced: [SubItem] = [.notes, .briefings, .integrations, .apiAccess, .models, .activity, .memory]
+    static let advanced: [SubItem] = [.notes, .briefings, .integrations, .apiAccess, .taughtSkills, .models, .activity, .memory]
     static let settings: [SubItem] = [.privacy]
 }

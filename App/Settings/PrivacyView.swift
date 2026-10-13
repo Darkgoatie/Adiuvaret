@@ -12,7 +12,7 @@ struct PrivacyView: View {
     @State private var confirm: Erase?
 
     private enum Erase: String, Identifiable {
-        case browsing, memory, activity, diagnostics, siteNotes, apiHosts
+        case browsing, memory, activity, diagnostics, siteNotes, apiHosts, skills
         var id: String { rawValue }
     }
 
@@ -59,6 +59,7 @@ struct PrivacyView: View {
                 eraseRow(String(localized: "Forget saved site routes"), String(localized: "Removes the link names kept for faster visits."), .siteNotes)
                 eraseRow(String(localized: "Forget everything I know about you"), String(localized: "Deletes the saved facts."), .memory)
                 eraseRow(String(localized: "Remove API hosts and tokens"), String(localized: "Forgets every host the assistant may call and its token."), .apiHosts)
+                eraseRow(String(localized: "Delete taught skills"), String(localized: "Removes every skill the assistant was taught."), .skills)
                 eraseRow(String(localized: "Clear the activity log"), String(localized: "Removes the list of tool calls."), .activity)
                 eraseRow(String(localized: "Clear diagnostics"), String(localized: "Removes the timing and error log."), .diagnostics)
             } header: { Text("Erase") } footer: {
@@ -107,6 +108,7 @@ struct PrivacyView: View {
         case .siteNotes: String(localized: "Forget saved site routes?")
         case .memory: String(localized: "Forget everything I know about you?")
         case .apiHosts: String(localized: "Remove API hosts and tokens?")
+        case .skills: String(localized: "Delete taught skills?")
         case .activity: String(localized: "Clear the activity log?")
         case .diagnostics: String(localized: "Clear diagnostics?")
         }
@@ -118,6 +120,7 @@ struct PrivacyView: View {
         case .siteNotes: SiteNoteStore.shared.clear()
         case .memory: MemoryHub.store.removeAll()
         case .apiHosts: APIHostStore.shared.removeAll()
+        case .skills: TaughtSkillHub.store.removeAll()
         case .activity: ActivityStore.shared.clear()
         case .diagnostics: DiagnosticsLog.shared.clear()
         }

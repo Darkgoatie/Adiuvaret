@@ -11,6 +11,7 @@ struct ActivityView: View {
 
     private static let names: [String: String] = [
         "openOtherSite": String(localized: "Open a new site"),
+        "saveSkill": String(localized: "Save a skill"),
         "callAPIWrite": String(localized: "API call that changes data"),
         "approveAPIHost": String(localized: "Allow a new API host"),
         "actOnPageRisky": String(localized: "Page action that needed approval"),
