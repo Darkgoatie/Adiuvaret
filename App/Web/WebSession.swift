@@ -40,6 +40,8 @@ final class WebSession: NSObject {
     @ObservationIgnored let webView: WKWebView
     @ObservationIgnored private let world = WKContentWorld.world(name: "adiuvaret-agent")
     @ObservationIgnored private var allowed: [String] = []
+    @ObservationIgnored private var lastBody = ""
+    @ObservationIgnored private var sameBody = 0
     @ObservationIgnored private var trailHost = ""
     @ObservationIgnored private var trail: [String] = []
     @ObservationIgnored private let siteNotes = SiteNoteStore.standard()
@@ -93,6 +95,7 @@ final class WebSession: NSObject {
         elements = [:]
         trailHost = host
         trail = []
+        lastBody = ""; sameBody = 0
         return await busy {
             webView.load(URLRequest(url: url, timeoutInterval: 30))
             await waitForLoad(seconds: 25)
@@ -231,7 +234,12 @@ final class WebSession: NSObject {
         let lines = snap.elements.prefix(8).map { SnapshotFormat.elementLine($0) }
         summarize(callID, title ?? String(localized: "Looked at the page · \(snap.elements.count) items"), lines, failed: false)
         let body = SnapshotFormat.render(snap, budget: budget)
-        return extra.isEmpty ? body : extra + "\n" + body
+        if body == lastBody { sameBody += 1 } else { sameBody = 0; lastBody = body }
+        var notes = extra
+        if sameBody >= 1 {
+            notes += (notes.isEmpty ? "" : "\n") + "The page looks exactly as it did the last time. Clicking or looking again will not change it. Events, tables and most content are plain text and are not listed as buttons: call lookAtPage with readText true and answer from that text. If it does not hold the answer, tell the user what is blocking you instead of repeating a step."
+        }
+        return notes.isEmpty ? body : notes + "\n" + body
     }
 
     private func snapshot() async -> PageSnapshot? {

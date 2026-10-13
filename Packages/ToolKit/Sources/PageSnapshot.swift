@@ -54,6 +54,7 @@ public enum SnapshotFormat {
         if s.elements.isEmpty {
             lines.append("No buttons, links or fields in view. Use readPage to read the text, or scroll.")
         }
+        lines.append("This list holds only buttons, links and fields. The information itself (events, tables, article text) is not listed: call lookAtPage with readText true to read it.")
         var used = lines.reduce(0) { $0 + $1.count + 1 }
         var shown = 0
         for e in s.elements {

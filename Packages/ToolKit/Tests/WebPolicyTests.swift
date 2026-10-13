@@ -120,6 +120,11 @@ import Foundation
         #expect(!line.contains("\n") && line.contains("line 'two'") && line.hasSuffix("…\""))
     }
 
+    @Test func listSaysContentIsNotListed() {
+        let text = SnapshotFormat.render(snap([PageElement(id: 1, role: "button", label: "Close")]))
+        #expect(text.contains("readText true"))
+    }
+
     @Test func emptyPageSuggestsReading() {
         #expect(SnapshotFormat.render(snap([])).contains("readPage"))
     }
