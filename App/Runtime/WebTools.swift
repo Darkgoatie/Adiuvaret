@@ -1,5 +1,4 @@
 import Foundation
-import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
@@ -297,18 +296,25 @@ private enum Self_ {
 
 // MARK: tools the model sees
 
-struct LiveSearchWebTool: Tool {
+struct LiveSearchWebTool: AppTool {
     let name = "searchWeb"
     let description = "Searches the web and returns result titles, sites and short summaries. Use it first for news, scores, weather, prices, schedules and anything that may have changed. Never tell the user to search themselves."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable
     struct Arguments {
-        @Guide(description: "Three to eight plain search words, for example: Real Betis next match")
         var query: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("query", "Three to eight plain search words, for example: Real Betis next match"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(query: args.string("query"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         let rowID = UUID()
         let scrubbed = ctx.scrub(WebSearch.cleanQuery(a.query))
         if scrubbed.changed { DiagnosticsLog.shared.record("web search", "removed \(scrubbed.removed.count) private words from the search") }
@@ -344,18 +350,25 @@ struct LiveSearchWebTool: Tool {
     }
 }
 
-struct LiveOpenWebsiteTool: Tool {
+struct LiveOpenWebsiteTool: AppTool {
     let name = "openWebsite"
     let description = "Opens a website the user named, or a search result, in the in-app browser. Returns the numbered buttons, links and fields on the page."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable
     struct Arguments {
-        @Guide(description: "Web address or domain, for example apple.com or https://example.com/page. https only.")
         var url: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("url", "Web address or domain, for example apple.com or https://example.com/page. https only."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(url: args.string("url"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         let rowID = UUID()
         switch WebPolicy.normalize(a.url) {
         case .rejected(let why):
@@ -373,47 +386,62 @@ struct LiveOpenWebsiteTool: Tool {
     }
 }
 
-struct LiveLookAtPageTool: Tool {
+struct LiveLookAtPageTool: AppTool {
     let name = "lookAtPage"
     let description = "Looks at the open website. Lists the numbered buttons, links and fields in view, or reads the page text."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable
     struct Arguments {
-        @Guide(description: "False lists the numbered buttons, links and fields in view. True reads the page text instead.")
         var readText: Bool
-        @Guide(description: "Which part of the text to read, starting at 1. Only used when readText is true.")
         var part: Int
-        @Guide(description: "Words from the label of a button or link to search the whole page for, including parts out of view and menus. Empty for the normal list. Use it when the item you want is not listed.")
         var find: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .bool("readText", "False lists the numbered buttons, links and fields in view. True reads the page text instead."),
+        .int("part", "Which part of the text to read, starting at 1. Only used when readText is true."),
+        .string("find", "Words from the label of a button or link to search the whole page for, including parts out of view and menus. Empty for the normal list. Use it when the item you want is not listed."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(readText: args.bool("readText"), part: args.int("part"), find: args.string("find"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         await runWebStep(gate, ctx, reporter, name: "lookAtPage", json: ["readText": a.readText, "part": a.part, "find": a.find],
                          title: String(localized: "Looking at the page…"), rowID: UUID())
     }
 }
 
-struct LiveActOnPageTool: Tool {
+struct LiveActOnPageTool: AppTool {
     let name = "actOnPage"
     let description = "Clicks, types, chooses or scrolls on the open website. Use element numbers from lookAtPage. Never fills passwords, card numbers or codes."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable
     enum PageAction: String, CaseIterable {
         case click, type, typeAndEnter, choose, check, uncheck, setSlider, scrollDown, scrollUp, scrollTop, scrollBottom
     }
 
-    @Generable
     struct Arguments {
-        @Guide(description: "Element number from lookAtPage. Use 0 for scrolling.")
         var element: Int
         var action: PageAction
-        @Guide(description: "Text to type, option to choose, or slider number. Empty for click, check, uncheck and scroll.")
         var value: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .int("element", "Element number from lookAtPage. Use 0 for scrolling."),
+        .choice("action", "", PageAction.allCases.map(\.rawValue)),
+        .string("value", "Text to type, option to choose, or slider number. Empty for click, check, uncheck and scroll."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        guard let action = PageAction(rawValue: args.string("action")) else { return "Not done: action must be one of: \(PageAction.allCases.map(\.rawValue).joined(separator: ", "))." }
+        do { return try await perform(arguments: Arguments(element: args.int("element"), action: action, value: args.string("value"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         let scrolling = [PageAction.scrollDown, .scrollUp, .scrollTop, .scrollBottom].contains(a.action)
         var risky = false
         if !scrolling {

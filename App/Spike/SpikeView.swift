@@ -1,5 +1,6 @@
 import SwiftUI
 
+@available(iOS 26.0, *)
 struct SpikeView: View {
     @State private var model = SpikeModel()
 

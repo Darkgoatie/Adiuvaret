@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import FoundationModels
 import ModelLibrary
 import ToolKit
 import SkillKit
@@ -11,7 +10,7 @@ import Diagnostics
 /// Chat with an online model through the user's own API key. The model has the same tools, memory and skills as the on-device one.
 /// What a tool returns is sent to the provider the user picked, so the Providers screen says so.
 @MainActor @Observable
-final class CloudChatService: ChatService {
+final class CloudChatService: ChatService, FixedToolsChat {
     private(set) var items: [ThreadItem]
     private(set) var isGenerating = false
     private(set) var banner: ChatBanner?
@@ -24,6 +23,8 @@ final class CloudChatService: ChatService {
     @ObservationIgnored private var memoryBlock = ""
     /// Models that refused tool definitions, remembered for this chat so every turn does not pay for a failed request.
     @ObservationIgnored private var toolsRefused = false
+    /// When set, the chat uses exactly these tools and skips the router. Briefings use it so only reading tools exist.
+    @ObservationIgnored var fixedTools: [String]?
     /// Most steps one reply may take: model turns that ask for tools, then the final answer.
     private static let maxRounds = 8
 
@@ -124,7 +125,7 @@ final class CloudChatService: ChatService {
             if case .user? = prior.last { prior.removeLast() }
             let toolIDs = await chooseTools(prompt: prompt, prior: prior, skill: skill)
             var system = AssistantPrompt.instructions(ids: toolIDs, memory: memoryBlock.isEmpty ? "" : " " + memoryBlock, online: true)
-            let wireTools = host.tools(for: toolIDs).compactMap { ToolBridge.wireTool($0) }
+            let wireTools = host.tools(for: toolIDs).map { ToolBridge.wireTool($0) }
             var useTools = !wireTools.isEmpty && !toolsRefused && !AppSettings.shared.actionsOff
 
             var history: [ProviderWire.Message] = []
@@ -213,6 +214,12 @@ final class CloudChatService: ChatService {
     /// plus what a matched skill names, so a long catalog does not eat its context.
     private func chooseTools(prompt: String, prior: [ThreadItem], skill: SkillUse?) async -> [String] {
         guard !AppSettings.shared.actionsOff else { return [] }
+        if let fixed = fixedTools {
+            let visible = Set(host.visibleToolIDs())
+            let ids = fixed.filter(visible.contains)
+            DiagnosticsLog.shared.record("route", "cloud fixed tools=[\(ids.joined(separator: ","))]")
+            return ids
+        }
         let previous = prior.reversed().compactMap { item -> String? in if case .user(_, let t) = item { return t } else { return nil } }.first
         let routed = await ToolRouter.chooseWithNote(prompt: prompt, previous: previous)
         var chosen = routed.0

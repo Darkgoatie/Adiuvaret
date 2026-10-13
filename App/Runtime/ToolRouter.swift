@@ -4,6 +4,7 @@ import ToolKit
 import Diagnostics
 import SkillKit
 
+@available(iOS 26.0, *)
 @Generable
 struct ToolRoute {
     @Guide(description: "True when the message needs the user's calendar or reminders, or fresh information from the web such as news, scores, weather, prices, opening hours or release dates. False for greetings, advice and writing help.")
@@ -39,16 +40,21 @@ enum ToolRouter {
         var needsTool = true
         var words = ""
         var note = "router ok"
-        do {
-            let session = LanguageModelSession(instructions: instructions(catalog))
-            var text = ""
-            if let previous, !previous.isEmpty { text += "Previous request: \(String(previous.prefix(200)))\n" }
-            text += "New message: \(String(prompt.prefix(400)))"
-            let route = try await session.respond(to: text, generating: ToolRoute.self).content
-            needsTool = route.needsTool
-            words = route.searchWords
-        } catch {
-            note = "router failed (\(type(of: error))): \(String(String(describing: error).prefix(120)))"
+        // Apple's model, when this iPhone has it, reads the message first. Without it the raw message searches the catalog directly.
+        if #available(iOS 26.0, *), AppleModel.isAvailable {
+            do {
+                let session = LanguageModelSession(instructions: instructions(catalog))
+                var text = ""
+                if let previous, !previous.isEmpty { text += "Previous request: \(String(previous.prefix(200)))\n" }
+                text += "New message: \(String(prompt.prefix(400)))"
+                let route = try await session.respond(to: text, generating: ToolRoute.self).content
+                needsTool = route.needsTool
+                words = route.searchWords
+            } catch {
+                note = "router failed (\(type(of: error))): \(String(String(describing: error).prefix(120)))"
+            }
+        } else {
+            note = "router skipped, no Apple model"
         }
         var chosen: [CatalogEntry] = []
         if needsTool {

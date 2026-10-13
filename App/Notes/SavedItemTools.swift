@@ -1,5 +1,4 @@
 import Foundation
-import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
@@ -34,21 +33,29 @@ struct FindSavedItemsExecutor: ToolExecutor {
     }
 }
 
-struct LiveSaveItemTool: Tool {
+struct LiveSaveItemTool: AppTool {
     let name = "saveItem"
     let description = "Keeps a note or a task inside this app's own Notes and Tasks list, after the user approves. Not the Obsidian folder, not Reminders, not Todoist. Do not claim it was kept unless the result says so."
     let gate: PolicyGate; let ctx: TaskContext
 
-    @Generable struct Arguments {
-        @Guide(description: "Either note or task.")
+    struct Arguments {
         var kind: String
-        @Guide(description: "A short title. May be empty; the first words of the text are used then.")
         var title: String
-        @Guide(description: "The text to keep, in the user's own words.")
         var text: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("kind", "Either note or task."),
+        .string("title", "A short title. May be empty; the first words of the text are used then."),
+        .string("text", "The text to keep, in the user's own words."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(kind: args.string("kind"), title: args.string("title"), text: args.string("text"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         let data = (try? JSONSerialization.data(withJSONObject: ["kind": a.kind, "title": a.title, "text": a.text])) ?? Data()
         switch await gate.run(ToolCall(toolName: name, argumentsJSON: String(decoding: data, as: UTF8.self)), in: ctx.callContext()) {
         case .executed(let out): return out
@@ -58,19 +65,27 @@ struct LiveSaveItemTool: Tool {
     }
 }
 
-struct LiveFindSavedItemsTool: Tool {
+struct LiveFindSavedItemsTool: AppTool {
     let name = "findSavedItems"
     let description = "Searches the notes and tasks kept inside this app, or lists the newest. Read only. Only report what the result contains."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable struct Arguments {
-        @Guide(description: "Words to look for. Empty lists the newest items.")
+    struct Arguments {
         var query: String
-        @Guide(description: "note, task, or empty for both.")
         var kind: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("query", "Words to look for. Empty lists the newest items."),
+        .string("kind", "note, task, or empty for both."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(query: args.string("query"), kind: args.string("kind"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         let id = UUID()
         await reporter.toolStarted(id, title: String(localized: "Looking through your saved items…"))
         let data = (try? JSONSerialization.data(withJSONObject: ["query": a.query, "kind": a.kind])) ?? Data()

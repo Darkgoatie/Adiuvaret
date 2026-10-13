@@ -32,7 +32,12 @@ enum ThreadItem: Identifiable {
 }
 
 enum ChatBanner: Equatable {
-    case appleIntelligenceUnavailable, offline, thermal, killSwitch
+    case appleIntelligenceUnavailable, noModel, offline, thermal, killSwitch
+}
+
+/// A chat that can be pinned to exactly these tools, skipping the router. Briefings use it so only reading tools exist.
+@MainActor protocol FixedToolsChat: AnyObject {
+    var fixedTools: [String]? { get set }
 }
 
 /// Everything the chat screen needs. The demo implementation and the real runtime both conform.

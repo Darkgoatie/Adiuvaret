@@ -1,5 +1,4 @@
 import Foundation
-import FoundationModels
 import DesignSystem
 import AdiuvaretCore
 import PolicyEngine
@@ -28,14 +27,14 @@ final class ToolHost {
     private var undos: [UUID: UndoAction] = [:]
     private var memoryUndos: [UUID: UUID] = [:]
     private var skillOffers: [UUID: SkillHub.Offer] = [:]
-    private var built: [String: any Tool]?
+    private var built: [String: any AppTool]?
 
     func attach(_ surface: any ToolSurface) { self.surface = surface }
 
     // MARK: tools
 
     /// Every tool the app has, built once for this chat. The model chooses from the ones it is given.
-    private func allTools() -> [String: any Tool] {
+    private func allTools() -> [String: any AppTool] {
         if let built { return built }
         let bridge = Bridge(host: self)
         let handles = self.handles
@@ -59,7 +58,7 @@ final class ToolHost {
         rawExecutors.merge(ManifestExecutors.make(reporter: bridge)) { a, _ in a }
         let gate = PolicyGate(engine: engine, approvals: bridge, executors: rawExecutors.mapValues { RecordingExecutor(inner: $0, ctx: ctx) as any ToolExecutor },
                               observer: { call, outcome, asked, ms in ActivityStore.shared.record(ActivityEntry.make(call, outcome, asked: asked, milliseconds: ms)) })
-        var all: [String: any Tool] = [
+        var all: [String: any AppTool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
             "findFreeTime": LiveFreeTimeTool(gate: gate, ctx: ctx),
             "createEvent": LiveCreateEventTool(gate: gate, ctx: ctx),
@@ -90,7 +89,7 @@ final class ToolHost {
         return all
     }
 
-    func tools(for ids: [String]) -> [any Tool] {
+    func tools(for ids: [String]) -> [any AppTool] {
         let all = allTools()
         return ids.compactMap { all[$0] }
     }

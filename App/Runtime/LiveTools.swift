@@ -1,6 +1,5 @@
 import Foundation
 import EventKit
-import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
@@ -148,24 +147,31 @@ enum ReminderUndo {
     }
 }
 
-struct LiveReadCalendarTool: Tool {
+struct LiveReadCalendarTool: AppTool {
     let name = "readCalendar"
     let description = "Lists the user's calendar events for one day."
     let gate: PolicyGate
     let ctx: TaskContext
     let reporter: any ToolReporter
 
-    @Generable
     struct Arguments {
-        @Guide(description: "First day to read as yyyy-MM-dd, for example 2026-10-20. Empty means today.")
         var startDate: String
-        @Guide(description: "Number of days to read from startDate, 1 to 31. Use 7 for a week.")
         var days: Int
-        @Guide(description: "Optional words to look for in event titles or calendar names. Empty lists everything.")
         var search: String
     }
 
-    func call(arguments: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("startDate", "First day to read as yyyy-MM-dd, for example 2026-10-20. Empty means today."),
+        .int("days", "Number of days to read from startDate, 1 to 31. Use 7 for a week."),
+        .string("search", "Optional words to look for in event titles or calendar names. Empty lists everything."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(startDate: args.string("startDate"), days: args.int("days"), search: args.string("search"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments: Arguments) async throws -> String {
         let id = UUID()
         await reporter.toolStarted(id, title: String(localized: "Checking your calendar…"))
         let payload: [String: Any] = ["startDate": arguments.startDate, "days": arguments.days, "search": arguments.search]
@@ -193,21 +199,29 @@ struct LiveReadCalendarTool: Tool {
     }
 }
 
-struct LiveCreateReminderTool: Tool {
+struct LiveCreateReminderTool: AppTool {
     let name = "createReminder"
     let description = "Creates a reminder for the user. Ask the user to approve; do not claim it was created unless the result says so."
     let gate: PolicyGate
     let ctx: TaskContext
     let reporter: any ToolReporter
 
-    @Generable
     struct Arguments {
         var title: String
-        @Guide(description: "Minutes from now until the reminder is due")
         var dueInMinutes: Int
     }
 
-    func call(arguments: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("title", ""),
+        .int("dueInMinutes", "Minutes from now until the reminder is due"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(title: args.string("title"), dueInMinutes: args.int("dueInMinutes"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments: Arguments) async throws -> String {
         let payload: [String: Any] = ["title": arguments.title, "dueInMinutes": arguments.dueInMinutes]
         let data = try JSONSerialization.data(withJSONObject: payload)
         let outcome = await gate.run(ToolCall(toolName: name, argumentsJSON: String(decoding: data, as: UTF8.self)), in: ctx.callContext())

@@ -1,5 +1,4 @@
 import Foundation
-import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import Persistence
@@ -34,16 +33,25 @@ struct SearchPastChatsExecutor: ToolExecutor {
     }
 }
 
-struct LiveSearchPastChatsTool: Tool {
+struct LiveSearchPastChatsTool: AppTool {
     let name = "searchPastChats"
     let description = "Searches the user's earlier conversations with this assistant by words. Use it for questions like what did we say about a topic. Only report what the result contains."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable struct Arguments {
-        @Guide(description: "Two to five words that appeared in the earlier conversation, for example: Seville hotel") var query: String
+    struct Arguments {
+        var query: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("query", "Two to five words that appeared in the earlier conversation, for example: Seville hotel"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(query: args.string("query"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         await serviceRead(gate, ctx, reporter, name: name, json: ["query": a.query], running: String(localized: "Looking through earlier chats…")) {
             $0 == 0 ? String(localized: "Searched earlier chats · nothing found") : String(localized: "Searched earlier chats · \($0) found")
         }

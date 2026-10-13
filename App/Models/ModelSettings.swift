@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import os
-import FoundationModels
 import ModelLibrary
 import Diagnostics
 
@@ -37,7 +36,7 @@ final class ModelSettings {
     init() {
         let saved = Set(UserDefaults.standard.stringArray(forKey: "models.installed") ?? [])
         installed = saved
-        activeID = ModelCatalog.resolve(active: UserDefaults.standard.string(forKey: "models.active"), installed: saved, connected: ProviderStore.shared.connected)
+        activeID = Self.pick(active: UserDefaults.standard.string(forKey: "models.active"), installed: saved, connected: ProviderStore.shared.connected)
         DiagnosticsLog.shared.record("memory budget", "\(memoryBudget / 1_000_000) MB available, device \(ProcessInfo.processInfo.physicalMemory / 1_000_000) MB")
         // Downloads that were stopped by the system or by closing the app come back as paused, not lost.
         for model in ModelCatalog.all where !saved.contains(model.id) {
@@ -45,7 +44,23 @@ final class ModelSettings {
         }
     }
 
-    var choices: [ModelChoice] { ModelCatalog.choices(installed: installed) }
+    var choices: [ModelChoice] { ModelCatalog.choices(installed: installed, appleAvailable: AppleModel.isAvailable) }
+
+    /// The model a chat should use: the saved one when it still works, else Apple's when this iPhone has it, else a downloaded one,
+    /// else an online model the person connected, else `ModelCatalog.noModelID`.
+    nonisolated static func pick(active: String?, installed: Set<String>, connected: Set<String>) -> String {
+        let base = ModelCatalog.resolve(active: active, installed: installed, connected: connected, appleAvailable: AppleModel.isAvailable)
+        guard base == ModelCatalog.noModelID, let online = connected.sorted().first.flatMap({ firstOnline(of: $0) }) else { return base }
+        return online
+    }
+
+    private nonisolated static func firstOnline(of provider: String) -> String? {
+        UserDefaults.standard.stringArray(forKey: "providers.pickedModels")?.first { Providers.parseModelID($0)?.provider.id == provider }
+    }
+
+    func resolve(_ id: String?) -> String {
+        Self.pick(active: id, installed: installed, connected: ProviderStore.shared.connected)
+    }
 
     /// Models of connected online providers the user turned on. A chat with one of these is sent to the provider.
     var cloudChoices: [ModelChoice] { ProviderStore.shared.choices }
@@ -59,10 +74,12 @@ final class ModelSettings {
 
     func loadState(_ id: String) -> LoadState {
         if Self.isCloud(id) { return .loaded }
+        if id == ModelCatalog.noModelID { return .unavailable(String(localized: "No model yet.")) }
         if id == ModelCatalog.appleID {
-            switch SystemLanguageModel.default.availability {
+            switch AppleModel.status {
             case .available: return .loaded
-            case .unavailable: return .unavailable(String(localized: "Apple Intelligence isn't available."))
+            case .unsupportedOS: return .unavailable(String(localized: "Needs iOS 26."))
+            case .unavailable(let why): return .unavailable(why)
             }
         }
         return loadStates[id] ?? .idle
@@ -70,7 +87,7 @@ final class ModelSettings {
 
     /// Loads a downloaded model into memory now, so the first message does not wait. Safe to call repeatedly.
     func preload(_ id: String) {
-        guard id != ModelCatalog.appleID else { return }
+        guard id != ModelCatalog.appleID, id != ModelCatalog.noModelID, !Self.isCloud(id) else { return }
         switch loadStates[id] {
         case .loading, .loaded: return
         default: break
@@ -120,10 +137,10 @@ final class ModelSettings {
 
     /// Makes `id` the model for new chats. Unknown or missing models fall back to Apple.
     func select(_ id: String) {
-        activeID = ModelCatalog.resolve(active: id, installed: installed, connected: ProviderStore.shared.connected)
+        activeID = resolve(id)
         defaults.set(activeID, forKey: "models.active")
         DiagnosticsLog.shared.record("model select", activeID)
-        if activeID == ModelCatalog.appleID || Self.isCloud(activeID) {
+        if activeID == ModelCatalog.appleID || activeID == ModelCatalog.noModelID || Self.isCloud(activeID) {
             for (id, state) in loadStates where state == .loaded || state == .loading { loadStates[id] = .idle }
             Task { await MLXRuntime.shared.unload() }
         } else {
@@ -133,12 +150,16 @@ final class ModelSettings {
 
     /// A chat service for `modelID` (default: the active model), seeded with earlier messages.
     func makeService(modelID: String? = nil, items: [ThreadItem] = [], title: String? = nil) -> any ChatService {
-        let id = ModelCatalog.resolve(active: modelID ?? activeID, installed: installed, connected: ProviderStore.shared.connected)
+        let id = resolve(modelID ?? activeID)
         if Self.isCloud(id) { return CloudChatService(restoring: items, title: title, modelID: id) }
+        if id == ModelCatalog.appleID {
+            if #available(iOS 26.0, *), AppleModel.isAvailable { return LiveChatService(restoring: items, title: title) }
+            return NoModelChatService(restoring: items, title: title)
+        }
         #if canImport(MLXLLM)
-        if id != ModelCatalog.appleID { preload(id); return MLXChatService(restoring: items, title: title, modelID: id) }
+        if id != ModelCatalog.noModelID { preload(id); return MLXChatService(restoring: items, title: title, modelID: id) }
         #endif
-        return LiveChatService(restoring: items, title: title)
+        return NoModelChatService(restoring: items, title: title)
     }
 
     /// Starts a download, or continues one that was paused. Finished files and half-written files are kept.
@@ -152,7 +173,7 @@ final class ModelSettings {
         }
         states[model.id] = .downloading(resumeFrom)
         DiagnosticsLog.shared.record("model download", "\(resumeFrom > 0 ? "resume" : "start") \(model.id) at \(Int(resumeFrom * 100))%")
-        DownloadActivity.shared.start(model, fraction: resumeFrom)
+        DownloadKeepAlive.start(model, fraction: resumeFrom)
         let id = model.id
         tasks[id] = Task { [weak self] in
             do {
@@ -186,7 +207,7 @@ final class ModelSettings {
         defaults.set(Array(installed), forKey: "models.installed")
         if activeID == id { select(ModelCatalog.appleID) }
         DiagnosticsLog.shared.record("model delete", id)
-        if let model = ModelCatalog.model(id) { DownloadActivity.shared.finish(model, success: false) }
+        if let model = ModelCatalog.model(id) { DownloadKeepAlive.finish(model, success: false) }
         Task {
             await MLXRuntime.shared.forget(id)
             // A cancelled download task may still be writing; give it a moment to stop before the folder goes.
@@ -198,7 +219,7 @@ final class ModelSettings {
     private func progress(_ id: String, _ fraction: Double) {
         guard case .downloading(let old) = states[id], fraction - old >= 0.005 || fraction >= 1 else { return }
         states[id] = .downloading(min(fraction, 1))
-        if let model = ModelCatalog.model(id) { DownloadActivity.shared.update(model, fraction: fraction) }
+        if let model = ModelCatalog.model(id) { DownloadKeepAlive.update(model, fraction: fraction) }
     }
 
     private func finishDownload(_ id: String, error: Error?, cancelled: Bool = false) {
@@ -207,14 +228,14 @@ final class ModelSettings {
         let kept = ModelStore.pendingFraction(id) ?? 0
         if cancelled {
             states[id] = .paused(kept, reason: nil)
-            DownloadActivity.shared.finish(model, success: false)
+            DownloadKeepAlive.finish(model, success: false)
             DiagnosticsLog.shared.record("model download", "paused \(id) at \(Int(kept * 100))%")
             return
         }
         if let error {
             let text = String(String(describing: error).prefix(120))
             states[id] = .paused(kept, reason: text)
-            DownloadActivity.shared.finish(model, success: false)
+            DownloadKeepAlive.finish(model, success: false)
             DiagnosticsLog.shared.record("model download", "stopped \(id) at \(Int(kept * 100))%: \(text)")
             return
         }
@@ -222,14 +243,14 @@ final class ModelSettings {
             // Every file arrived but the weights are not right. Only this case discards the files, because resuming cannot fix it.
             ModelStore.remove(id)
             states[id] = .failed(problem + " " + String(localized: "Download it again."))
-            DownloadActivity.shared.finish(model, success: false)
+            DownloadKeepAlive.finish(model, success: false)
             DiagnosticsLog.shared.record("model download", "failed check \(id): \(problem)")
             return
         }
         installed.insert(id)
         states[id] = .idle
         defaults.set(Array(installed), forKey: "models.installed")
-        DownloadActivity.shared.finish(model, success: true)
+        DownloadKeepAlive.finish(model, success: true)
         DiagnosticsLog.shared.record("model download", "done \(id)")
     }
 

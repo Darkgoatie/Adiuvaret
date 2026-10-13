@@ -6,6 +6,7 @@ import Diagnostics
 /// Keeps a model download running when the app is in the background. iOS shows a continuous background task as a Live Activity
 /// with its title, subtitle and progress bar, and the person can cancel it there. Cancelling or running out of time pauses the
 /// download, it never deletes it.
+@available(iOS 26.0, *)
 @MainActor
 final class DownloadActivity {
     static let shared = DownloadActivity()
@@ -83,5 +84,25 @@ final class DownloadActivity {
         task.progress.completedUnitCount = Int64(known * Double(Self.scale))
         task.updateTitle(String(localized: "Downloading \(model.name)"), subtitle: DownloadText.summary(fraction: known, totalBytes: model.sizeBytes))
         DiagnosticsLog.shared.record("download activity", "running \(modelID)")
+    }
+}
+
+/// The download keep-alive exists from iOS 26. Before that a download runs while the app is open and pauses when it is closed,
+/// and the person resumes it from the Models screen; nothing is lost either way.
+enum DownloadKeepAlive {
+    nonisolated static func registerAll() {
+        if #available(iOS 26.0, *) { DownloadActivity.registerAll() }
+    }
+
+    @MainActor static func start(_ model: LocalModel, fraction: Double) {
+        if #available(iOS 26.0, *) { DownloadActivity.shared.start(model, fraction: fraction) }
+    }
+
+    @MainActor static func update(_ model: LocalModel, fraction: Double) {
+        if #available(iOS 26.0, *) { DownloadActivity.shared.update(model, fraction: fraction) }
+    }
+
+    @MainActor static func finish(_ model: LocalModel, success: Bool) {
+        if #available(iOS 26.0, *) { DownloadActivity.shared.finish(model, success: success) }
     }
 }

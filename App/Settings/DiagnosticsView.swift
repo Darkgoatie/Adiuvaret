@@ -1,7 +1,6 @@
 import SwiftUI
 import DesignSystem
 import Diagnostics
-import FoundationModels
 import UIKit
 
 /// Settings, then Diagnostics: shows what the app recorded and lets the user share it. Never holds message text.
@@ -40,12 +39,9 @@ struct DiagnosticsView: View {
         let info = Bundle.main.infoDictionary
         let version = "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
         var h = ["App": version, "iOS": UIDevice.current.systemVersion, "Device": machine(),
-                 "Reasoning API in build": LiveChatService.reasoningCompiled ? "yes" : "no (needs iOS 27)",
+                 "Reasoning API in build": AppleModel.reasoningCompiled ? "yes" : "no (needs iOS 27)",
                  "Actions switched off": AppSettings.shared.actionsOff ? "yes" : "no"]
-        switch SystemLanguageModel.default.availability {
-        case .available: h["Apple Intelligence"] = "available"
-        case .unavailable(let reason): h["Apple Intelligence"] = "unavailable: \(reason)"
-        }
+        h["Apple Intelligence"] = AppleModel.statusText
         return h
     }
 

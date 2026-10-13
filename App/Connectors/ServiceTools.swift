@@ -1,5 +1,4 @@
 import Foundation
-import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
@@ -88,66 +87,104 @@ func serviceRead(_ gate: PolicyGate, _ ctx: TaskContext, _ reporter: any ToolRep
     }
 }
 
-struct LiveListGitHubTool: Tool {
+struct LiveListGitHubTool: AppTool {
     let name = "listGitHubIssues"
     let description = "Lists open GitHub issues and pull requests (not repositories or commits) assigned to the user, created by the user, or waiting for the user's review. Only report items the result contains; never invent any."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable struct Arguments {
-        @Guide(description: "Which list: assigned, review, or created. Use assigned when unsure.") var what: String
-        @Guide(description: "Optional extra plain words to narrow the list. Empty for none.") var words: String
+    struct Arguments {
+        var what: String
+        var words: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("what", "Which list: assigned, review, or created. Use assigned when unsure."),
+        .string("words", "Optional extra plain words to narrow the list. Empty for none."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(what: args.string("what"), words: args.string("words"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         await serviceRead(gate, ctx, reporter, name: name, json: ["what": a.what, "words": a.words], running: String(localized: "Checking GitHub…")) {
             $0 == 0 ? String(localized: "Looked at GitHub · nothing open") : String(localized: "Looked at GitHub · \($0) open")
         }
     }
 }
 
-struct LiveListGitHubReposTool: Tool {
+struct LiveListGitHubReposTool: AppTool {
     let name = "listGitHubRepos"
     let description = "Lists the user's GitHub repositories, most recently pushed first. Use it for questions about their repos. Only name repositories the result contains."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable struct Arguments {
-        @Guide(description: "Always an empty string.") var unused: String
+    struct Arguments {
+        var unused: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("unused", "Always an empty string."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(unused: args.string("unused"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         await serviceRead(gate, ctx, reporter, name: name, json: [:], running: String(localized: "Checking GitHub…")) {
             $0 == 0 ? String(localized: "Looked at GitHub · no repositories") : String(localized: "Looked at GitHub · \($0) repositories")
         }
     }
 }
 
-struct LiveListGitHubCommitsTool: Tool {
+struct LiveListGitHubCommitsTool: AppTool {
     let name = "listGitHubCommits"
     let description = "Lists the newest commits of one of the user's GitHub repositories. Use it for questions about commits or recent changes. Only report commits the result contains."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable struct Arguments {
-        @Guide(description: "The repository name the user said, for example adiuvaret. Empty for the most recently pushed one.") var repo: String
-        @Guide(description: "How many commits, from 1 to 10. Use 3 when not said.") var count: Int
+    struct Arguments {
+        var repo: String
+        var count: Int
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("repo", "The repository name the user said, for example adiuvaret. Empty for the most recently pushed one."),
+        .int("count", "How many commits, from 1 to 10. Use 3 when not said."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(repo: args.string("repo"), count: args.int("count"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         await serviceRead(gate, ctx, reporter, name: name, json: ["repo": a.repo, "count": a.count], running: String(localized: "Checking GitHub…")) {
             $0 == 0 ? String(localized: "Looked at GitHub · no commits") : String(localized: "Looked at GitHub · \($0) commits")
         }
     }
 }
 
-struct LiveSearchNotionTool: Tool {
+struct LiveSearchNotionTool: AppTool {
     let name = "searchNotion"
     let description = "Searches the titles of the user's Notion pages and databases."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable struct Arguments {
-        @Guide(description: "One to four words from the page title, for example: product roadmap") var query: String
+    struct Arguments {
+        var query: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("query", "One to four words from the page title, for example: product roadmap"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(query: args.string("query"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         await serviceRead(gate, ctx, reporter, name: name, json: ["query": a.query], running: String(localized: "Searching Notion…")) {
             $0 == 0 ? String(localized: "Searched Notion · nothing found") : String(localized: "Searched Notion · \($0) found")
         }

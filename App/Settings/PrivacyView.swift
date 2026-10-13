@@ -24,7 +24,7 @@ struct PrivacyView: View {
                     .listRowBackground(Color.clear)
             }
             Section {
-                item("iphone", String(localized: "Apple model"), String(localized: "Runs on this iPhone. Nothing leaves it."))
+                if AppleModel.isAvailable { item("iphone", String(localized: "Apple model"), String(localized: "Runs on this iPhone. Nothing leaves it.")) }
                 item("cpu", String(localized: "Downloaded models"), String(localized: "Run on this iPhone. Only the download itself uses the internet, from Hugging Face."))
                 if providers.connected.isEmpty {
                     item("cloud", String(localized: "Online models"), String(localized: "None connected."))

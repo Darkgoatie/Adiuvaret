@@ -71,8 +71,8 @@ struct RootView: View {
     private func runBriefing(_ id: UUID) {
         guard let b = BriefingHub.shared.store.find(id) else { return }
         drawerOpen = false; path = []
-        let service = LiveChatService(restoring: [], title: b.title)
-        service.fixedTools = BriefingTools.tools(for: b)
+        let service = ModelSettings.shared.makeService(title: b.title)
+        if let tools = service as? any FixedToolsChat { tools.fixedTools = BriefingTools.tools(for: b) }
         store.open(service)
         let prompt = BriefingPrompt.text(for: b)
         Task { await service.send(prompt); store.persistCurrent() }

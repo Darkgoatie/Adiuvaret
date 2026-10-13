@@ -61,6 +61,7 @@ struct ReminderExecutor: ToolExecutor {
     }
 }
 
+@available(iOS 26.0, *)
 struct ReadCalendarTool: Tool {
     let name = "readCalendar"
     let description = "Lists calendar events for a day."
@@ -80,6 +81,7 @@ struct ReadCalendarTool: Tool {
     }
 }
 
+@available(iOS 26.0, *)
 struct CreateReminderTool: Tool {
     let name = "createReminder"
     let description = "Creates a reminder."
@@ -112,6 +114,7 @@ enum SpikeOutcome {
     }
 }
 
+@available(iOS 26.0, *)
 struct DummyTool: Tool {
     let name: String
     let description = "Returns a short note."

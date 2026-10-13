@@ -52,7 +52,7 @@ struct ChatView: View {
 
     private var chipKind: ModelPrivacyChip.Kind {
         if let (p, _) = Providers.parseModelID(service.modelID) { return .cloud(provider: p.name) }
-        return service.modelID == "apple" ? .onDevice : .localModel
+        return service.modelID == ModelCatalog.appleID ? .onDevice : .localModel
     }
 
     /// Files shared to the app are added to this composer, up to the per-message limit; the rest are removed again.
@@ -167,6 +167,21 @@ struct ChatView: View {
                     .padding(.horizontal, Spacing.l).padding(.vertical, Spacing.m)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .modifier(ThreadScrolling(proxy: proxy, service: service))
+            }
+        }
+    }
+}
+
+/// Keeps the newest message in view. From iOS 18 the thread follows streaming text only while it was already at the bottom, so reading history is
+/// never interrupted. On iOS 17 there is no way to measure that, so it scrolls to each new message and leaves streaming text where it is.
+private struct ThreadScrolling: ViewModifier {
+    let proxy: ScrollViewProxy
+    let service: any ChatService
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
                 .defaultScrollAnchor(.bottom, for: .initialOffset)
                 .onScrollGeometryChange(for: ScrollEdges.self) { g in
                     ScrollEdges(offset: g.contentOffset.y, content: g.contentSize.height, container: g.containerSize.height)
@@ -180,7 +195,12 @@ struct ChatView: View {
                     // A message the user just sent always shows.
                     if let last = service.items.last, case .user = last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
                 }
-            }
+        } else {
+            content
+                .onAppear { if let last = service.items.last { proxy.scrollTo(last.id, anchor: .bottom) } }
+                .onChange(of: service.items.count) { _, _ in
+                    if let last = service.items.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+                }
         }
     }
 }
@@ -234,6 +254,7 @@ private struct BannerView: View {
     var body: some View {
         switch banner {
         case .appleIntelligenceUnavailable: SystemBanner(kind: .error, message: String(localized: "Apple Intelligence isn't turned on, so I can't answer yet."), actionTitle: String(localized: "Open Settings"))
+        case .noModel: SystemBanner(kind: .warning, message: String(localized: "There is no model to answer with yet. Connect an online model in Settings, Providers, or download one in Models."))
         case .offline: SystemBanner(kind: .info, message: String(localized: "You're offline. Everything I do still stays on your iPhone."))
         case .thermal: SystemBanner(kind: .warning, message: String(localized: "Your iPhone is warm, so I'll answer more slowly."))
         case .killSwitch: SystemBanner(kind: .warning, message: String(localized: "Actions are switched off. I can talk, but I won't change anything."))

@@ -1,6 +1,5 @@
 import Foundation
 import EventKit
-import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
@@ -182,67 +181,104 @@ private func text(_ o: GateOutcome, nothingDone: String) -> String {
     }
 }
 
-struct LiveFreeTimeTool: Tool {
+struct LiveFreeTimeTool: AppTool {
     let name = "findFreeTime"
     let description = "Finds free time slots in the user's calendar between 08:00 and 20:00."
     let gate: PolicyGate; let ctx: TaskContext
 
-    @Generable
     struct Arguments {
-        @Guide(description: "First day as yyyy-MM-dd. Empty means today.") var startDate: String
-        @Guide(description: "Number of days, 1 to 31") var days: Int
-        @Guide(description: "Shortest slot in minutes, for example 30 or 60") var minutes: Int
+        var startDate: String
+        var days: Int
+        var minutes: Int
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("startDate", "First day as yyyy-MM-dd. Empty means today."),
+        .int("days", "Number of days, 1 to 31"),
+        .int("minutes", "Shortest slot in minutes, for example 30 or 60"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(startDate: args.string("startDate"), days: args.int("days"), minutes: args.int("minutes"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         text(await report(gate, ctx, name: name, json: ["startDate": a.startDate, "days": a.days, "minutes": a.minutes]), nothingDone: "")
     }
 }
 
-struct LiveCreateEventTool: Tool {
+struct LiveCreateEventTool: AppTool {
     let name = "createEvent"
     let description = "Creates a calendar event. The user must approve. Do not say it was created unless the result says so."
     let gate: PolicyGate; let ctx: TaskContext
 
-    @Generable
     struct Arguments {
         var title: String
-        @Guide(description: "Start as yyyy-MM-dd HH:mm in the user's time zone") var start: String
-        @Guide(description: "Length in minutes, 60 if the user did not say") var durationMinutes: Int
+        var start: String
+        var durationMinutes: Int
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("title", ""),
+        .string("start", "Start as yyyy-MM-dd HH:mm in the user's time zone"),
+        .int("durationMinutes", "Length in minutes, 60 if the user did not say"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(title: args.string("title"), start: args.string("start"), durationMinutes: args.int("durationMinutes"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         text(await report(gate, ctx, name: name, json: ["title": a.title, "start": a.start, "durationMinutes": a.durationMinutes]), nothingDone: "Tell the user nothing was created.")
     }
 }
 
-struct LiveMoveEventTool: Tool {
+struct LiveMoveEventTool: AppTool {
     let name = "moveEvent"
     let description = "Moves an event the user has just seen to a new start time, keeping its length. Needs the event id from readCalendar. The user must approve."
     let gate: PolicyGate; let ctx: TaskContext
 
-    @Generable
     struct Arguments {
-        @Guide(description: "Event id such as e3, from readCalendar") var event: String
-        @Guide(description: "New start as yyyy-MM-dd HH:mm") var newStart: String
+        var event: String
+        var newStart: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("event", "Event id such as e3, from readCalendar"),
+        .string("newStart", "New start as yyyy-MM-dd HH:mm"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(event: args.string("event"), newStart: args.string("newStart"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         text(await report(gate, ctx, name: name, json: ["event": a.event, "newStart": a.newStart]), nothingDone: "Tell the user nothing was moved.")
     }
 }
 
-struct LiveDeleteEventTool: Tool {
+struct LiveDeleteEventTool: AppTool {
     let name = "deleteEvent"
     let description = "Deletes an event the user has just seen. Needs the event id from readCalendar. The user must confirm."
     let gate: PolicyGate; let ctx: TaskContext
 
-    @Generable
     struct Arguments {
-        @Guide(description: "Event id such as e3, from readCalendar") var event: String
+        var event: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("event", "Event id such as e3, from readCalendar"),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(event: args.string("event"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         text(await report(gate, ctx, name: name, json: ["event": a.event]), nothingDone: "Tell the user nothing was deleted.")
     }
 }

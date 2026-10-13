@@ -11,6 +11,7 @@ struct PendingApproval: Identifiable {
     let resume: CheckedContinuation<ApprovalResponse, Never>
 }
 
+@available(iOS 26.0, *)
 @MainActor @Observable
 final class SpikeModel {
     var prompt = ""
@@ -91,6 +92,7 @@ final class SpikeModel {
     }
 }
 
+@available(iOS 26.0, *)
 struct ModelApprover: ApprovalPresenter {
     let model: SpikeModel
     func requestApproval(for call: ToolCall, tool: ToolDescriptor, reason: ApprovalReason) async -> ApprovalResponse {

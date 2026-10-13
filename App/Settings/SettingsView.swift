@@ -60,7 +60,7 @@ struct SettingsView: View {
             } header: { Text("Chat") } footer: {
                 Text("The ring at the top right fills as the chat uses up the model's memory for one conversation. Speed shows tokens per second below each reply; it is an estimate.").font(DS.Typography.caption)
             }
-            if LiveChatService.reasoningCompiled {
+            if AppleModel.reasoningCompiled {
                 Section {
                     Toggle(isOn: $settings.deepReasoning) { Text("Think before answering").font(DS.Typography.body) }
                         .tint(DS.Colors.accent).frame(minHeight: 44).accessibilityIdentifier("settings.reasoning")
@@ -87,7 +87,7 @@ struct SettingsView: View {
             Section("Testing") {
                 NavigationLink("Diagnostics") { DiagnosticsView() }
                 NavigationLink("Evals") { EvalView() }
-                NavigationLink("Spike") { SpikeView() }
+                if #available(iOS 26.0, *) { NavigationLink("Spike") { SpikeView() } }
                 NavigationLink("Design") { DesignGallery() }
             }
         }

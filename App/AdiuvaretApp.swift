@@ -7,7 +7,7 @@ import UserNotifications
 struct AdiuvaretApp: App {
     init() {
         DesignSystemFonts.register()
-        DownloadActivity.registerAll()
+        DownloadKeepAlive.registerAll()
         BriefingHub.registerBackground()
         UNUserNotificationCenter.current().delegate = BriefingNotificationDelegate.shared
         let info = Bundle.main.infoDictionary

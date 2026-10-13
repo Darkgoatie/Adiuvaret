@@ -1,6 +1,5 @@
 import Foundation
 import EventKit
-import FoundationModels
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
@@ -30,17 +29,25 @@ struct ListRemindersExecutor: ToolExecutor {
     }
 }
 
-struct LiveListRemindersTool: Tool {
+struct LiveListRemindersTool: AppTool {
     let name = "listReminders"
     let description = "Lists the user's open reminders and to-dos with due dates."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable
     struct Arguments {
-        @Guide(description: "Optional words to look for in reminder titles or list names. Empty lists everything.") var search: String
+        var search: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("search", "Optional words to look for in reminder titles or list names. Empty lists everything."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(search: args.string("search"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         let id = UUID()
         await reporter.toolStarted(id, title: String(localized: "Checking your reminders…"))
         let data = (try? JSONSerialization.data(withJSONObject: ["search": a.search])) ?? Data()

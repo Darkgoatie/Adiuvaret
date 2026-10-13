@@ -9,8 +9,11 @@ import Diagnostics
 import ModelLibrary
 import SkillKit
 
+/// Chat on Apple's on-device model. FoundationModels exists from iOS 26, so everything here is gated; ModelSettings only builds it
+/// when `AppleModel.isAvailable`.
+@available(iOS 26.0, *)
 @MainActor @Observable
-final class LiveChatService: ChatService {
+final class LiveChatService: ChatService, FixedToolsChat {
     private(set) var items: [ThreadItem] = []
     private(set) var isGenerating = false
     private var availabilityBanner: ChatBanner?
@@ -49,7 +52,7 @@ final class LiveChatService: ChatService {
     }
 
     private func makeSession(history: [ThreadItem] = [], toolIDs: [String]) -> LanguageModelSession {
-        let tools = host.tools(for: toolIDs)
+        let tools = host.appleTools(for: toolIDs)
         let instructions = AssistantPrompt.instructions(ids: toolIDs, memory: memoryBlock, online: false)
         guard let transcript = Self.transcript(instructions: instructions, history: history) else {
             return LanguageModelSession(tools: tools, instructions: instructions)
@@ -90,7 +93,7 @@ final class LiveChatService: ChatService {
         host.learn(from: trimmed)
         if title == String(localized: "New chat") { title = String(trimmed.prefix(40)) }
         guard availabilityBanner != .appleIntelligenceUnavailable else {
-            items.append(.error(id: UUID(), text: String(localized: "Apple Intelligence isn't available, so I can't answer yet.")))
+            items.append(.error(id: UUID(), text: String(localized: "Apple Intelligence isn't available, so I can't answer yet. Pick another model from the menu at the top.")))
             return
         }
         lastPrompt = trimmed
@@ -227,12 +230,7 @@ final class LiveChatService: ChatService {
 
     private static let reasoningUnsupportedKey = "reasoning.unsupported"
 
-    static var reasoningCompiled: Bool {
-        #if REASONING_API
-        if #available(iOS 27, *) { return true }
-        #endif
-        return false
-    }
+    static var reasoningCompiled: Bool { AppleModel.reasoningCompiled }
 
     /// Asks for the deepest reasoning the on-device model offers. The API exists from iOS 27, so it is
     /// compiled only when the build sets REASONING_API (the Xcode 27 pipeline) and used only on iOS 27 or later.

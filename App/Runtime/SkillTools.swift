@@ -1,5 +1,5 @@
 import Foundation
-import FoundationModels
+import ToolKit
 import AdiuvaretCore
 import PolicyEngine
 import SkillKit
@@ -30,17 +30,27 @@ struct SkillUseExecutor: ToolExecutor {
     }
 }
 
-struct LiveSkillUseTool: Tool {
+struct LiveSkillUseTool: AppTool {
     let name = "skill_use"
     let description = "Finds and reads the user's saved skills, which are named sets of steps for a kind of task. action find lists matching skills for some words, action use reads one skill by its id. After reading a skill, follow its steps with your other tools. Only report what the result contains."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
-    @Generable struct Arguments {
-        @Guide(description: "Either find or use") var action: String
-        @Guide(description: "For find: a few words about the task. For use: the skill id from the find result.") var query: String
+    struct Arguments {
+        var action: String
+        var query: String
     }
 
-    func call(arguments a: Arguments) async throws -> String {
+    let params: [ToolParam] = [
+        .string("action", "Either find or use"),
+        .string("query", "For find: a few words about the task. For use: the skill id from the find result."),
+    ]
+
+    func run(_ args: ToolArgs) async -> String {
+        do { return try await perform(arguments: Arguments(action: args.string("action"), query: args.string("query"))) }
+        catch { return "Failed: \(name) could not finish." }
+    }
+
+    func perform(arguments a: Arguments) async throws -> String {
         let id = UUID()
         await reporter.toolStarted(id, title: String(localized: "Looking at skills…"))
         let data = (try? JSONSerialization.data(withJSONObject: ["action": a.action, "query": a.query])) ?? Data()

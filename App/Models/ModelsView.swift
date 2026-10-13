@@ -15,6 +15,8 @@ struct ModelsView: View {
                 appleRow
             } header: {
                 Text("Built in")
+            } footer: {
+                if !AppleModel.isAvailable { Text("Choose a downloaded model below, or connect an online model in Settings, Providers.").font(DS.Typography.caption) }
             }
             Section {
                 ForEach(ModelCatalog.all) { row($0) }
@@ -54,6 +56,14 @@ struct ModelsView: View {
         }
     }
 
+    private var appleNote: String {
+        switch AppleModel.status {
+        case .available: String(localized: "Built in. Supports calendar and reminder tools.")
+        case .unsupportedOS: String(localized: "Needs iOS 26 or later on an iPhone that supports Apple Intelligence. The downloaded and online models below work on this iPhone.")
+        case .unavailable(let why): why + " " + String(localized: "The downloaded and online models work without it.")
+        }
+    }
+
     private func remaining(_ model: LocalModel) -> Int64 {
         CellularPolicy.remainingBytes(sizeBytes: model.sizeBytes, fraction: ModelStore.pendingFraction(model.id) ?? 0)
     }
@@ -66,10 +76,10 @@ struct ModelsView: View {
         HStack(spacing: Spacing.m) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Apple Intelligence").font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
-                Text("Built in. Supports calendar and reminder tools.").font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
+                Text(verbatim: appleNote).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
             }
             Spacer(minLength: Spacing.s)
-            trailingUse(id: ModelCatalog.appleID)
+            if AppleModel.isAvailable { trailingUse(id: ModelCatalog.appleID) }
         }
         .frame(minHeight: 44)
         .accessibilityIdentifier("models.apple")
