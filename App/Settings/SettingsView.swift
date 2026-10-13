@@ -52,6 +52,14 @@ struct SettingsView: View {
                     }
                 }
             }
+            Section {
+                Toggle(isOn: $settings.contextRing) { Text("Context ring").font(DS.Typography.body) }
+                    .tint(DS.Colors.accent).frame(minHeight: 44).accessibilityIdentifier("settings.contextRing")
+                Toggle(isOn: $settings.tokMeter) { Text("Speed under replies").font(DS.Typography.body) }
+                    .tint(DS.Colors.accent).frame(minHeight: 44).accessibilityIdentifier("settings.tokMeter")
+            } header: { Text("Chat") } footer: {
+                Text("The ring at the top right fills as the chat uses up the model's memory for one conversation. Speed shows tokens per second below each reply; it is an estimate.").font(DS.Typography.caption)
+            }
             if LiveChatService.reasoningCompiled {
                 Section {
                     Toggle(isOn: $settings.deepReasoning) { Text("Think before answering").font(DS.Typography.body) }

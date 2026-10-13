@@ -17,6 +17,8 @@ final class AppSettings {
     private static let quickBarKey = "settings.quickBar"
     private static let reasoningKey = "settings.deepReasoning"
     private static let shortcutsKey = "settings.shortcuts"
+    private static let contextRingKey = "settings.contextRing"
+    private static let tokMeterKey = "settings.tokMeter"
 
     var actionsOff: Bool {
         didSet {
@@ -41,6 +43,16 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(quickBarOn, forKey: Self.quickBarKey) }
     }
 
+    /// The ring at the top right of a chat that fills as the context window does. On by default.
+    var contextRing: Bool {
+        didSet { UserDefaults.standard.set(contextRing, forKey: Self.contextRingKey) }
+    }
+
+    /// Tokens per second under each reply. Off until the user turns it on.
+    var tokMeter: Bool {
+        didSet { UserDefaults.standard.set(tokMeter, forKey: Self.tokMeterKey) }
+    }
+
     /// The user's own shortcuts: a short word on the button and the prompt it puts in the message field.
     var shortcuts: [QuickShortcut] {
         didSet { UserDefaults.standard.set(try? JSONEncoder().encode(shortcuts), forKey: Self.shortcutsKey) }
@@ -49,6 +61,8 @@ final class AppSettings {
     private init() {
         deepReasoning = UserDefaults.standard.object(forKey: Self.reasoningKey) as? Bool ?? true
         quickBarOn = UserDefaults.standard.bool(forKey: Self.quickBarKey)
+        contextRing = UserDefaults.standard.object(forKey: Self.contextRingKey) as? Bool ?? true
+        tokMeter = UserDefaults.standard.bool(forKey: Self.tokMeterKey)
         if let data = UserDefaults.standard.data(forKey: Self.shortcutsKey),
            let list = try? JSONDecoder().decode([QuickShortcut].self, from: data) {
             shortcuts = list

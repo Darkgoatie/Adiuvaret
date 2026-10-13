@@ -176,15 +176,18 @@ final class LiveChatService: ChatService {
         let work = Task { @MainActor in
             while let session {
                 var started = false
+                var firstAt: ContinuousClock.Instant?
                 do {
                     for try await partial in Self.stream(session, modelPrompt, reasoning: wantReasoning) {
                         if !started {
+                            firstAt = clock.now
                             DiagnosticsLog.shared.record("first token", "\((clock.now - turnStart).milliseconds) ms since send, reasoning=\(wantReasoning && Self.reasoningCompiled)")
                             items.append(.assistant(id: replyID, text: partial.content, streaming: true)); started = true
                         }
                         else { replace(replyID, with: .assistant(id: replyID, text: partial.content, streaming: true)) }
                     }
                     DiagnosticsLog.shared.record("reply done", "\((clock.now - turnStart).milliseconds) ms total")
+                    if case .assistant(_, let t, _)? = items.first(where: { $0.id == replyID }) { ReplyStats.shared.record(replyID, text: t, since: firstAt) }
                     finishStreaming(replyID)
                     return
                 } catch is CancellationError {

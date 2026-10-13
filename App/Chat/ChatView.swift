@@ -70,6 +70,11 @@ struct ChatView: View {
         return i < service.items.count - 1
     }
 
+    private func speedText(for item: ThreadItem) -> String? {
+        guard AppSettings.shared.tokMeter, case .assistant(let id, _, false) = item else { return nil }
+        return ReplyStats.shared.text(for: id)
+    }
+
     private var header: some View {
         HStack(spacing: Spacing.s) {
             Button(action: openDrawer) { Image(systemName: "line.3.horizontal").imageScale(.large).frame(width: 44, height: 44) }
@@ -79,6 +84,9 @@ struct ChatView: View {
                 modelMenu
             }
             Spacer(minLength: 0)
+            if AppSettings.shared.contextRing {
+                ContextRing(fraction: ContextMeter.fraction(used: contextUsed, window: contextWindow), used: contextUsed, window: contextWindow)
+            }
             if WebSession.shared.hasPage {
                 Button { WebSession.shared.panelVisible = true } label: { Image(systemName: "globe").imageScale(.large).frame(width: 44, height: 44) }
                     .accessibilityLabel(Text("Open the browser")).accessibilityIdentifier("chat.browser")
@@ -95,6 +103,19 @@ struct ChatView: View {
         .padding(.horizontal, Spacing.s)
         .padding(.bottom, Spacing.xs)
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+    }
+
+    private var contextWindow: Int { ContextMeter.window(for: service.modelID) }
+
+    private var contextUsed: Int {
+        var total = ContextMeter.overheadTokens
+        for item in service.items {
+            switch item {
+            case .user(_, let t), .assistant(_, let t, _): total += ContextMeter.estimateTokens(t)
+            default: break
+            }
+        }
+        return total
     }
 
     private var modelMenu: some View {
@@ -137,7 +158,7 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Spacing.l) {
                         ForEach(service.items) { item in
-                            ItemView(item: item, service: service)
+                            ItemView(item: item, service: service, speed: speedText(for: item))
                                 .equatable()
                                 .messageActions(item, service: service, editing: $editing, saved: turnFinished)
                                 .id(item.id)
@@ -176,9 +197,10 @@ private struct ItemView: View, Equatable {
     let service: any ChatService
     /// A snapshot of what the row shows, a plain string so it can be compared from any thread.
     let key: String
+    let speed: String?
 
-    init(item: ThreadItem, service: any ChatService) {
-        self.item = item; self.service = service; self.key = item.renderKey
+    init(item: ThreadItem, service: any ChatService, speed: String? = nil) {
+        self.item = item; self.service = service; self.speed = speed; self.key = item.renderKey + (speed ?? "")
     }
 
     /// Two rows are the same when their content is, so a streaming reply redraws only itself instead of every earlier message.
@@ -188,7 +210,11 @@ private struct ItemView: View, Equatable {
         switch item {
         case .user(_, let t): MessageBubble(role: .user, text: t)
         case .userFiles(_, let files): AttachmentRow(files: files)
-        case .assistant(_, let t, let s): MessageBubble(role: .assistant, text: t, isStreaming: s)
+        case .assistant(_, let t, let s):
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                MessageBubble(role: .assistant, text: t, isStreaming: s)
+                if let speed { SpeedLabel(text: speed) }
+            }
         case .tool(_, let p, let t, let d): ToolProgressRow(phase: p, title: t, details: d)
         case .action(let id, let p, let t, let d, let o):
             ActionCard(phase: p, title: t, detail: d, openTitle: o, onUndo: { service.undo(id) })

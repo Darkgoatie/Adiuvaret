@@ -129,6 +129,7 @@ final class MLXChatService: ChatService {
                 if !prepared.documents.isEmpty || !prepared.imageURLs.isEmpty { filesInSession = true }
                 var raw = ""
                 var started = false
+                var firstAt: ContinuousClock.Instant?
                 var outgoing = message
                 for round in 0..<2 {
                     raw = ""
@@ -138,6 +139,7 @@ final class MLXChatService: ChatService {
                         guard !shown.isEmpty, started || !SkillCall.hidesPartial(shown) else { continue }
                         if !started {
                             started = true
+                            firstAt = clock.now
                             DiagnosticsLog.shared.record("first token", "\((clock.now - start).milliseconds) ms, model=\(modelID)")
                             items.append(.assistant(id: replyID, text: shown, streaming: true))
                         } else {
@@ -159,6 +161,7 @@ final class MLXChatService: ChatService {
                 }
                 if started {
                     replace(replyID, ThinkFilter.visible(TurnMarkers.clean(raw)), streaming: false)
+                    ReplyStats.shared.record(replyID, text: raw, since: firstAt)
                     // The session holds the long message with the fetched data. Start the next turn from the plain saved messages.
                     if context != nil || filesInSession { session = nil; filesInSession = false }
                     DiagnosticsLog.shared.record("reply done", "\((clock.now - start).milliseconds) ms, model=\(modelID)")

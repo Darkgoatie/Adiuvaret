@@ -142,6 +142,7 @@ final class CloudChatService: ChatService {
 
             var turns = ProviderWire.turns(from: history)
             var shown = ""; var started = false
+            var firstAt: ContinuousClock.Instant?
             do {
                 let plainSystem = AssistantPrompt.instructions(ids: [], memory: memoryBlock.isEmpty ? "" : " " + memoryBlock, online: true)
                 if !useTools { system = plainSystem }
@@ -158,6 +159,7 @@ final class CloudChatService: ChatService {
                                 shown += piece
                                 if !started {
                                     started = true
+                                    firstAt = clock.now
                                     DiagnosticsLog.shared.record("first token", "\((clock.now - start).milliseconds) ms, cloud=\(provider.id)")
                                     items.append(.assistant(id: replyID, text: shown, streaming: true))
                                 } else {
@@ -190,6 +192,7 @@ final class CloudChatService: ChatService {
                 if !started, !shown.isEmpty { started = true; items.append(.assistant(id: replyID, text: shown, streaming: true)) }
                 if started {
                     replace(replyID, shown.trimmingCharacters(in: .whitespacesAndNewlines), streaming: false)
+                    ReplyStats.shared.record(replyID, text: shown, since: firstAt)
                     DiagnosticsLog.shared.record("reply done", "\((clock.now - start).milliseconds) ms, cloud=\(provider.id)")
                 } else if !Task.isCancelled {
                     items.append(.error(id: UUID(), text: String(localized: "\(provider.name) didn't write anything. Try asking again.")))
