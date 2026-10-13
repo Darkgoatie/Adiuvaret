@@ -277,7 +277,10 @@ public enum ConnectorValidator {
 
 /// Every connector written as a manifest. A new connector is one file with one value, added here.
 public enum ConnectorRegistry {
-    public static let manifests: [ConnectorManifest] = []
+    public static let manifests: [ConnectorManifest] = [
+        SlackManifest.manifest, DiscordManifest.manifest, FigmaManifest.manifest,
+        MondayManifest.manifest, GitLabManifest.manifest, BitbucketManifest.manifest,
+    ]
 
     public static func manifest(_ id: String) -> ConnectorManifest? { manifests.first { $0.id == id } }
 

@@ -111,6 +111,20 @@ import Foundation
         #expect(m.catalogEntries.map(\.id) == ["listTodoistTasks", "addTodoistTask"])
     }
 
+    @Test func itemsKeyWalksDottedPathsAndArrayIndexes() {
+        let data = Data(#"{"data":{"boards":[{"items_page":{"items":[{"name":"A","id":"1"},{"name":"B","id":"2"}]}}]}}"#.utf8)
+        let spec = ConnectorListSpec(itemsKey: "data.boards.0.items_page.items", line: "{name} ({id})", requiredField: "name", header: "items", empty: "none")
+        #expect(ConnectorEngine.lines(spec, data: data, args: [:]) == ["A (1)", "B (2)"])
+        let missing = ConnectorListSpec(itemsKey: "data.boards.3.items", line: "{name}", requiredField: "name", header: "items", empty: "none")
+        #expect(ConnectorEngine.lines(missing, data: data, args: [:]).isEmpty)
+    }
+
+    @Test func registeredManifestsAreUniqueAndOnTheirOwnHosts() {
+        let ids = ConnectorRegistry.manifests.map(\.id)
+        #expect(Set(ids).count == ids.count)
+        for m in ConnectorRegistry.manifests { #expect(ServiceHost.hosts[m.id] == m.host, Comment(rawValue: m.id)) }
+    }
+
     @Test func argumentRulesCleanText() {
         let words = ConnectorArg("q", guide: "", rule: .words, maxLength: 20, truncates: true)
         #expect(words.clean("is:open author:@me") == "is open author me")
