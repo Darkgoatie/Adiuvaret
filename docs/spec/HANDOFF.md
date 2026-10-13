@@ -30,3 +30,9 @@ Wait for the user to say build, then device results. After that: 21 (activity lo
 
 ## Skill system (decision 18, tasks 55-61)
 Built; compile check green on Xcode 27 (run 38322855528, 25 skill tests, signed export, not uploaded). Packages/SkillKit (AgentSkill, SkillRegistry, BuiltinSkills, SkillImport, SkillMigration, SkillIntent/SkillCall). App: SkillRegistryHub (shared registry, one-time migration of skills.json), SkillHub (match, offer, save), SkillTools (skill_use for Apple), SkillsView under Memory. MLX and Cloud: matched skill body is injected and its read-only tools run in code; models can also reply `skill_use: <id>`. Cloud sees only web-only skills. Device check pending.
+
+## Browser agent on TUMOnline (2026-10-13)
+Device report 1: "Check my TUM Calendar" after sign-in answered from the iPhone calendar. Cause: "calendar" blocked the browse intent and the router ignored an open page. Fix a03c38f (task 68), in build 10; build 10 had to be added to the Internal TestFlight group by API (task 71).
+Device report 2: the agent looped Looked at page / Close. Cause: the listing only held elements in view and uncovered; the Calendar link was not listed. Fix be7f6d3 and fcc4043 (task 69): `find` searches the whole page by label, off-screen matches are marked, an identical listing triggers a repeat notice.
+Site notes (decision 20, task 67, 59cd81f): click labels per host kept on the phone and shown on the next openWebsite.
+Open: a link behind an open overlay is still skipped; the model could ignore the repeat notice (a hard stop after N identical steps is the stricter option); TUMOnline's real markup was never seen. Swift for 67 to 69 is compiled for the first time by the next Xcode Cloud run.
