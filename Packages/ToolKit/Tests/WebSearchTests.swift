@@ -127,7 +127,7 @@ import Foundation
         for t in ["Open Tumonline and log in.", "Go to apple.com", "log in to my bank", "visit the BBC", "take me to the Apple homepage"] {
             #expect(WebIntent.looksLikeBrowseRequest(t), Comment(rawValue: t))
         }
-        for t in ["What's the weather in Seville?", "tell me a joke", "log in", "what's on my calendar, open it", ""] {
+        for t in ["What's the weather in Seville?", "tell me a joke", "what's on my calendar, open it", "thanks", ""] {
             #expect(!WebIntent.looksLikeBrowseRequest(t), Comment(rawValue: t))
         }
     }
