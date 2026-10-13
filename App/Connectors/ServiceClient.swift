@@ -40,7 +40,7 @@ enum ServiceClient {
         guard var request, let url = request.url else { throw Failure.wrongHost }
         guard ServiceHost.isAllowed(url, for: connector) else { throw Failure.wrongHost }
         guard let token = SecretStore.token(for: connector) else { throw Failure.notConnected }
-        request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        (ConnectorRegistry.manifest(connector)?.auth ?? .bearer).apply(token, to: &request)
         request.timeoutInterval = 15
         let config = URLSessionConfiguration.ephemeral
         config.httpCookieStorage = nil

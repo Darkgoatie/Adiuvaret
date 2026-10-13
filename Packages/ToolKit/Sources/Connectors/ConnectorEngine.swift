@@ -228,6 +228,7 @@ public enum ConnectorValidator {
         var p: [String] = []
         if m.id.isEmpty || m.id != m.id.lowercased() || !m.id.allSatisfy({ $0.isLetter || $0.isNumber }) { p.append("id must be lowercase letters and digits") }
         if m.host.isEmpty || m.host.contains("/") || m.host.contains(":") || m.host.contains("@") || m.host != m.host.lowercased() { p.append("host must be a bare lowercase host") }
+        if m.headers.keys.contains(where: { ["authorization", "x-api-key", "private-token", "x-figma-token"].contains($0.lowercased()) }) { p.append("auth headers belong in `auth`, not `headers`") }
         if m.tools.isEmpty { p.append("no tools") }
         if Set(m.tools.map(\.name)).count != m.tools.count { p.append("duplicate tool names") }
         for t in m.tools {

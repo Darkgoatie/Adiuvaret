@@ -1,5 +1,26 @@
 import Foundation
 
+/// How a pasted token is attached to a request. Set once per connector.
+public enum ConnectorAuth: Sendable, Equatable {
+    /// Authorization: Bearer <token>
+    case bearer
+    /// Authorization: <prefix> <token>, for example "Bot".
+    case scheme(String)
+    /// Authorization: <token> with no prefix.
+    case rawAuthorization
+    /// A named header carrying the token, for example PRIVATE-TOKEN.
+    case header(String)
+
+    public func apply(_ token: String, to request: inout URLRequest) {
+        switch self {
+        case .bearer: request.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
+        case .scheme(let p): request.setValue(p + " " + token, forHTTPHeaderField: "Authorization")
+        case .rawAuthorization: request.setValue(token, forHTTPHeaderField: "Authorization")
+        case .header(let name): request.setValue(token, forHTTPHeaderField: name)
+        }
+    }
+}
+
 /// One argument a tool takes. The rule decides what text may reach a request, so a model cannot add a path segment, a second host or a query qualifier.
 public struct ConnectorArg: Sendable, Equatable {
     public enum Rule: Sendable, Equatable {
@@ -184,14 +205,17 @@ public struct ConnectorManifest: Sendable, Equatable {
     public let networkNote: String
     public let host: String
     public let headers: [String: String]
+    public let auth: ConnectorAuth
+    /// Where the user gets a token, shown next to the paste field.
+    public let tokenHelp: String
     public let tools: [ConnectorToolSpec]
 
     public init(id: String, title: String, company: String? = nil, category: String, symbol: String, brandAsset: String, brandRGB: [Double],
                 defaultOn: Bool = false, reads: String, changes: String, networkNote: String, host: String,
-                headers: [String: String] = [:], tools: [ConnectorToolSpec]) {
+                headers: [String: String] = [:], auth: ConnectorAuth = .bearer, tokenHelp: String = "", tools: [ConnectorToolSpec]) {
         self.id = id; self.title = title; self.company = company ?? id; self.category = category; self.symbol = symbol
         self.brandAsset = brandAsset; self.brandRGB = brandRGB; self.defaultOn = defaultOn; self.reads = reads; self.changes = changes
-        self.networkNote = networkNote; self.host = host; self.headers = headers; self.tools = tools
+        self.networkNote = networkNote; self.host = host; self.headers = headers; self.auth = auth; self.tokenHelp = tokenHelp; self.tools = tools
     }
 
     public var network: String { "Requests go to \(host) with your own token. \(networkNote)" }
