@@ -225,14 +225,11 @@ import Foundation
         }
     }
 
-    @Test func profileFixtureShowsCurrentObjectResponseLimitation() throws {
+    @Test func profileObjectRendersAsOneLine() throws {
         let spec = try #require(manifest.tool("getCalendlyProfile")?.list)
         let lines = ConnectorEngine.lines(spec, data: profileJSON, args: [:])
-        #expect(lines.isEmpty,
-                Comment(rawValue: "Known engine limitation: list parsing expects an array, but /users/me returns an object in resource."))
-
-        let out = ConnectorEngine.result(spec, data: profileJSON, args: [:])
-        #expect(out == "Could not parse the Calendly profile response.", Comment(rawValue: out))
+        #expect(lines.count == 1, Comment(rawValue: "\(lines)"))
+        #expect(lines.first?.hasPrefix("John Doe <user@example.com>") == true, Comment(rawValue: "\(lines)"))
     }
 
     @Test func eventTypesFixtureParsesAndRendersFirstLine() throws {

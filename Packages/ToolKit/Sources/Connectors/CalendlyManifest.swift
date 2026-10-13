@@ -21,6 +21,7 @@ public enum CalendlyManifest {
                 description: "Gets the current Calendly user profile, including the canonical user URI needed by other Calendly tools.",
                 request: ConnectorRequestSpec(path: "/users/me"),
                 list: ConnectorListSpec(
+                    itemsKey: "resource",
                     line: "{name|80} <{email}>[[ — {timezone}]] ({uri})",
                     requiredField: "uri",
                     limit: 1,
