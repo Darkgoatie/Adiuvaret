@@ -29,6 +29,11 @@ final class ProviderStore {
 
     func isConnected(_ id: String) -> Bool { connected.contains(id) }
 
+    private static let noticeKey = "providers.dataNoticeSeen"
+    /// True until the user has been told once that online models receive their chats.
+    var needsDataNotice: Bool { !UserDefaults.standard.bool(forKey: Self.noticeKey) }
+    func markDataNoticeSeen() { UserDefaults.standard.set(true, forKey: Self.noticeKey) }
+
     /// Models to show for a provider: the live list when it was fetched, otherwise the suggestions.
     func models(for p: Provider) -> [String] {
         let live = cached[p.id] ?? []

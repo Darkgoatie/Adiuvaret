@@ -53,6 +53,7 @@ struct ProviderDetailView: View {
     @State private var pasted = ""
     @State private var message: String?
     @State private var confirmRemove = false
+    @State private var showDataNotice = false
     @FocusState private var focused: Bool
 
     private var connected: Bool { store.isConnected(provider.id) }
@@ -68,6 +69,20 @@ struct ProviderDetailView: View {
         .confirmationDialog(String(localized: "Remove this key?"), isPresented: $confirmRemove, titleVisibility: .visible) {
             Button(String(localized: "Remove key"), role: .destructive) { store.disconnect(provider.id) }
         } message: { Text("The key is deleted from this iPhone. The provider's account is not changed.") }
+        .alert(String(localized: "Your chats go to the provider"), isPresented: $showDataNotice) {
+            Button(String(localized: "Cancel"), role: .cancel) {}
+            Button(String(localized: "Continue")) {
+                store.markDataNoticeSeen()
+                Task { await connect() }
+            }
+        } message: {
+            Text("When you chat with an online model, your messages and anything its tools read for it are sent to that company. The models on this iPhone never send anything.")
+        }
+    }
+
+    /// The first connection of any provider shows the notice once; after that, Connect goes straight through.
+    private func tryConnect() {
+        if store.needsDataNotice { showDataNotice = true } else { Task { await connect() } }
     }
 
     // MARK: not connected
@@ -78,13 +93,13 @@ struct ProviderDetailView: View {
                 .textContentType(.password).autocorrectionDisabled().textInputAutocapitalization(.never)
                 .font(DS.Typography.body).frame(minHeight: 44).focused($focused)
                 .accessibilityIdentifier("provider.key")
-                .onSubmit { Task { await connect() } }
+                .onSubmit { tryConnect() }
             Button { pasteFromClipboard() } label: {
                 Label(String(localized: "Paste from clipboard"), systemImage: "doc.on.clipboard").font(DS.Typography.body)
                     .foregroundStyle(DS.Colors.accentText).frame(minHeight: 44, alignment: .leading)
             }
             .accessibilityIdentifier("provider.paste")
-            Button { Task { await connect() } } label: {
+            Button { tryConnect() } label: {
                 HStack {
                     Text(store.checking.contains(provider.id) ? String(localized: "Checking the key…") : String(localized: "Connect"))
                         .font(DS.Typography.body.weight(.semibold))

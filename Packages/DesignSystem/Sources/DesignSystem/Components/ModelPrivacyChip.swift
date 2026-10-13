@@ -16,7 +16,7 @@ public struct ModelPrivacyChip: View {
     public var body: some View {
         HStack(spacing: Spacing.xs) {
             Image(systemName: icon).imageScale(.small)
-            Text(verbatim: "\(model) · \(label)").lineLimit(2)
+            Text(verbatim: label.isEmpty ? model : "\(model) · \(label)").lineLimit(2)
         }
         .font(DS.Typography.caption)
         .foregroundStyle(tint)
@@ -24,7 +24,7 @@ public struct ModelPrivacyChip: View {
         .padding(.vertical, prominent ? Spacing.xs : 0)
         .background(prominent ? DS.Colors.surfaceRaised : .clear, in: RoundedRectangle(cornerRadius: Radius.s))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: "\(model), \(label)"))
+        .accessibilityLabel(Text(verbatim: label.isEmpty ? model : "\(model), \(label)"))
     }
 
     private var icon: String {
@@ -38,7 +38,7 @@ public struct ModelPrivacyChip: View {
     private var label: String {
         switch kind {
         case .onDevice, .localModel: L("Stays on your iPhone")
-        case .cloud(let p): L("Sent to \(p)")
+        case .cloud: ""
         case .offlineFallback: L("Offline, on your iPhone")
         }
     }
