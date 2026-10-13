@@ -14,6 +14,7 @@ xcodegen generate
 echo "Build number $BUILD"
 
 xcodebuild -downloadComponent MetalToolchain || true
-defaults write com.apple.dt.Xcode IDEPackageSupportDisableAutomaticPackageResolution -bool NO
-defaults write com.apple.dt.Xcode IDEDisableAutomaticPackageResolution -bool NO
-xcodebuild -resolvePackageDependencies -project Adiuvaret.xcodeproj -scheme Adiuvaret
+# Xcode Cloud will not resolve packages itself, so the versions pinned in ci_scripts/Package.resolved are used.
+# Regenerate that file with the "Resolve packages" GitHub workflow whenever project.yml dependencies change.
+mkdir -p Adiuvaret.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
+cp ci_scripts/Package.resolved Adiuvaret.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
