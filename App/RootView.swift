@@ -23,7 +23,7 @@ struct RootView: View {
                          switchModel: { id in ModelSettings.shared.select(id); store.switchModel(to: id) }, openModels: { handle(.models) })
                     .id(store.currentID)
             } drawer: {
-                DrawerView(chats: store.summaries, activeID: store.currentID, isOpen: drawerOpen, pendingApprovals: 1,
+                DrawerView(chats: store.summaries, activeID: store.currentID, isOpen: drawerOpen,
                            select: { route in handle(route) },
                            pin: { store.togglePin($0) },
                            delete: { store.delete($0) },
@@ -108,7 +108,6 @@ struct RootView: View {
         case .notes, .note: PlaceholderScreen(title: String(localized: "Notes and Tasks"), icon: "note.text")
         case .briefings: BriefingsView(open: { runBriefing($0) })
         case .briefing: EmptyView()
-        case .approvalsInbox: PlaceholderScreen(title: String(localized: "Approvals"), icon: "checkmark.seal")
         case .activity: PlaceholderScreen(title: String(localized: "Activity log"), icon: "list.bullet.rectangle")
         case .integrations: IntegrationsView()
         case .models: ModelsView(use: { id in ModelSettings.shared.select(id); if store.current.items.isEmpty { store.switchModel(to: id) } })
@@ -133,12 +132,11 @@ struct RootView: View {
         return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "id" }?.value.flatMap(UUID.init)
     }
 
-    /// adiuvaret://new, adiuvaret://approvals, adiuvaret://notes ...
+    /// adiuvaret://new, adiuvaret://briefings, adiuvaret://notes ...
     static func route(from url: URL) -> Route? {
         guard url.scheme == "adiuvaret" else { return nil }
         switch url.host() {
         case "new": return .newChat
-        case "approvals": return .approvalsInbox
         case "briefings": return .briefings
         case "notes": return .notes
         case "memory": return .memory

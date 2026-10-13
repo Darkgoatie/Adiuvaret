@@ -5,7 +5,6 @@ struct DrawerView: View {
     let chats: [ChatSummary]
     var activeID: UUID? = nil
     var isOpen = true
-    let pendingApprovals: Int
     let select: (Route) -> Void
     let pin: (UUID) -> Void
     let delete: (UUID) -> Void
@@ -89,14 +88,6 @@ struct DrawerView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 0) {
             Divider()
-            if pendingApprovals > 0 {
-                Button { select(.approvalsInbox) } label: {
-                    Label { Text(verbatim: String(localized: "\(pendingApprovals) waiting for your approval")).font(DS.Typography.subheadline) } icon: { Image(systemName: "checkmark.seal") }
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                }
-                .foregroundStyle(DS.Colors.accentText)
-                .padding(.horizontal, Spacing.l)
-            }
             bottomRow(String(localized: "Advanced"), symbol: "slider.horizontal.3", route: .advanced, id: "drawer.advanced")
             bottomRow(String(localized: "Settings"), symbol: "gearshape", route: .settings, id: "drawer.settings")
         }

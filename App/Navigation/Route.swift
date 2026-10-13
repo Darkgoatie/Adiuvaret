@@ -6,7 +6,6 @@ enum Route: Hashable {
     case chat(UUID)
     case briefings
     case briefing(UUID)
-    case approvalsInbox
     case notes
     case note(UUID)
     case memory
