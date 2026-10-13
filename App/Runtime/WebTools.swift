@@ -141,8 +141,8 @@ struct SearchWebExecutor: ToolExecutor {
         }
         if let subject = InfoFeeds.referenceSubject(for: asked), let text = await InfoFetcher.reference(subject: subject) { return text }
 
-        // With a Tavily key the model's own query is searched by a service that returns an answer and the matching passages.
-        if let key = SecretStore.token(for: Self.tavilyID), let text = await Self.tavily(asked, key: key) { return text }
+        // The model's own query goes to a search service that returns ranked pages with long excerpts; the built-in search below is the fallback.
+        if Self.parallelOn, let text = await Self.parallel(asked) { return text }
 
         // Up to three rounds: search, read the top pages, and if they do not cover the question try better words.
         var query = WebSearch.queryFrom(asked)
@@ -173,23 +173,26 @@ struct SearchWebExecutor: ToolExecutor {
         return failure ?? WebSearch.render([], query: asked)
     }
 
-    static let tavilyID = "websearch.tavily"
+    /// The free Parallel search Hermes uses when no search key is set. Switchable in Advanced, API access; off means the built-in search.
+    static let parallelKey = "websearch.parallel"
+    static var parallelOn: Bool { UserDefaults.standard.object(forKey: parallelKey) as? Bool ?? true }
+    private static let parallelSession = UUID().uuidString
 
-    /// Tavily's answer, or nil on any failure so the built-in search can still answer.
-    static func tavily(_ query: String, key: String) async -> String? {
-        guard let request = TavilySearch.request(query: query, key: key) else { return nil }
+    /// Parallel's answer, or nil on any failure (including its free-tier limit) so the built-in search can still answer.
+    static func parallel(_ query: String) async -> String? {
+        guard let request = ParallelSearch.request(query: query, session: parallelSession) else { return nil }
         let config = URLSessionConfiguration.ephemeral
         config.httpCookieStorage = nil; config.urlCache = nil
         config.timeoutIntervalForRequest = 20; config.timeoutIntervalForResource = 25
         let session = URLSession(configuration: config, delegate: NoRedirect(), delegateQueue: nil)
         defer { session.finishTasksAndInvalidate() }
         guard let (data, response) = try? await session.data(for: request), let http = response as? HTTPURLResponse else {
-            DiagnosticsLog.shared.record("web search", "tavily unreachable"); return nil
+            DiagnosticsLog.shared.record("web search", "parallel unreachable"); return nil
         }
-        guard http.statusCode == 200 else { DiagnosticsLog.shared.record("web search", "tavily status \(http.statusCode)"); return nil }
-        guard data.count < 800_000, let answer = TavilySearch.parse(data) else { DiagnosticsLog.shared.record("web search", "tavily unreadable"); return nil }
-        DiagnosticsLog.shared.record("web search", "tavily \(answer.hits.count) results, answer \(answer.summary.isEmpty ? "no" : "yes")")
-        return TavilySearch.render(answer, query: query)
+        guard http.statusCode == 200 else { DiagnosticsLog.shared.record("web search", "parallel status \(http.statusCode)"); return nil }
+        guard data.count < 1_500_000, let hits = ParallelSearch.parse(data) else { DiagnosticsLog.shared.record("web search", "parallel no usable answer"); return nil }
+        DiagnosticsLog.shared.record("web search", "parallel \(hits.count) results")
+        return ParallelSearch.render(hits, query: query)
     }
 
     private enum Round {
