@@ -283,6 +283,7 @@ final class LiveChatService: ChatService, FixedToolsChat {
     }
 }
 
+@available(iOS 26.0, *)
 extension LiveChatService: ToolSurface {
     func surfaceAppend(_ item: ThreadItem) { items.append(item) }
     func surfaceReplace(_ id: UUID, with item: ThreadItem) { replace(id, with: item) }
