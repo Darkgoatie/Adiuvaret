@@ -2,7 +2,7 @@ name: Adiuvaret
 options:
   bundleIdPrefix: com.halit
   deploymentTarget:
-    iOS: "26.0"
+    iOS: "17.0"
 packages:
   AdiuvaretPackages:
     path: Packages
@@ -64,6 +64,7 @@ targets:
         MARKETING_VERSION: "0.3.0"
         CURRENT_PROJECT_VERSION: "11"
         SWIFT_VERSION: "6.0"
+        OTHER_LDFLAGS: ["$(inherited)", "-weak_framework", "FoundationModels"]
         SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: Config/Info.plist

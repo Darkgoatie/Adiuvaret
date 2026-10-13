@@ -31,6 +31,19 @@ import Foundation
         #expect(ModelCatalog.choices(installed: []).map(\.id) == ["apple"])
     }
 
+    @Test func withoutAppleIntelligenceTheMenuAndFallbackSkipIt() {
+        let a = "mlx-community/Qwen3-1.7B-4bit", b = "mlx-community/gemma-3-1b-it-4bit"
+        #expect(ModelCatalog.choices(installed: [], appleAvailable: false).isEmpty)
+        #expect(ModelCatalog.choices(installed: [a, b], appleAvailable: false).map(\.id) == [b, a])
+        #expect(ModelCatalog.resolve(active: nil, installed: [], appleAvailable: false) == ModelCatalog.noModelID)
+        #expect(ModelCatalog.resolve(active: "apple", installed: [], appleAvailable: false) == ModelCatalog.noModelID)
+        #expect(ModelCatalog.resolve(active: "apple", installed: [a, b], appleAvailable: false) == b)
+        #expect(ModelCatalog.resolve(active: a, installed: [a, b], appleAvailable: false) == a)
+        #expect(ModelCatalog.resolve(active: "openai:gpt-4.1", installed: [], connected: ["openai"], appleAvailable: false) == "openai:gpt-4.1")
+        #expect(ModelCatalog.resolve(active: "openai:gpt-4.1", installed: [], connected: [], appleAvailable: false) == ModelCatalog.noModelID)
+        #expect(ModelCatalog.resolve(active: "apple", installed: [], appleAvailable: true) == "apple")
+    }
+
     @Test func resolveFallsBackToAppleWhenTheModelIsGone() {
         let q = "mlx-community/Qwen3-1.7B-4bit"
         #expect(ModelCatalog.resolve(active: q, installed: [q]) == q)

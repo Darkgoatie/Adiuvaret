@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "AdiuvaretPackages",
     defaultLocalization: "en",
-    platforms: [.iOS(.v26), .macOS(.v26)],
+    platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
         .library(name: "AdiuvaretCore", targets: ["AdiuvaretCore"]),
         .library(name: "PolicyEngine", targets: ["PolicyEngine"]),

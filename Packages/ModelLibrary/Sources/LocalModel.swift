@@ -31,6 +31,8 @@ public struct ModelChoice: Sendable, Equatable, Identifiable {
 public enum ModelCatalog {
     public static let appleID = "apple"
     public static let apple = ModelChoice(id: appleID, name: "Apple")
+    /// The id of a chat that has no usable model yet: no Apple Intelligence, nothing downloaded, no online provider.
+    public static let noModelID = "none"
 
     private static let apache = "https://www.apache.org/licenses/LICENSE-2.0"
     private static let gemma = "https://ai.google.dev/gemma/terms"
@@ -58,17 +60,22 @@ public enum ModelCatalog {
 
     public static func model(_ id: String) -> LocalModel? { all.first { $0.id == id } }
 
-    /// The built-in model first, then the downloaded ones in catalog order.
-    public static func choices(installed: Set<String>) -> [ModelChoice] {
-        [apple] + all.filter { installed.contains($0.id) }.map { ModelChoice(id: $0.id, name: $0.name) }
+    /// Apple's model first when this iPhone has it, then the downloaded ones in catalog order.
+    public static func choices(installed: Set<String>, appleAvailable: Bool = true) -> [ModelChoice] {
+        (appleAvailable ? [apple] : []) + all.filter { installed.contains($0.id) }.map { ModelChoice(id: $0.id, name: $0.name) }
     }
 
-    /// The model to use: the saved one if it is still available, otherwise the built-in one.
-    public static func resolve(active: String?, installed: Set<String>, connected: Set<String> = []) -> String {
-        guard let active, active != appleID else { return appleID }
-        if let (p, _) = Providers.parseModelID(active) { return connected.contains(p.id) ? active : appleID }
-        guard installed.contains(active), model(active) != nil else { return appleID }
-        return active
+    /// The model to use: the saved one if it can still be used, otherwise Apple's when this iPhone has it, otherwise the
+    /// smallest downloaded one, otherwise `noModelID`. The app adds an online model on top of that when one is connected.
+    public static func resolve(active: String?, installed: Set<String>, connected: Set<String> = [], appleAvailable: Bool = true) -> String {
+        func usable(_ id: String) -> Bool {
+            if id == appleID { return appleAvailable }
+            if let (p, _) = Providers.parseModelID(id) { return connected.contains(p.id) }
+            return installed.contains(id) && model(id) != nil
+        }
+        if let active, usable(active) { return active }
+        if appleAvailable { return appleID }
+        return all.first { installed.contains($0.id) }?.id ?? noModelID
     }
 }
 
