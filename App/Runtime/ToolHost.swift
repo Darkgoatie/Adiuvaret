@@ -56,7 +56,8 @@ final class ToolHost {
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
                                          "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
                                          "listGitHubIssues": ListGitHubExecutor(), "listGitHubRepos": ListGitHubReposExecutor(), "listGitHubCommits": ListGitHubCommitsExecutor(), "searchNotion": SearchNotionExecutor(), "searchPastChats": SearchPastChatsExecutor(), "skill_use": SkillUseExecutor()]
-        let gate = PolicyGate(engine: engine, approvals: bridge, executors: rawExecutors.mapValues { RecordingExecutor(inner: $0, ctx: ctx) as any ToolExecutor })
+        let gate = PolicyGate(engine: engine, approvals: bridge, executors: rawExecutors.mapValues { RecordingExecutor(inner: $0, ctx: ctx) as any ToolExecutor },
+                              observer: { call, outcome, asked, ms in ActivityStore.shared.record(ActivityEntry.make(call, outcome, asked: asked, milliseconds: ms)) })
         let all: [String: any Tool] = [
             "readCalendar": LiveReadCalendarTool(gate: gate, ctx: ctx, reporter: bridge),
             "findFreeTime": LiveFreeTimeTool(gate: gate, ctx: ctx),

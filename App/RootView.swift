@@ -108,7 +108,7 @@ struct RootView: View {
         case .notes, .note: PlaceholderScreen(title: String(localized: "Notes and Tasks"), icon: "note.text")
         case .briefings: BriefingsView(open: { runBriefing($0) })
         case .briefing: EmptyView()
-        case .activity: PlaceholderScreen(title: String(localized: "Activity log"), icon: "list.bullet.rectangle")
+        case .activity: ActivityView()
         case .integrations: IntegrationsView()
         case .models: ModelsView(use: { id in ModelSettings.shared.select(id); if store.current.items.isEmpty { store.switchModel(to: id) } })
         case .privacy: PlaceholderScreen(title: String(localized: "Privacy"), icon: "lock.shield")
