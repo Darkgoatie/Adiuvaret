@@ -135,7 +135,7 @@ struct ProviderDetailView: View {
             }
             .frame(minHeight: 44)
         } footer: {
-            Text("Chats with these models are sent to \(provider.name). Your calendar, reminders, notes and memory are never included.")
+            Text("Chats with these models are sent to \(provider.name). These models can use the same tools as the on-device one, so anything a tool reads for them, such as calendar events, reminders, notes or a web page, is sent to \(provider.name) to answer you. Writes still ask you first.")
         }
         Section {
             ForEach(store.models(for: provider), id: \.self) { model in

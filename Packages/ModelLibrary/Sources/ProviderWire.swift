@@ -138,4 +138,129 @@ public enum ProviderWire {
         default: "\(provider.name) answered with status \(status)."
         }
     }
+
+    // MARK: tool calling
+
+    /// A streamed piece with tool-call fragments. The plain `chunk` keeps working for chats without tools.
+    public struct Delta: Sendable, Equatable {
+        public struct Fragment: Sendable, Equatable {
+            public let index: Int
+            public let id: String?
+            public let name: String?
+            public let arguments: String?
+            public init(index: Int, id: String? = nil, name: String? = nil, arguments: String? = nil) { self.index = index; self.id = id; self.name = name; self.arguments = arguments }
+        }
+        public var text: String
+        public var toolFragments: [Fragment]
+        public var toolStop: Bool
+        public var done: Bool
+        public var error: String?
+        public init(text: String = "", toolFragments: [Fragment] = [], toolStop: Bool = false, done: Bool = false, error: String? = nil) {
+            self.text = text; self.toolFragments = toolFragments; self.toolStop = toolStop; self.done = done; self.error = error
+        }
+    }
+
+    public static func delta(_ provider: Provider, line: String) -> Delta? {
+        guard line.hasPrefix("data:") else { return nil }
+        let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+        if payload == "[DONE]" { return Delta(done: true) }
+        guard let data = payload.data(using: .utf8), let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        if let err = o["error"] as? [String: Any] { return Delta(done: true, error: (err["message"] as? String).map { String($0.prefix(160)) } ?? "The provider reported an error.") }
+        switch provider.api {
+        case .openAICompatible:
+            guard let choice = (o["choices"] as? [[String: Any]])?.first else { return nil }
+            let d = choice["delta"] as? [String: Any]
+            var out = Delta(text: (d?["content"] as? String) ?? "")
+            for (n, t) in ((d?["tool_calls"] as? [[String: Any]]) ?? []).enumerated() {
+                let fn = t["function"] as? [String: Any]
+                out.toolFragments.append(.init(index: (t["index"] as? Int) ?? n, id: t["id"] as? String, name: fn?["name"] as? String, arguments: fn?["arguments"] as? String))
+            }
+            let reason = (choice["finish_reason"] as? String) ?? ""
+            if reason == "tool_calls" || reason == "function_call" { out.toolStop = true }
+            if !reason.isEmpty && out.text.isEmpty && out.toolFragments.isEmpty { out.done = true }
+            return out
+        case .anthropic:
+            switch o["type"] as? String {
+            case "content_block_start":
+                if let b = o["content_block"] as? [String: Any], (b["type"] as? String) == "tool_use" {
+                    return Delta(toolFragments: [.init(index: (o["index"] as? Int) ?? 0, id: b["id"] as? String, name: b["name"] as? String)])
+                }
+                return nil
+            case "content_block_delta":
+                guard let d = o["delta"] as? [String: Any] else { return nil }
+                switch d["type"] as? String {
+                case "text_delta": return Delta(text: (d["text"] as? String) ?? "")
+                case "input_json_delta": return Delta(toolFragments: [.init(index: (o["index"] as? Int) ?? 0, arguments: d["partial_json"] as? String)])
+                default: return nil
+                }
+            case "message_delta":
+                if let d = o["delta"] as? [String: Any], (d["stop_reason"] as? String) == "tool_use" { return Delta(toolStop: true) }
+                return nil
+            case "message_stop": return Delta(done: true)
+            case "error": return Delta(done: true, error: ((o["error"] as? [String: Any])?["message"] as? String).map { String($0.prefix(160)) } ?? "The provider reported an error.")
+            default: return nil
+            }
+        }
+    }
+
+    /// A streaming request with tools. Turns carry tool calls and results in the provider's own shape.
+    public static func toolBody(_ provider: Provider, model: String, system: String, turns: [WireTurn], tools: [WireTool], maxTokens: Int = 2048) -> Data? {
+        switch turns.last {
+        case .user?, .toolResults?: break
+        default: return nil
+        }
+        let schemas: [[String: Any]] = tools.compactMap { t in
+            guard let d = t.schemaJSON.data(using: .utf8), let schema = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { return nil }
+            switch provider.api {
+            case .openAICompatible: return ["type": "function", "function": ["name": t.name, "description": t.description, "parameters": schema] as [String: Any]]
+            case .anthropic: return ["name": t.name, "description": t.description, "input_schema": schema]
+            }
+        }
+        var list: [[String: Any]] = []
+        for turn in turns {
+            switch (turn, provider.api) {
+            case (.user(let text, let images), .openAICompatible):
+                if images.isEmpty { list.append(["role": "user", "content": text]) } else {
+                    var parts: [[String: Any]] = [["type": "text", "text": text]]
+                    for i in images { parts.append(["type": "image_url", "image_url": ["url": "data:\(i.mediaType);base64,\(i.base64)"]]) }
+                    list.append(["role": "user", "content": parts])
+                }
+            case (.user(let text, let images), .anthropic):
+                if images.isEmpty { list.append(["role": "user", "content": text]) } else {
+                    var parts: [[String: Any]] = images.map { ["type": "image", "source": ["type": "base64", "media_type": $0.mediaType, "data": $0.base64]] }
+                    parts.append(["type": "text", "text": text])
+                    list.append(["role": "user", "content": parts])
+                }
+            case (.assistant(let text, let calls), .openAICompatible):
+                var m: [String: Any] = ["role": "assistant", "content": text.isEmpty ? NSNull() : text]
+                if !calls.isEmpty { m["tool_calls"] = calls.map { ["id": $0.id, "type": "function", "function": ["name": $0.name, "arguments": $0.argumentsJSON]] as [String: Any] } }
+                list.append(m)
+            case (.assistant(let text, let calls), .anthropic):
+                var parts: [[String: Any]] = text.isEmpty ? [] : [["type": "text", "text": text]]
+                for c in calls {
+                    let input = (c.argumentsJSON.data(using: .utf8).flatMap { try? JSONSerialization.jsonObject(with: $0) }) ?? [String: Any]()
+                    parts.append(["type": "tool_use", "id": c.id, "name": c.name, "input": input])
+                }
+                list.append(["role": "assistant", "content": parts])
+            case (.toolResults(let results), .openAICompatible):
+                for r in results { list.append(["role": "tool", "tool_call_id": r.callID, "content": r.output]) }
+            case (.toolResults(let results), .anthropic):
+                list.append(["role": "user", "content": results.map { ["type": "tool_result", "tool_use_id": $0.callID, "content": $0.output] as [String: Any] }])
+            }
+        }
+        var body: [String: Any]
+        switch provider.api {
+        case .openAICompatible:
+            body = ["model": model, "stream": true, "max_tokens": maxTokens, "messages": [["role": "system", "content": system] as [String: Any]] + list]
+        case .anthropic:
+            body = ["model": model, "stream": true, "max_tokens": maxTokens, "system": system, "messages": list]
+        }
+        if !schemas.isEmpty { body["tools"] = schemas }
+        return try? JSONSerialization.data(withJSONObject: body)
+    }
+
+    /// Turns the app's saved messages into wire turns: strict user/assistant order, as the plain path requires.
+    public static func turns(from messages: [Message]) -> [WireTurn] {
+        alternating(messages).map { $0.isUser ? .user($0.text, images: $0.images) : .assistant(text: $0.text, calls: []) }
+    }
 }

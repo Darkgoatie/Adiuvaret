@@ -141,6 +141,45 @@ enum CloudClient {
         }
     }
 
+    /// One model turn with tools. Text arrives as it is written; tool calls arrive complete at the end of the turn.
+    enum TurnEvent { case text(String), calls([WireCall]) }
+
+    static func streamTurn(_ p: Provider, model: String, key: String, system: String, turns: [WireTurn], tools: [WireTool]) -> AsyncThrowingStream<TurnEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let work = Task {
+                guard let body = ProviderWire.toolBody(p, model: model, system: system, turns: turns, tools: tools), var r = request(p, url: ProviderWire.chatURL(p), key: key, body: body) else {
+                    continuation.finish(throwing: ProviderError.text("The request could not be built."))
+                    return
+                }
+                r.timeoutInterval = 90
+                let s = session(timeout: 90); defer { s.finishTasksAndInvalidate() }
+                do {
+                    let (bytes, response) = try await s.bytes(for: r)
+                    guard let http = response as? HTTPURLResponse else { throw ProviderError.text("No answer from \(p.name).") }
+                    guard http.statusCode == 200 else { throw ProviderError.status(http.statusCode, ProviderWire.problem(status: http.statusCode, provider: p)) }
+                    var acc = WireAccumulator()
+                    for try await line in bytes.lines {
+                        guard let d = ProviderWire.delta(p, line: line) else { continue }
+                        if let e = d.error { throw ProviderError.text(e) }
+                        if !d.text.isEmpty { continuation.yield(.text(d.text)) }
+                        acc.add(d)
+                        if d.done { break }
+                    }
+                    let calls = acc.calls
+                    if !calls.isEmpty { continuation.yield(.calls(calls)) }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish()
+                } catch let e as ProviderError {
+                    continuation.finish(throwing: e)
+                } catch {
+                    continuation.finish(throwing: ProviderError.text("Could not reach \(p.name). Check the connection."))
+                }
+            }
+            continuation.onTermination = { _ in work.cancel() }
+        }
+    }
+
     /// Streams the reply text. Throws a short sentence on failure, never the key or the response body.
     static func stream(_ p: Provider, model: String, key: String, system: String, messages: [ProviderWire.Message]) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
@@ -177,6 +216,9 @@ enum CloudClient {
 
 struct ProviderError: Error, LocalizedError {
     let message: String
+    /// The HTTP status when the provider refused the request, so a refusal of the tools can be told from a bad key.
+    var status: Int?
     static func text(_ s: String) -> ProviderError { ProviderError(message: s) }
+    static func status(_ code: Int, _ s: String) -> ProviderError { ProviderError(message: s, status: code) }
     var errorDescription: String? { message }
 }
