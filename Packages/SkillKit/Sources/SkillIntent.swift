@@ -6,9 +6,9 @@ public enum SkillIntent {
 
     public static func looksLikeSkillRequest(_ text: String) -> Bool {
         let words = text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init)
-        guard words.contains("skill") || words.contains("skills") else { return false }
+        guard words.contains("skill") || words.contains("skills") || words.contains("workflow") || words.contains("workflows") else { return false }
         let flat = " " + words.joined(separator: " ") + " "
-        if flat.contains(" skills do you ") || flat.contains(" skills you have ") || flat.contains(" your skills ") || flat.contains(" list skills ") || flat.contains(" list your skills ") { return true }
+        if flat.contains(" workflows do you ") || flat.contains(" workflows you have ") || flat.contains(" your workflows ") || flat.contains(" list workflows ") || flat.contains(" skills do you ") || flat.contains(" skills you have ") || flat.contains(" your skills ") || flat.contains(" list skills ") || flat.contains(" list your skills ") { return true }
         return words.contains { actions.contains($0) }
     }
 }
@@ -38,6 +38,6 @@ public enum SkillCall {
     /// The line added to the instructions of a model without tool calling, listing what it may ask for.
     public static func instruction(index: String) -> String {
         guard !index.isEmpty else { return "" }
-        return "Skills you can use (named sets of steps):\n\(index)\nTo use one, reply with only this line and nothing else: \(marker) <id>"
+        return "Workflows you can use (named sets of steps):\n\(index)\nTo use one, reply with only this line and nothing else: \(marker) <id>"
     }
 }

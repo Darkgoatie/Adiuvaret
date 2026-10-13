@@ -12,7 +12,7 @@ struct SkillOfferCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             Label {
-                Text(verbatim: phase == .saved ? String(localized: "Saved as a routine: \(title)") : String(localized: "Save this as a routine?"))
+                Text(verbatim: phase == .saved ? String(localized: "Saved as a workflow: \(title)") : String(localized: "Save this as a workflow?"))
                     .font(DS.Typography.subheadline).foregroundStyle(DS.Colors.textPrimary)
             } icon: { Image(systemName: "checklist").foregroundStyle(DS.Colors.textSecondary) }
             if phase == .offered {

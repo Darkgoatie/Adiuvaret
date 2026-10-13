@@ -25,23 +25,23 @@ struct SkillsView: View {
                     } header: {
                         Text(title(source))
                     } footer: {
-                        if source == .imported { Text("Imported skills are treated as untrusted text. They guide the steps and never allow anything extra.").font(DS.Typography.caption) }
+                        if source == .imported { Text("Imported workflows are treated as untrusted text. They guide the steps and never allow anything extra.").font(DS.Typography.caption) }
                     }
                 }
             }
             Section {
                 Button { importing = true } label: {
-                    Label("Import a skill", systemImage: "square.and.arrow.down").frame(minHeight: 44, alignment: .leading)
+                    Label("Import a workflow", systemImage: "square.and.arrow.down").frame(minHeight: 44, alignment: .leading)
                 }
                 .accessibilityIdentifier("skills.import")
             } footer: {
-                Text("A skill file is JSON or Markdown with a name, a description and the steps. Swipe a skill to delete it. Built-in skills can only be switched off.")
+                Text("A workflow file is JSON or Markdown with a name, a description and the steps. Swipe a workflow to delete it. Built-in workflows can only be switched off.")
                     .font(DS.Typography.caption)
             }
         }
         .scrollContentBackground(.hidden)
         .background(DS.Colors.background)
-        .navigationTitle(String(localized: "Skills"))
+        .navigationTitle(String(localized: "Workflows"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: reload)
         .fileImporter(isPresented: $importing, allowedContentTypes: Self.types, onCompletion: importFile)
@@ -87,19 +87,19 @@ struct SkillsView: View {
             message = String(localized: "Added \(skill.name).")
         } catch let e as SkillImportError {
             switch e {
-            case .tooLarge: message = String(localized: "That file is too large for a skill.")
-            case .unreadable: message = String(localized: "That file isn't a skill. Use JSON or Markdown.")
-            case .missing(let what): message = String(localized: "The skill needs a \(what).")
+            case .tooLarge: message = String(localized: "That file is too large for a workflow.")
+            case .unreadable: message = String(localized: "That file isn't a workflow. Use JSON or Markdown.")
+            case .missing(let what): message = String(localized: "The workflow needs a \(what).")
             }
         } catch let e as SkillError {
             switch e {
-            case .duplicate: message = String(localized: "A skill with that name already exists.")
-            case .unknownTool(let t): message = String(localized: "The skill names a tool that doesn't exist: \(t).")
-            case .full: message = String(localized: "There is no room for more skills.")
-            default: message = String(localized: "That skill couldn't be added.")
+            case .duplicate: message = String(localized: "A workflow with that name already exists.")
+            case .unknownTool(let t): message = String(localized: "The workflow names a tool that doesn't exist: \(t).")
+            case .full: message = String(localized: "There is no room for more workflows.")
+            default: message = String(localized: "That workflow couldn't be added.")
             }
         } catch {
-            message = String(localized: "That skill couldn't be added.")
+            message = String(localized: "That workflow couldn't be added.")
         }
         reload()
     }

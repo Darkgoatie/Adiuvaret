@@ -60,7 +60,7 @@ struct MemoryView: View {
         Section {
             NavigationLink { SkillsView() } label: {
                 HStack {
-                    Text("Skills").font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
+                    Text("Workflows").font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
                     Spacer()
                     Text(verbatim: "\(skillCount)").font(DS.Typography.body).foregroundStyle(DS.Colors.textSecondary)
                 }
@@ -68,7 +68,7 @@ struct MemoryView: View {
             }
             .accessibilityIdentifier("memory.skills")
         } footer: {
-            Text("Skills are saved sets of steps. They only guide me. I still ask before anything changes.").font(DS.Typography.caption)
+            Text("Workflows are saved sets of steps. They only guide me. I still ask before anything changes.").font(DS.Typography.caption)
         }
     }
 }

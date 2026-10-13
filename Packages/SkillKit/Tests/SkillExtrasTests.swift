@@ -110,7 +110,7 @@ import ToolKit
 
 @Suite struct SkillIntentTests {
     @Test func skillRequestsAreRecognised() {
-        for t in ["use my weekly review skill", "what skills do you have?", "run the plan my day skill", "list your skills", "which saved skills are available"] {
+        for t in ["use my weekly review skill", "what skills do you have?", "run the plan my day skill", "list your skills", "which saved skills are available", "use my weekly review workflow", "what workflows do you have?"] {
             #expect(SkillIntent.looksLikeSkillRequest(t), Comment(rawValue: t))
         }
         for t in ["what's on my calendar", "he has a great skill at chess", "tell me a joke", ""] {
