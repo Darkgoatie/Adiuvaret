@@ -41,6 +41,8 @@ targets:
         product: BriefingKit
       - package: AdiuvaretPackages
         product: SkillKit
+      - package: AdiuvaretPackages
+        product: Evals
       - package: MLXLM
         product: MLXLLM
       - package: MLXLM

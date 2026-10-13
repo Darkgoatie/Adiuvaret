@@ -86,6 +86,7 @@ struct SettingsView: View {
             }
             Section("Testing") {
                 NavigationLink("Diagnostics") { DiagnosticsView() }
+                NavigationLink("Evals") { EvalView() }
                 NavigationLink("Spike") { SpikeView() }
                 NavigationLink("Design") { DesignGallery() }
             }
