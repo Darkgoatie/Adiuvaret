@@ -191,3 +191,47 @@ public enum WebIntent {
             || InfoFeeds.newsTopic(for: text) != nil || InfoFeeds.referenceSubject(for: text) != nil || SportsScores.request(for: text) != nil
     }
 }
+
+/// "Open apple.com", "log in to Tumonline": a request to open a named site, with its address when it can be worked out in code.
+public struct SiteRequest: Equatable, Sendable {
+    public let address: String
+    public let wantsLogin: Bool
+
+    /// Sites people name without an address.
+    private static let known: [(phrase: String, host: String)] = [
+        (" tumonline ", "campus.tum.de"), (" tum online ", "campus.tum.de"),
+    ]
+    private static let openers = [" open ", " go to ", " visit ", " browse ", " log in ", " login ", " log into ", " sign in ", " signin ", " sign into "]
+    private static let loginWords = [" log in ", " login ", " log into ", " sign in ", " signin ", " sign into "]
+
+    public static func detect(_ text: String) -> SiteRequest? {
+        let trim = CharacterSet(charactersIn: ",!?;:\"'()")
+        let tokens = text.lowercased().split(whereSeparator: { $0.isWhitespace }).map { raw -> String in
+            var t = String(raw).trimmingCharacters(in: trim)
+            while t.hasSuffix(".") { t.removeLast() }
+            return t
+        }.filter { !$0.isEmpty }
+        let padded = " " + tokens.joined(separator: " ") + " "
+        guard openers.contains(where: { padded.contains($0) }) else { return nil }
+        let wantsLogin = loginWords.contains { padded.contains($0) }
+        if let domain = tokens.first(where: isDomain) { return SiteRequest(address: "https://" + domain, wantsLogin: wantsLogin) }
+        if let site = known.first(where: { padded.contains($0.phrase) }) { return SiteRequest(address: "https://" + site.host, wantsLogin: wantsLogin) }
+        return nil
+    }
+
+    private static func isDomain(_ token: String) -> Bool {
+        guard !token.contains("@"), !token.contains("/"), token.contains(".") else { return false }
+        let labels = token.split(separator: ".", omittingEmptySubsequences: false)
+        guard labels.count >= 2, let last = labels.last, last.count >= 2, last.allSatisfy({ $0.isLetter }) else { return false }
+        return labels.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" } }
+    }
+
+    /// Added to the model's instructions for this message only.
+    public var instruction: String {
+        var t = "The user wants a website opened. Its address is \(address). Call openWebsite with that address, then lookAtPage."
+        if wantsLogin {
+            t += " Then click the login or sign-in link yourself (a link needs no approval) until the page shows the sign-in form. Stop there. Tell the user to tap the globe icon at the top of the chat and sign in on the page, and to say when they are done. Never type a user name, password or code. When they say they are signed in, call lookAtPage and carry on browsing for them."
+        }
+        return t
+    }
+}

@@ -81,6 +81,11 @@ public enum WebPolicy {
         allowed.contains { isSameSite(host, as: $0) }
     }
 
+    /// Sites whose sign-in lives on a sibling host of the same organisation. Opening the first allows the whole organisation's domain for the chat.
+    public static func relatedSites(of host: String) -> [String] {
+        ["tum.de"].filter { isSameSite(host, as: $0) }
+    }
+
     private static let riskyWords: Set<String> = [
         "pay", "payment", "paypal", "buy", "purchase", "order", "checkout", "submit", "send", "post", "publish",
         "delete", "remove", "confirm", "subscribe", "unsubscribe", "donate", "transfer", "withdraw", "login", "signin",
@@ -94,6 +99,16 @@ public enum WebPolicy {
         if riskyPhrases.contains(where: { lower.contains($0) }) { return true }
         let words = lower.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
         return words.contains { riskyWords.contains($0) }
+    }
+
+    private static let loginWords: Set<String> = ["login", "log", "in", "signin", "sign", "anmelden", "einloggen", "anmeldung", "giris", "oturum", "ac", "my", "to", "account", "user", "tumonline", "tum"]
+
+    /// A link that only leads to a sign-in page. Opening it changes nothing, so it needs no approval; pressing a submit button on that page still does.
+    public static func isLoginLink(role: String, label: String) -> Bool {
+        guard role == "link" else { return false }
+        let words = label.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard !words.isEmpty, words.count <= 4, words.allSatisfy({ loginWords.contains($0) }) else { return false }
+        return words.contains { ["login", "signin", "anmelden", "einloggen", "anmeldung", "giris", "oturum"].contains($0) } || (words.contains("log") && words.contains("in")) || (words.contains("sign") && words.contains("in"))
     }
 
     /// Fields the assistant never fills: passwords, card details and one-time codes. The user types these.
