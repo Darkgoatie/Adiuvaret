@@ -105,14 +105,16 @@ import Foundation
 
         let boards = try #require(m.tool("listMondayBoards"))
         let boardsReq = try #require(ConnectorEngine.request(m, boards, [:]))
-        let boardsBody = try #require(JSONSerialization.jsonObject(with: try #require(boardsReq.httpBody)) as? [String: Any])
+        let boardsBodyData = try #require(boardsReq.httpBody)
+        let boardsBody = try #require(JSONSerialization.jsonObject(with: boardsBodyData) as? [String: Any])
         let boardsQuery = try #require(boardsBody["query"] as? String)
         #expect(boardsQuery == #"query { boards(limit: 25) { id name state } }"#)
         #expect(boardsQuery.range(of: #"\{[A-Za-z_][A-Za-z0-9_]*\}"#, options: .regularExpression) == nil)
 
         let items = try #require(m.tool("listMondayItems"))
         let itemsReq = try #require(ConnectorEngine.request(m, items, ["boardID": "1234567890"]))
-        let itemsBody = try #require(JSONSerialization.jsonObject(with: try #require(itemsReq.httpBody)) as? [String: Any])
+        let itemsBodyData = try #require(itemsReq.httpBody)
+        let itemsBody = try #require(JSONSerialization.jsonObject(with: itemsBodyData) as? [String: Any])
         let itemsQuery = try #require(itemsBody["query"] as? String)
         #expect(itemsQuery == #"query { boards(ids: 1234567890) { items_page(limit: 50) { items { id name } } } }"#)
         #expect(itemsQuery.range(of: #"\{[A-Za-z_][A-Za-z0-9_]*\}"#, options: .regularExpression) == nil)

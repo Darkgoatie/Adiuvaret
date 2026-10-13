@@ -9,7 +9,8 @@ import Foundation
     private var tool: WireTool { WireTool(name: "searchWeb", description: "Searches the web.", schemaJSON: schema) }
 
     private func json(_ data: Data?) throws -> [String: Any] {
-        try #require(try JSONSerialization.jsonObject(with: try #require(data)) as? [String: Any])
+        let raw = try #require(data)
+        return try #require(JSONSerialization.jsonObject(with: raw) as? [String: Any])
     }
 
     @Test func openAIBodyCarriesToolsAndToolResults() throws {

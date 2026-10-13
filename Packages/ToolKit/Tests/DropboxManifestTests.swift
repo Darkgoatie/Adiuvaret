@@ -110,7 +110,8 @@ import Foundation
         let listRequest = try #require(ConnectorEngine.request(manifest, listTool, ["path": "/Homework/math"]))
         #expect(listRequest.httpMethod == "POST")
         #expect(listRequest.url?.absoluteString == "https://api.dropboxapi.com/2/files/list_folder")
-        let listBody = try #require(JSONSerialization.jsonObject(with: try #require(listRequest.httpBody)) as? [String: Any])
+        let listBodyData = try #require(listRequest.httpBody)
+        let listBody = try #require(JSONSerialization.jsonObject(with: listBodyData) as? [String: Any])
         #expect(listBody["path"] as? String == "/Homework/math")
         #expect((listBody["limit"] as? NSNumber)?.intValue == 100)
 
@@ -118,7 +119,8 @@ import Foundation
         let searchRequest = try #require(ConnectorEngine.request(manifest, searchTool, ["query": "Prime" ]))
         #expect(searchRequest.httpMethod == "POST")
         #expect(searchRequest.url?.absoluteString == "https://api.dropboxapi.com/2/files/search_v2")
-        let searchBody = try #require(JSONSerialization.jsonObject(with: try #require(searchRequest.httpBody)) as? [String: String])
+        let searchBodyData = try #require(searchRequest.httpBody)
+        let searchBody = try #require(JSONSerialization.jsonObject(with: searchBodyData) as? [String: String])
         #expect(searchBody == ["query": "Prime"])
     }
 

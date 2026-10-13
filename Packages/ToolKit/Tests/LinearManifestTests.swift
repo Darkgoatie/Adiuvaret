@@ -74,7 +74,8 @@ import Foundation
         let issuesReq = try #require(ConnectorEngine.request(manifest, issues, ["search": ""]))
         #expect(issuesReq.httpMethod == "POST")
         #expect(issuesReq.url?.absoluteString == "https://api.linear.app/graphql")
-        let issuesBody = try #require(JSONSerialization.jsonObject(with: try #require(issuesReq.httpBody)) as? [String: Any])
+        let issuesBodyData = try #require(issuesReq.httpBody)
+        let issuesBody = try #require(JSONSerialization.jsonObject(with: issuesBodyData) as? [String: Any])
         let issuesQuery = try #require(issuesBody["query"] as? String)
         #expect(issuesQuery == #"query { viewer { assignedIssues(first: 20, filter: { state: { type: { nin: ["completed", "canceled"] } } }) { nodes { identifier title state { name } dueDate } } } }"#)
 
@@ -82,7 +83,8 @@ import Foundation
         let teamsReq = try #require(ConnectorEngine.request(manifest, teams, ["search": ""]))
         #expect(teamsReq.httpMethod == "POST")
         #expect(teamsReq.url?.absoluteString == "https://api.linear.app/graphql")
-        let teamsBody = try #require(JSONSerialization.jsonObject(with: try #require(teamsReq.httpBody)) as? [String: Any])
+        let teamsBodyData = try #require(teamsReq.httpBody)
+        let teamsBody = try #require(JSONSerialization.jsonObject(with: teamsBodyData) as? [String: Any])
         let teamsQuery = try #require(teamsBody["query"] as? String)
         #expect(teamsQuery == #"query Teams { teams(first: 20) { nodes { id key name } } }"#)
     }
