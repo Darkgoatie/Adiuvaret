@@ -14,8 +14,43 @@ final class TaskContext: @unchecked Sendable {
     private var userMessage = ""
     private var privateText = ""
     private var ran: [String] = []
+    private var browseIntent = false
+    private var pageAtStart: Bool?
+    private var opens = 0
+    private var searched = false
+    private var pageSteps = 0
 
-    func beginTask(message: String = "") { lock.lock(); ran = []; taskID = UUID(); untrusted = false; personal = false; userMessage = message; privateText = ""; lock.unlock() }
+    func beginTask(message: String = "") {
+        lock.lock(); ran = []; taskID = UUID(); untrusted = false; personal = false; userMessage = message; privateText = ""
+        browseIntent = WebIntent.looksLikeBrowseRequest(message); pageAtStart = nil; opens = 0; pageSteps = 0; searched = false
+        lock.unlock()
+    }
+
+    /// Guards the browser tools. A question is answered by searchWeb first; the browser is for when the user asked to go to a site,
+    /// when a page was already open for them, or when the search could not answer. Returns a sentence when the step must not run.
+    func noteSearched() { lock.lock(); searched = true; lock.unlock() }
+    static let maxOpensWithoutBrowseRequest = 2
+    static let maxPageStepsWithoutBrowseRequest = 4
+    func browserGate(opening: Bool, pageOpenNow: Bool) -> String? {
+        lock.lock(); defer { lock.unlock() }
+        if pageAtStart == nil { pageAtStart = pageOpenNow }
+        if browseIntent || pageAtStart == true { return nil }
+        if opening {
+            guard searched else {
+                return "Not done: do not open a site to look for an answer. Call searchWeb with the question first; it already reads the best pages. Open a page only to read a result it returned."
+            }
+            if opens >= Self.maxOpensWithoutBrowseRequest {
+                return "Not done: enough pages were opened. Answer from what the search and the pages showed, and say what is still unconfirmed."
+            }
+            opens += 1
+        } else {
+            if pageSteps >= Self.maxPageStepsWithoutBrowseRequest {
+                return "Not done: stop browsing. Answer from what you already read, or call searchWeb with different words."
+            }
+            pageSteps += 1
+        }
+        return nil
+    }
     /// Calendar or reminder text read in this task, kept only to stop it reaching a search.
     func noteRan(_ tool: String) { lock.lock(); ran.append(tool); lock.unlock() }
     func toolsRan() -> [String] { lock.lock(); defer { lock.unlock() }; return ran }

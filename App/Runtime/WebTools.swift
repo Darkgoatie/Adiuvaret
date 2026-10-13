@@ -323,7 +323,7 @@ private enum Self_ {
 
 struct LiveSearchWebTool: AppTool {
     let name = "searchWeb"
-    let description = "Searches the web and returns result titles, sites and short summaries. Use it first for news, scores, weather, prices, schedules and anything that may have changed. Never tell the user to search themselves."
+    let description = "Searches the web and returns ranked pages with the passages that answer the query. Use it first for any question, fact, how-to, documentation, news, scores, weather, prices or schedule, before opening any site. Write the query as a clear question or phrase; if the first answer is incomplete, search again with different words. Never tell the user to search themselves."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
     struct Arguments {
@@ -341,6 +341,7 @@ struct LiveSearchWebTool: AppTool {
 
     func perform(arguments a: Arguments) async throws -> String {
         let rowID = UUID()
+        ctx.noteSearched()
         let scrubbed = ctx.scrub(WebSearch.cleanQuery(a.query))
         if scrubbed.changed { DiagnosticsLog.shared.record("web search", "removed \(scrubbed.removed.count) private words from the search") }
         let query = WebSearch.cleanQuery(scrubbed.query)
@@ -377,7 +378,7 @@ struct LiveSearchWebTool: AppTool {
 
 struct LiveOpenWebsiteTool: AppTool {
     let name = "openWebsite"
-    let description = "Opens a website the user named, or a search result, in the in-app browser. Returns the numbered buttons, links and fields on the page."
+    let description = "Opens a website in the in-app browser. Use it only when the user asked to go to a site or sign in, or to read one page that searchWeb returned. Never use it to hunt for an answer: call searchWeb first."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
     struct Arguments {
@@ -394,6 +395,7 @@ struct LiveOpenWebsiteTool: AppTool {
     }
 
     func perform(arguments a: Arguments) async throws -> String {
+        if let stop = ctx.browserGate(opening: true, pageOpenNow: await MainActor.run(body: { WebSession.shared.hasPage })) { return stop }
         let rowID = UUID()
         switch WebPolicy.normalize(a.url) {
         case .rejected(let why):
@@ -413,7 +415,7 @@ struct LiveOpenWebsiteTool: AppTool {
 
 struct LiveLookAtPageTool: AppTool {
     let name = "lookAtPage"
-    let description = "Looks at the open website. Lists the numbered buttons, links and fields in view, or reads the page text."
+    let description = "Looks at the open website. Lists the numbered buttons, links and fields in view, or reads the page text. Only for a page the user asked you to use or one search result you opened."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
     struct Arguments {
@@ -434,14 +436,15 @@ struct LiveLookAtPageTool: AppTool {
     }
 
     func perform(arguments a: Arguments) async throws -> String {
-        await runWebStep(gate, ctx, reporter, name: "lookAtPage", json: ["readText": a.readText, "part": a.part, "find": a.find],
+        if let stop = ctx.browserGate(opening: false, pageOpenNow: await MainActor.run(body: { WebSession.shared.hasPage })) { return stop }
+        return await runWebStep(gate, ctx, reporter, name: "lookAtPage", json: ["readText": a.readText, "part": a.part, "find": a.find],
                          title: String(localized: "Looking at the page…"), rowID: UUID())
     }
 }
 
 struct LiveActOnPageTool: AppTool {
     let name = "actOnPage"
-    let description = "Clicks, types, chooses or scrolls on the open website. Use element numbers from lookAtPage. Never fills passwords, card numbers or codes."
+    let description = "Clicks, types, chooses or scrolls on the open website, for tasks the user asked you to do on that site. Use element numbers from lookAtPage. Do not click around to find an answer; use searchWeb. Never fills passwords, card numbers or codes."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
     enum PageAction: String, CaseIterable {
@@ -467,6 +470,7 @@ struct LiveActOnPageTool: AppTool {
     }
 
     func perform(arguments a: Arguments) async throws -> String {
+        if let stop = ctx.browserGate(opening: false, pageOpenNow: await MainActor.run(body: { WebSession.shared.hasPage })) { return stop }
         let scrolling = [PageAction.scrollDown, .scrollUp, .scrollTop, .scrollBottom].contains(a.action)
         var risky = false
         if !scrolling {
