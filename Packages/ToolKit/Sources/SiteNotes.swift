@@ -71,6 +71,9 @@ public final class SiteNoteStore: @unchecked Sendable {
         notes = (try? Data(contentsOf: url)).flatMap { try? JSONDecoder().decode([SiteNote].self, from: $0) } ?? []
     }
 
+    /// The one store the browser and the Settings screen share, so a deletion shows up everywhere.
+    public static let shared = SiteNoteStore.standard()
+
     public static func standard() -> SiteNoteStore {
         let dir = (try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)) ?? FileManager.default.temporaryDirectory
         return SiteNoteStore(url: dir.appendingPathComponent("sitenotes.json"))
@@ -86,6 +89,15 @@ public final class SiteNoteStore: @unchecked Sendable {
     public func record(host: String, steps: [String]) {
         lock.lock(); defer { lock.unlock() }
         notes = SiteNoteRules.merge(notes, host: host, steps: steps, now: Date())
+        persist()
+    }
+
+    /// Deletes one route of a host; the host goes too when it has no route left.
+    public func removeRoute(host: String, at index: Int) {
+        lock.lock(); defer { lock.unlock() }
+        guard let h = notes.firstIndex(where: { $0.host == host.lowercased() }), notes[h].routes.indices.contains(index) else { return }
+        notes[h].routes.remove(at: index)
+        if notes[h].routes.isEmpty { notes.remove(at: h) }
         persist()
     }
 

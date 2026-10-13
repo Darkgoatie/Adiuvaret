@@ -48,6 +48,23 @@ struct SiteNotesTests {
         #expect(SiteNoteRules.render(nil).isEmpty)
     }
 
+    @Test func removingRoutesAndHosts() {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("sitenotes-\(UUID().uuidString).json")
+        let store = SiteNoteStore(url: url)
+        store.record(host: "a.org", steps: ["Menu", "Calendar"])
+        store.record(host: "a.org", steps: ["Grades"])
+        store.record(host: "b.org", steps: ["Home"])
+        store.removeRoute(host: "a.org", at: 0)
+        #expect(store.note(for: "a.org")?.routes.map(\.steps) == [["Menu", "Calendar"]])
+        store.removeRoute(host: "a.org", at: 5)
+        #expect(store.note(for: "a.org")?.routes.count == 1)
+        store.removeRoute(host: "a.org", at: 0)
+        #expect(store.note(for: "a.org") == nil)
+        store.remove(host: "b.org")
+        #expect(SiteNoteStore(url: url).all().isEmpty)
+        try? FileManager.default.removeItem(at: url)
+    }
+
     @Test func storePersistsAndClears() {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("sitenotes-\(UUID().uuidString).json")
         let store = SiteNoteStore(url: url)

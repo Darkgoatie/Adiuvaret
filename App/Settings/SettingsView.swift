@@ -69,6 +69,8 @@ struct SettingsView: View {
                 }
             }
             Section {
+                NavigationLink { SiteNotesView() } label: { Text("Site notes").font(DS.Typography.body).frame(minHeight: 44) }
+                    .accessibilityIdentifier("settings.siteNotes")
                 Button(role: .destructive) { confirmClear = true } label: { Text("Clear browsing data").font(DS.Typography.body) }
                     .frame(minHeight: 44).accessibilityIdentifier("settings.clearWeb")
             } header: { Text("Browser") } footer: {

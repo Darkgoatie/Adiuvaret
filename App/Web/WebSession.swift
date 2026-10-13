@@ -44,7 +44,7 @@ final class WebSession: NSObject {
     @ObservationIgnored private var sameBody = 0
     @ObservationIgnored private var trailHost = ""
     @ObservationIgnored private var trail: [String] = []
-    @ObservationIgnored private let siteNotes = SiteNoteStore.standard()
+    @ObservationIgnored private let siteNotes = SiteNoteStore.shared
     @ObservationIgnored private var owner: UUID?
     @ObservationIgnored private var elements: [Int: PageElement] = [:]
     @ObservationIgnored private var lastHasPassword = false
