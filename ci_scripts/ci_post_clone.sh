@@ -14,4 +14,6 @@ xcodegen generate
 echo "Build number $BUILD"
 
 xcodebuild -downloadComponent MetalToolchain || true
+defaults write com.apple.dt.Xcode IDEPackageSupportDisableAutomaticPackageResolution -bool NO
+defaults write com.apple.dt.Xcode IDEDisableAutomaticPackageResolution -bool NO
 xcodebuild -resolvePackageDependencies -project Adiuvaret.xcodeproj -scheme Adiuvaret
