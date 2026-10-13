@@ -74,6 +74,12 @@ extension ChatService {
 }
 
 extension Array where Element == ThreadItem {
+    /// Adds a row for something the assistant did (read a page, clicked, opened, asked for approval). While a reply is being written the row
+    /// goes above it, so every action of a turn reads in order above the answer.
+    mutating func appendAboveReply(_ item: ThreadItem, reply: UUID?) {
+        if let reply, let i = firstIndex(where: { $0.id == reply }) { insert(item, at: i) } else { append(item) }
+    }
+
     /// The files of the newest user message, which the model is about to answer.
     func currentTurnFiles() -> [ChatFile] {
         guard let i = lastIndex(where: { if case .user = $0 { true } else { false } }) else { return [] }

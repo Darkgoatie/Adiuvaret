@@ -21,6 +21,8 @@ final class CloudChatService: ChatService, FixedToolsChat {
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var lastPrompt = ""
     @ObservationIgnored private var memoryBlock = ""
+    /// The reply being written, so action rows that arrive meanwhile are placed above it.
+    @ObservationIgnored private var activeReplyID: UUID?
     /// Models that refused tool definitions, remembered for this chat so every turn does not pay for a failed request.
     @ObservationIgnored private var toolsRefused = false
     /// When set, the chat uses exactly these tools and skips the router. Briefings use it so only reading tools exist.
@@ -103,6 +105,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
     private func run(_ prompt: String) async {
         isGenerating = true
         let replyID = UUID()
+        activeReplyID = replyID
         let ctx = host.ctx
         ctx.beginTask(message: prompt)
         let work = Task { @MainActor in
@@ -207,6 +210,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
         }
         task = work
         await work.value
+        activeReplyID = nil
         isGenerating = false
     }
 
@@ -248,7 +252,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
 }
 
 extension CloudChatService: ToolSurface {
-    func surfaceAppend(_ item: ThreadItem) { items.append(item) }
+    func surfaceAppend(_ item: ThreadItem) { items.appendAboveReply(item, reply: activeReplyID) }
     func surfaceReplace(_ id: UUID, with item: ThreadItem) {
         if let i = items.firstIndex(where: { $0.id == id }) { items[i] = item }
     }

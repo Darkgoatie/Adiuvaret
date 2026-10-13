@@ -32,6 +32,8 @@ final class LiveChatService: ChatService, FixedToolsChat {
     private var wantReasoning: Bool { useReasoning && AppSettings.shared.deepReasoning }
     @ObservationIgnored private var toolIDs: [String] = []
     @ObservationIgnored private var lastPrompt = ""
+    /// The reply being written, so action rows that arrive meanwhile are placed above it.
+    @ObservationIgnored private var activeReplyID: UUID?
 
     @ObservationIgnored var onChange: (() -> Void)?
     /// When set, the chat uses exactly these tools and skips the router. Briefings use it so only reading tools exist.
@@ -176,6 +178,7 @@ final class LiveChatService: ChatService, FixedToolsChat {
             session = makeSession(history: prior, toolIDs: ids)
         }
         let replyID = UUID()
+        activeReplyID = replyID
         let work = Task { @MainActor in
             while let session {
                 var started = false
@@ -216,6 +219,7 @@ final class LiveChatService: ChatService, FixedToolsChat {
         }
         task = work
         await work.value
+        activeReplyID = nil
         host.offerSkill(for: prompt)
         isGenerating = false
     }
@@ -285,7 +289,7 @@ final class LiveChatService: ChatService, FixedToolsChat {
 
 @available(iOS 26.0, *)
 extension LiveChatService: ToolSurface {
-    func surfaceAppend(_ item: ThreadItem) { items.append(item) }
+    func surfaceAppend(_ item: ThreadItem) { items.appendAboveReply(item, reply: activeReplyID) }
     func surfaceReplace(_ id: UUID, with item: ThreadItem) { replace(id, with: item) }
     func surfaceRemove(_ id: UUID) { items.removeAll { $0.id == id } }
 }
