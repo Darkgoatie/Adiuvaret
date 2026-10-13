@@ -1,0 +1,21 @@
+{
+  "projects": [
+    {
+      "id": "prj_2euZBFqxYdDMDG1jTrHFnNZ2eUVa",
+      "name": "docs",
+      "framework": "nextjs",
+      "updatedAt": 1728390000000
+    },
+    {
+      "id": "prj_7rQ6xJqMmS2YvR8PL6Aa0dnC4kLq",
+      "name": "api-service",
+      "framework": "node",
+      "createdAt": 1728300000000
+    }
+  ],
+  "pagination": {
+    "count": 2,
+    "next": null,
+    "prev": null
+  }
+}

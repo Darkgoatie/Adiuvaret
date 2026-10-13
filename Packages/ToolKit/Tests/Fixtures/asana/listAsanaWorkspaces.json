@@ -1,0 +1,15 @@
+{
+  "data": [
+    {
+      "gid": "12345",
+      "resource_type": "workspace",
+      "name": "My Company Workspace"
+    },
+    {
+      "gid": "67890",
+      "resource_type": "workspace",
+      "name": "Product Org"
+    }
+  ],
+  "next_page": null
+}

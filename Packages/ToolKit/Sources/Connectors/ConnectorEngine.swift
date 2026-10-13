@@ -90,8 +90,9 @@ public enum ConnectorEngine {
     public static func lines(_ spec: ConnectorListSpec, data: Data, args: [String: String]) -> [String] {
         guard let root = try? JSONSerialization.jsonObject(with: data) else { return [] }
         var items: [[String: Any]] = []
-        if let key = spec.itemsKey { items = node(root, key) as? [[String: Any]] ?? [] }
-        else { items = (root as? [[String: Any]]) ?? [] }
+        let found: Any? = spec.itemsKey.map { node(root, $0) } ?? root
+        if let list = found as? [[String: Any]] { items = list }
+        else if let one = found as? [String: Any] { items = [one] }
         let words = filterWords(spec, args)
         var out: [String] = []
         for item in items {
@@ -140,11 +141,7 @@ public enum ConnectorEngine {
     }
 
     static func value(_ item: [String: Any], _ path: String) -> String? {
-        var cur: Any = item
-        for part in path.split(separator: ".") {
-            guard let d = cur as? [String: Any], let next = d[String(part)] else { return nil }
-            cur = next
-        }
+        guard let cur = node(item, path) else { return nil }
         if let s = cur as? String { return s }
         if let n = cur as? NSNumber { return n.stringValue }
         return nil
@@ -278,6 +275,8 @@ public enum ConnectorValidator {
 /// Every connector written as a manifest. A new connector is one file with one value, added here.
 public enum ConnectorRegistry {
     public static let manifests: [ConnectorManifest] = [
+        LinearManifest.manifest, AsanaManifest.manifest, ClickUpManifest.manifest, AirtableManifest.manifest,
+        SentryManifest.manifest, VercelManifest.manifest, DropboxManifest.manifest, CalendlyManifest.manifest,
         SlackManifest.manifest, DiscordManifest.manifest, FigmaManifest.manifest,
         MondayManifest.manifest, GitLabManifest.manifest, BitbucketManifest.manifest,
     ]

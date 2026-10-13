@@ -1,0 +1,89 @@
+{
+  "collection": [
+    {
+      "uri": "https://api.calendly.com/scheduled_events/AAAAAAAAAAAAAAAA",
+      "name": "15 Minute Meeting",
+      "status": "active",
+      "start_time": "2019-08-24T14:15:22.123456Z",
+      "end_time": "2019-08-24T14:30:22.123456Z",
+      "event_type": "https://api.calendly.com/event_types/AAAAAAAAAAAAAAAA",
+      "location": {
+        "additional_info": "Please check in at the main lobby.",
+        "location": "Calendly Office",
+        "type": "physical"
+      },
+      "invitees_counter": {
+        "total": 1,
+        "active": 1,
+        "limit": 1
+      },
+      "created_at": "2019-01-02T03:04:05.092125Z",
+      "updated_at": "2019-01-02T03:04:05.092125Z",
+      "event_memberships": [
+        {
+          "user": "https://api.calendly.com/users/AAAAAAAAAAAAAAAA",
+          "user_email": "user@example.com",
+          "user_name": "John Smith",
+          "buffered_end_time": "2019-08-24T14:30:22.123456Z",
+          "buffered_start_time": "2019-08-24T14:15:22.123456Z"
+        }
+      ],
+      "event_guests": [
+        {
+          "email": "user@example.com",
+          "created_at": "2022-04-21T17:10:48.484945Z",
+          "updated_at": "2022-04-21T17:11:01.758636Z"
+        }
+      ],
+      "calendar_event": {
+        "kind": "google",
+        "external_id": "8suu9k3hj00mni03ss12ba0ce0"
+      },
+      "meeting_notes_plain": "Internal meeting notes",
+      "meeting_notes_html": "<p>Internal meeting notes</p>"
+    },
+    {
+      "uri": "https://api.calendly.com/scheduled_events/BBBBBBBBBBBBBBBB",
+      "name": "30 Minute Meeting",
+      "status": "active",
+      "start_time": "2019-08-25T10:00:00.000000Z",
+      "end_time": "2019-08-25T10:30:00.000000Z",
+      "event_type": "https://api.calendly.com/event_types/BBBBBBBBBBBBBBBB",
+      "location": {
+        "type": "zoom",
+        "status": "pushed",
+        "join_url": "https://zoom.us/j/123456789"
+      },
+      "invitees_counter": {
+        "total": 1,
+        "active": 1,
+        "limit": 1
+      },
+      "created_at": "2019-01-03T03:04:05.092125Z",
+      "updated_at": "2019-01-03T03:04:05.092125Z",
+      "event_memberships": [
+        {
+          "user": "https://api.calendly.com/users/AAAAAAAAAAAAAAAA",
+          "user_email": "user@example.com",
+          "user_name": "John Smith",
+          "buffered_end_time": "2019-08-25T10:30:00.000000Z",
+          "buffered_start_time": "2019-08-25T10:00:00.000000Z"
+        }
+      ],
+      "event_guests": [],
+      "calendar_event": {
+        "kind": "google",
+        "external_id": "9abx9k3hj00mni03ss12ba0ce1"
+      },
+      "meeting_notes_plain": null,
+      "meeting_notes_html": null
+    }
+  ],
+  "pagination": {
+    "count": 20,
+    "next_page": "https://api.calendly.com/scheduled_events?count=1&page_token=sNjq4TvMDfUHEl7zHRR0k0E1PCEJWvdi",
+    "previous_page": "https://api.calendly.com/scheduled_events?count=1&page_token=VJs2rfDYeY8ahZpq0QI1O114LJkNjd7H",
+    "next_page_token": "sNjq4TvMDfUHEl7zHRR0k0E1PCEJWvdi",
+    "previous_page_token": "VJs2rfDYeY8ahZpq0QI1O114LJkNjd7H"
+  }
+}

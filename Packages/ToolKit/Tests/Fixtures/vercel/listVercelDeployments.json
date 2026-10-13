@@ -1,0 +1,27 @@
+{
+  "pagination": {
+    "count": 2,
+    "next": null,
+    "prev": null
+  },
+  "deployments": [
+    {
+      "uid": "dpl_2euZBFqxYdDMDG1jTrHFnNZ2eUVa",
+      "name": "docs",
+      "projectId": "prj_2euZBFqxYdDMDG1jTrHFnNZ2eUVa",
+      "url": "docs-9jaeg38me.vercel.app",
+      "created": 1609492210000,
+      "state": "READY",
+      "readyState": "READY"
+    },
+    {
+      "uid": "dpl_4nUuX9qTs2PLx4g7Km8Ab3sN2wVd",
+      "name": "api-service",
+      "projectId": "prj_7rQ6xJqMmS2YvR8PL6Aa0dnC4kLq",
+      "url": "api-service-git-main.vercel.app",
+      "created": 1609491200000,
+      "state": "ERROR",
+      "readyState": "ERROR"
+    }
+  ]
+}

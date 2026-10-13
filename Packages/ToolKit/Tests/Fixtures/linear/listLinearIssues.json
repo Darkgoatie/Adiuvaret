@@ -1,0 +1,28 @@
+{
+  "data": {
+    "viewer": {
+      "assignedIssues": {
+        "nodes": [
+          {
+            "identifier": "ENG-241",
+            "title": "Fix iOS deep-link regression in auth flow",
+            "state": { "name": "In Progress" },
+            "dueDate": "2026-10-20"
+          },
+          {
+            "identifier": "MOB-88",
+            "title": "Reduce startup latency on cold launch",
+            "state": { "name": "Todo" },
+            "dueDate": null
+          },
+          {
+            "identifier": "OPS-19",
+            "title": "Backfill release audit trail for Q4",
+            "state": { "name": "In Review" },
+            "dueDate": "2026-10-25"
+          }
+        ]
+      }
+    }
+  }
+}

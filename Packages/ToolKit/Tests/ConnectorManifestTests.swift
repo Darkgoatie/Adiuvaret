@@ -119,6 +119,12 @@ import Foundation
         #expect(ConnectorEngine.lines(missing, data: data, args: [:]).isEmpty)
     }
 
+    @Test func aSingleObjectIsOneItemAndFieldsIndexArrays() {
+        let data = Data(#"{"resource":{"name":"Ana","tags":[{"n":"x"}]}}"#.utf8)
+        let spec = ConnectorListSpec(itemsKey: "resource", line: "{name} {tags.0.n}", requiredField: "name", header: "profile", empty: "none")
+        #expect(ConnectorEngine.lines(spec, data: data, args: [:]) == ["Ana x"])
+    }
+
     @Test func registeredManifestsAreUniqueAndOnTheirOwnHosts() {
         let ids = ConnectorRegistry.manifests.map(\.id)
         #expect(Set(ids).count == ids.count)
