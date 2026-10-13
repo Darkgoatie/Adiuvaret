@@ -83,10 +83,10 @@ public enum WebPolicy {
 
     private static let riskyWords: Set<String> = [
         "pay", "payment", "paypal", "buy", "purchase", "order", "checkout", "submit", "send", "post", "publish",
-        "delete", "remove", "confirm", "subscribe", "unsubscribe", "donate", "transfer", "withdraw", "login", "signin",
+        "delete", "remove", "confirm", "subscribe", "unsubscribe", "donate", "transfer", "withdraw",
         "register", "book", "reserve", "upgrade", "apply"
     ]
-    private static let riskyPhrases = ["check out", "sign in", "log in", "sign up", "place order", "cancel order", "cancel subscription", "close account"]
+    private static let riskyPhrases = ["check out", "sign up", "place order", "cancel order", "cancel subscription", "close account"]
 
     /// Clicks that could buy, send, delete or sign in. The label is page text, so the rule is in code and the model cannot talk its way past it.
     public static func clickNeedsApproval(label: String) -> Bool {

@@ -54,13 +54,13 @@ import Foundation
     }
 
     @Test func riskyClicksNeedApproval() {
-        for label in ["Place order", "Pay now", "Buy", "Send message", "Delete account", "Sign in", "Log in", "Submit", "Check out", "Confirm booking", "Book now", "Subscribe", "Cancel subscription"] {
+        for label in ["Place order", "Pay now", "Buy", "Send message", "Delete account", "Submit", "Check out", "Confirm booking", "Book now", "Subscribe", "Cancel subscription"] {
             #expect(WebPolicy.clickNeedsApproval(label: label), "\(label) should need approval")
         }
     }
 
     @Test func ordinaryClicksDoNot() {
-        for label in ["Search", "Next page", "Show more", "Add to cart", "Books", "Accept all cookies", "Menu", "Home", "Sports", "Reorder list"] {
+        for label in ["Search", "Next page", "Show more", "Add to cart", "Books", "Accept all cookies", "Menu", "Home", "Sports", "Reorder list", "Log in", "Sign in", "Login"] {
             #expect(!WebPolicy.clickNeedsApproval(label: label), "\(label) should not need approval")
         }
     }

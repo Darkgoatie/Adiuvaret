@@ -179,6 +179,17 @@ public enum WebIntent {
         return dateOpeners.contains { padded.contains(" " + $0 + " ") }
     }
 
+    private static let browseVerbs: [String] = [" open ", " visit ", " browse ", " go to ", " log in ", " login ", " log into ", " sign in ", " sign into ", " take me to "]
+
+    /// The user wants to be taken to a site or service, whichever one: the browser tools are offered and the model works out the address and the clicks from what it reads.
+    public static func looksLikeBrowseRequest(_ text: String) -> Bool {
+        let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard words.count >= 2 else { return false }
+        let padded = " " + words.joined(separator: " ") + " "
+        if blockers.contains(where: { padded.contains(" " + $0 + " ") }) { return false }
+        return browseVerbs.contains { padded.contains($0) }
+    }
+
     public static func looksLikeWebRequest(_ text: String) -> Bool {
         let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
         guard !words.isEmpty else { return false }

@@ -48,9 +48,9 @@ public extension ToolCatalog {
             requires: ["openWebsite", "lookAtPage"]),
         CatalogEntry(
             id: "openWebsite", title: "Open website", category: "Web",
-            description: "Opens a website the user names, or a search result, in the in-app browser. Returns the page's buttons, links and fields.",
+            description: "Opens a website or online service the user names, or a search result, in the in-app browser. Returns the page's buttons, links and fields. Also used to take the user to the sign-in page of a site; the user signs in themselves.",
             keywords: ["open", "visit", "website", "site", "url", "browser", "homepage", "address"],
-            examples: ["Open apple.com", "Go to the BBC website", "Visit github.com", "Take me to the Apple homepage"],
+            examples: ["Open apple.com", "Go to the BBC website", "Visit github.com", "Take me to the Apple homepage", "Open my university portal and log in"],
             requires: ["lookAtPage", "actOnPage"]),
         CatalogEntry(
             id: "lookAtPage", title: "Look at page", category: "Web",

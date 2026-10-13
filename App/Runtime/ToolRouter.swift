@@ -21,7 +21,7 @@ enum ToolRouter {
         return """
         You decide which capability a message needs. The calendar holds only the user's own events; when a public or world event happens (a final, a launch, a holiday, a conference) is a web search question. Capabilities: \(capabilities). \
         Set needsTool to false for greetings, thanks, advice, writing help and general questions. \
-        For anything about the user's own calendar, events, free time or reminders, or that needs current information from the internet (news, scores, weather, prices, schedules, opening hours, release dates, who won), a website or a page, set needsTool to true and \
+        For anything about the user's own calendar, events, free time or reminders, or that needs current information from the internet (news, scores, weather, prices, schedules, opening hours, release dates, who won), a website or a page, opening or signing in to any site or service, set needsTool to true and \
         write searchWords as three to six words naming what is needed, using verbs like read, find, create, move, delete, list \
         and nouns like calendar, event, free time, reminder, web search, website, page. For anything that needs the internet write the words search web first. A short follow-up such as "and the day after?" continues the previous request.
         """
@@ -62,6 +62,12 @@ enum ToolRouter {
         if WebIntent.looksLikePublicDateQuestion(prompt), let search = catalog.entry("searchWeb") {
             chosen = catalog.withRequirements([search])
             note += " public-date->web"
+        }
+        // Wanting to be taken to a site or to sign in somewhere always gets the browser tools; the model finds the address and reads the page.
+        if WebIntent.looksLikeBrowseRequest(prompt), let open = catalog.entry("openWebsite") {
+            let wanted = [open] + (catalog.entry("searchWeb").map { [$0] } ?? [])
+            chosen = catalog.withRequirements(wanted + chosen, cap: 5)
+            note += " browse-intent"
         }
         // A question that names a connected app goes to that app's tool, whatever the router said.
         if let match = ConnectorIntent.detect(prompt), ConnectorCatalog.isOn(match.connector), let entry = catalog.entry(match.tool) {
