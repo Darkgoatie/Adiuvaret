@@ -2,7 +2,10 @@ import Foundation
 
 /// Where each token connector may send requests. A token is only ever attached to its own host.
 public enum ServiceHost {
-    public static let hosts: [String: String] = ["todoist": "api.todoist.com", "github": "api.github.com", "notion": "api.notion.com"]
+    private static let builtIn: [String: String] = ["todoist": "api.todoist.com", "github": "api.github.com", "notion": "api.notion.com"]
+
+    /// Hand-wired connectors plus every manifest in the registry.
+    public static let hosts: [String: String] = builtIn.merging(ConnectorRegistry.manifests.map { ($0.id, $0.host) }) { a, _ in a }
 
     public static func isAllowed(_ url: URL, for connector: String) -> Bool {
         guard let host = hosts[connector], url.scheme == "https", url.host?.lowercased() == host, url.port == nil, url.user == nil, url.password == nil else { return false }
