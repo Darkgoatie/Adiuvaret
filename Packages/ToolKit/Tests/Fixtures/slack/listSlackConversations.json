@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "channels": [
+    {
+      "id": "C012AB3CD",
+      "name": "general",
+      "is_private": false,
+      "is_im": false,
+      "is_mpim": false,
+      "topic": {
+        "value": "Company-wide announcements and work-based matters"
+      },
+      "purpose": {
+        "value": "This channel is for team-wide communication and announcements."
+      }
+    },
+    {
+      "id": "C061EG9T2",
+      "name": "random",
+      "is_private": false,
+      "is_im": false,
+      "is_mpim": false,
+      "topic": {
+        "value": "Non-work banter and water cooler conversation"
+      },
+      "purpose": {
+        "value": "A place for non-work-related chatter."
+      }
+    }
+  ],
+  "response_metadata": {
+    "next_cursor": "dGVhbTpDMDYxRkE1UEI="
+  }
+}

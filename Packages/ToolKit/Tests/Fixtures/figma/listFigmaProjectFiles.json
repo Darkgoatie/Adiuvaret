@@ -1,0 +1,26 @@
+{
+  "name": "Design System",
+  "files": [
+    {
+      "key": "AbCdEf123456",
+      "name": "Buttons",
+      "thumbnail_url": "https://s3-alpha.figma.com/thumbnails/buttons.png",
+      "last_modified": "2026-10-01T09:30:00Z"
+    },
+    {
+      "key": "QwErTy987654",
+      "name": "Inputs",
+      "thumbnail_url": "https://s3-alpha.figma.com/thumbnails/inputs.png",
+      "last_modified": "2026-10-02T11:45:00Z"
+    }
+  ],
+  "_probe_without_token": {
+    "method": "GET",
+    "path": "/v1/projects/{project_id}/files",
+    "status": 401,
+    "body": {
+      "status": 401,
+      "err": "Missing credentials"
+    }
+  }
+}

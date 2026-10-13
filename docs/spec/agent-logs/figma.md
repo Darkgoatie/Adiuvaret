@@ -1,0 +1,3 @@
+- Started Figma connector manifest task: loaded connector spec, manifest engine, Todoist sample, and manifest tests.
+- Verified Figma REST paths with developers.figma.com docs and unauthenticated curl probes (all three endpoints return 401 Missing credentials without token).
+- Added FigmaManifest, fixture JSONs, and FigmaManifestTests; validated scorer ranking and rendered fixture lines via Python checks.

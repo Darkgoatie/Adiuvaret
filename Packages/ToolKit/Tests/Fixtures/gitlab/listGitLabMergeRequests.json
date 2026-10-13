@@ -1,0 +1,20 @@
+[
+  {
+    "id": 701,
+    "iid": 42,
+    "title": "Harden OAuth callback validation",
+    "state": "opened",
+    "updated_at": "2026-10-12T14:52:00.000Z",
+    "web_url": "https://gitlab.com/adiuvaret/mobile/-/merge_requests/42",
+    "references": { "short": "!42", "relative": "!42", "full": "adiuvaret/mobile!42" }
+  },
+  {
+    "id": 702,
+    "iid": 41,
+    "title": "Fix release notes rendering",
+    "state": "opened",
+    "updated_at": "2026-10-11T09:04:00.000Z",
+    "web_url": "https://gitlab.com/adiuvaret/mobile/-/merge_requests/41",
+    "references": { "short": "!41", "relative": "!41", "full": "adiuvaret/mobile!41" }
+  }
+]

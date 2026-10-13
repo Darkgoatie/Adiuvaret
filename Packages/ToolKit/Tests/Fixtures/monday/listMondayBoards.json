@@ -1,0 +1,21 @@
+{
+  "data": {
+    "boards": [
+      {
+        "id": "1234567890",
+        "name": "Product Roadmap",
+        "state": "active"
+      },
+      {
+        "id": "2345678901",
+        "name": "Marketing Launch",
+        "state": "active"
+      },
+      {
+        "id": "3456789012",
+        "name": "Archived Board",
+        "state": "archived"
+      }
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+2026-10-13: Loaded connector docs/tests, extracted Slack method docs, and confirmed unauthenticated /api probes return ok:false not_authed.
+2026-10-13: Added SlackManifest + Slack fixtures + SlackManifestTests with host-bound requests, scope/error notes, and first-line parsing assertions.
+2026-10-13: Verified Slack examples against the Python catalog scorer and ran a Python line-template renderer against all Slack read fixtures.

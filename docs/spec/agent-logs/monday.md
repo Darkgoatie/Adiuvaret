@@ -1,0 +1,4 @@
+- Started Monday connector manifest implementation; loaded connector specs/tests and scorer script.
+- Confirmed monday GraphQL endpoint/docs: POST https://api.monday.com/v2, JSON body with query, API-Version current stable is 2026-07.
+- Added Monday manifest + monday fixtures + Monday manifest tests (validator, host safety, GraphQL slot safety, fixture parsing workaround for itemsKey dotted-path limitation).
+- Verified monday examples rank to their own tools in scorer port; verified fixture line templates via Python renderer; probed api.monday.com/v2 unauthenticated (NOT_AUTHENTICATED as expected).

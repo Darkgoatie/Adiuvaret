@@ -1,0 +1,21 @@
+[
+  {
+    "id": "80351110224678912",
+    "name": "1337 Krew",
+    "icon": "8342729096ea3675442027381ff50dfe",
+    "banner": "bb42bdc37653b7cf58c4c8cc622e76cb",
+    "owner": true,
+    "permissions": "36953089",
+    "features": ["COMMUNITY", "NEWS", "ANIMATED_ICON", "INVITE_SPLASH", "BANNER", "ROLE_ICONS"],
+    "approximate_member_count": 3268,
+    "approximate_presence_count": 784
+  },
+  {
+    "id": "197038439483310086",
+    "name": "Discord Testers",
+    "icon": "f64c482b807da4f539cff778d174971c",
+    "features": ["COMMUNITY", "NEWS", "BANNER"],
+    "approximate_member_count": 60814,
+    "approximate_presence_count": 20034
+  }
+]

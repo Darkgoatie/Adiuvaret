@@ -1,0 +1,60 @@
+[
+  {
+    "id": "334385199974967042",
+    "channel_id": "290926798999357250",
+    "author": {
+      "id": "53908099506183680",
+      "username": "Mason",
+      "discriminator": "9999",
+      "avatar": "a_bab14f271d565501444b2ca3be944b25"
+    },
+    "content": "Supa Hot",
+    "timestamp": "2017-07-11T17:27:07.299000+00:00",
+    "edited_timestamp": null,
+    "tts": false,
+    "mention_everyone": false,
+    "mentions": [],
+    "mention_roles": [],
+    "attachments": [],
+    "embeds": [],
+    "pinned": false,
+    "type": 0
+  },
+  {
+    "id": "334385199974967043",
+    "channel_id": "290926798999357250",
+    "author": {
+      "id": "53908099506183680",
+      "username": "Mason",
+      "global_name": "Mason",
+      "discriminator": "9999",
+      "avatar": "a_bab14f271d565501444b2ca3be944b25"
+    },
+    "content": "Big news! In this <#278325129692446722> channel!",
+    "timestamp": "2017-07-11T17:28:07.299000+00:00",
+    "edited_timestamp": null,
+    "tts": false,
+    "mention_everyone": false,
+    "mentions": [],
+    "mention_roles": [],
+    "mention_channels": [
+      {
+        "id": "278325129692446722",
+        "guild_id": "278325129692446720",
+        "name": "big-news",
+        "type": 5
+      }
+    ],
+    "attachments": [],
+    "embeds": [],
+    "pinned": false,
+    "type": 0,
+    "flags": 2,
+    "message_reference": {
+      "type": 0,
+      "channel_id": "278325129692446722",
+      "guild_id": "278325129692446720",
+      "message_id": "306588351130107906"
+    }
+  }
+]

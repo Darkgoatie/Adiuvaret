@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "query": "The meaning of life the universe and everything",
+  "messages": {
+    "matches": [
+      {
+        "channel": {
+          "id": "C12345678",
+          "name": "general"
+        },
+        "text": "The meaning of life the universe and everything is 42.",
+        "ts": "1508284197.000015",
+        "username": "roach"
+      },
+      {
+        "channel": {
+          "id": "C12345678",
+          "name": "random"
+        },
+        "text": "The meaning of life the universe and everything is 101010",
+        "ts": "1508795665.000236",
+        "username": "robot overlord"
+      }
+    ],
+    "pagination": {
+      "first": 1,
+      "last": 2,
+      "page": 1,
+      "page_count": 1,
+      "per_page": 20,
+      "total_count": 2
+    },
+    "total": 2
+  }
+}

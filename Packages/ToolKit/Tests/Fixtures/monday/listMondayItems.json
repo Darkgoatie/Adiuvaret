@@ -1,0 +1,27 @@
+{
+  "data": {
+    "boards": [
+      {
+        "id": "1234567890",
+        "name": "Product Roadmap",
+        "items_page": {
+          "cursor": "MSwxMjM0NTY3ODkwLDA=",
+          "items": [
+            {
+              "id": "9001",
+              "name": "Ship alpha"
+            },
+            {
+              "id": "9002",
+              "name": "Write docs"
+            },
+            {
+              "id": "9003",
+              "name": "Plan beta rollout"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

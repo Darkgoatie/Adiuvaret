@@ -90,7 +90,7 @@ public enum ConnectorEngine {
     public static func lines(_ spec: ConnectorListSpec, data: Data, args: [String: String]) -> [String] {
         guard let root = try? JSONSerialization.jsonObject(with: data) else { return [] }
         var items: [[String: Any]] = []
-        if let key = spec.itemsKey { items = ((root as? [String: Any])?[key] as? [[String: Any]]) ?? [] }
+        if let key = spec.itemsKey { items = node(root, key) as? [[String: Any]] ?? [] }
         else { items = (root as? [[String: Any]]) ?? [] }
         let words = filterWords(spec, args)
         var out: [String] = []
@@ -104,6 +104,17 @@ public enum ConnectorEngine {
             if out.count == spec.limit { break }
         }
         return out
+    }
+
+    /// Walks a dotted path through dictionaries and, for numeric steps, arrays: "data.boards.0.items_page.items".
+    static func node(_ root: Any, _ path: String) -> Any? {
+        var cur: Any = root
+        for part in path.split(separator: ".") {
+            if let d = cur as? [String: Any], let n = d[String(part)] { cur = n }
+            else if let a = cur as? [Any], let i = Int(part), a.indices.contains(i) { cur = a[i] }
+            else { return nil }
+        }
+        return cur
     }
 
     static func filterWords(_ spec: ConnectorListSpec, _ args: [String: String]) -> [String] {

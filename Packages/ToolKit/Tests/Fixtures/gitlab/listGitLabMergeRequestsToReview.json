@@ -1,0 +1,11 @@
+[
+  {
+    "id": 810,
+    "iid": 105,
+    "title": "Refactor notification scheduler",
+    "state": "opened",
+    "updated_at": "2026-10-10T11:35:00.000Z",
+    "web_url": "https://gitlab.com/adiuvaret/core/-/merge_requests/105",
+    "references": { "short": "!105", "relative": "!105", "full": "adiuvaret/core!105" }
+  }
+]
