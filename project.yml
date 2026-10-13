@@ -59,7 +59,7 @@ targets:
         DEVELOPMENT_TEAM: P6LL282795
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: Config/Adiuvaret.entitlements
-        MARKETING_VERSION: "0.2.0"
+        MARKETING_VERSION: "0.3.0"
         CURRENT_PROJECT_VERSION: "11"
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
@@ -93,7 +93,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret.widgets
         DEVELOPMENT_TEAM: P6LL282795
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "0.2.0"
+        MARKETING_VERSION: "0.3.0"
         CURRENT_PROJECT_VERSION: "11"
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
