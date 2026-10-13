@@ -144,6 +144,7 @@ struct DeleteEventExecutor: ToolExecutor {
 
 enum EventUndo {
     static func run(_ action: UndoAction) async -> Bool {
+        if case .removeSavedItem(let id) = action { return SavedItemStore.shared.remove(id) }
         let store = EKEventStore()
         guard (try? await store.requestFullAccessToEvents()) == true else { return false }
         switch action {
@@ -158,6 +159,8 @@ enum EventUndo {
             return await ReminderUndo.remove(id: id)
         case .removeTodoist(let id):
             return (try? await ServiceClient.send(ServiceRequest.todoistDelete(id: id), to: "todoist")) != nil
+        case .removeSavedItem:
+            return false
         }
     }
 }

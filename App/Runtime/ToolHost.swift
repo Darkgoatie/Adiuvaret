@@ -52,6 +52,7 @@ final class ToolHost {
                                          "lookAtPage": LookAtPageExecutor(),
                                          "actOnPage": ActOnPageExecutor(), "actOnPageRisky": ActOnPageExecutor(),
                                          "searchNotes": SearchNotesExecutor(), "readNote": ReadNoteExecutor(), "writeNote": WriteNoteExecutor(reporter: bridge),
+                                         "saveItem": SaveItemExecutor(reporter: bridge), "findSavedItems": FindSavedItemsExecutor(),
                                          "findContact": FindContactExecutor(), "runShortcut": RunShortcutExecutor(reporter: bridge),
                                          "draftEmail": DraftEmailExecutor(reporter: bridge),
                                          "listTodoistTasks": ListTodoistExecutor(), "addTodoistTask": AddTodoistExecutor(reporter: bridge),
@@ -73,6 +74,8 @@ final class ToolHost {
             "searchNotes": LiveSearchNotesTool(gate: gate, ctx: ctx, reporter: bridge),
             "readNote": LiveReadNoteTool(gate: gate, ctx: ctx, reporter: bridge),
             "writeNote": LiveWriteNoteTool(gate: gate, ctx: ctx),
+            "saveItem": LiveSaveItemTool(gate: gate, ctx: ctx),
+            "findSavedItems": LiveFindSavedItemsTool(gate: gate, ctx: ctx, reporter: bridge),
             "findContact": LiveFindContactTool(gate: gate, ctx: ctx, reporter: bridge),
             "runShortcut": LiveRunShortcutTool(gate: gate, ctx: ctx),
             "draftEmail": LiveDraftEmailTool(gate: gate, ctx: ctx),
@@ -134,6 +137,13 @@ final class ToolHost {
             rows = [DetailRow(String(localized: "Note"), target.isEmpty ? ((args["title"] as? String) ?? "") : NoteName.title(of: target)),
                     DetailRow(String(localized: "Text"), String(((args["text"] as? String) ?? "").prefix(200))),
                     DetailRow(String(localized: "Where"), String(localized: "Your notes folder"))]
+        case "saveItem":
+            let isTask = SavedItemRules.kind(from: (args["kind"] as? String) ?? "") == .task
+            title = isTask ? String(localized: "Keep this task?") : String(localized: "Keep this note?")
+            let kept = SavedItemRules.clean(title: (args["title"] as? String) ?? "", text: (args["text"] as? String) ?? "")
+            rows = [DetailRow(String(localized: "Title"), kept?.title ?? ""),
+                    DetailRow(String(localized: "Text"), String((kept?.text ?? "").prefix(200))),
+                    DetailRow(String(localized: "Where"), String(localized: "Notes and Tasks in this app"))]
         case "runShortcut":
             title = String(localized: "Run this shortcut?")
             rows = [DetailRow(String(localized: "Shortcut"), (args["name"] as? String) ?? ""),

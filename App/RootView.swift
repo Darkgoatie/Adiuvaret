@@ -105,7 +105,7 @@ struct RootView: View {
     @ViewBuilder private func destination(_ r: Route) -> some View {
         switch r {
         case .memory: MemoryView()
-        case .notes, .note: PlaceholderScreen(title: String(localized: "Notes and Tasks"), icon: "note.text")
+        case .notes, .note: NotesView()
         case .briefings: BriefingsView(open: { runBriefing($0) })
         case .briefing: EmptyView()
         case .activity: ActivityView()

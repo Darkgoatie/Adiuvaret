@@ -82,6 +82,16 @@ public extension ToolCatalog {
             examples: ["Create a note called Packing list with a passport and charger", "Add a line to my Ideas note about the new app", "Jot down a note that the dentist moved to Friday"],
             requires: ["searchNotes"]),
         CatalogEntry(
+            id: "saveItem", title: "Keep a note or task here", category: "Saved",
+            description: "Keeps a note or a task inside Adiuvaret itself, in its own Notes and Tasks list. It is not the Obsidian folder, not Reminders and not Todoist. Use it when the user asks to keep or stash something here and names no other app.",
+            keywords: ["keep this", "stash", "keep a note", "hold on to", "stash this", "note it here"],
+            examples: ["Keep this for later: the Wi-Fi code is on the fridge", "Keep a note in Adiuvaret that the landlord prefers phone calls", "Stash a task in Adiuvaret to renew my passport"]),
+        CatalogEntry(
+            id: "findSavedItems", title: "Recall what was kept", category: "Saved",
+            description: "Recalls what the user kept inside Adiuvaret in its own Notes and Tasks list, or lists the newest kept items. Read only. Not the Obsidian folder, not Reminders and not Todoist.",
+            keywords: ["what did i save", "what have i saved", "recall", "saved", "what i kept", "what did i keep", "kept items"],
+            examples: ["What did I save in Adiuvaret about the landlord?", "Recall what I kept earlier", "List my saved tasks in Adiuvaret"]),
+        CatalogEntry(
             id: "findContact", title: "Find contact", category: "Contacts",
             description: "Looks up a person in the user's contacts and returns their phone numbers, emails and birthday. Read only.",
             keywords: ["contact", "phone number", "email address", "birthday", "number of", "address book"],
