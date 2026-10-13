@@ -277,7 +277,18 @@
     return out(true, 'scrolled');
   }
 
+  // Large pictures on the page (a scanned notice, a menu, a timetable), for text recognition when the page itself has no text.
+  function images() {
+    const out = [];
+    document.querySelectorAll('img').forEach(img => {
+      const w = img.naturalWidth || img.width || 0, h = img.naturalHeight || img.height || 0;
+      const src = img.currentSrc || img.src || '';
+      if (w >= 300 && h >= 120 && /^https:/i.test(src) && out.length < 4 && !out.some(o => o.src === src)) out.push({ src, alt: clean(img.getAttribute('alt') || '', 80) });
+    });
+    return JSON.stringify(out);
+  }
+
   function readText() { return document.body ? (document.body.innerText || document.body.textContent || '') : ''; }
 
-  Object.defineProperty(window, '__agent', { value: Object.freeze({ snapshot, act, scroll, readText }), configurable: false });
+  Object.defineProperty(window, '__agent', { value: Object.freeze({ snapshot, act, scroll, readText, images }), configurable: false });
 })();

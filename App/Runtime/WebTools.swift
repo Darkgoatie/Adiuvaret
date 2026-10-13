@@ -89,8 +89,13 @@ struct SearchWebExecutor: ToolExecutor {
         config.urlCache = nil
         let session = URLSession(configuration: config)
         defer { session.finishTasksAndInvalidate() }
-        guard let result = try? await session.data(for: request), let http = result.1 as? HTTPURLResponse, http.statusCode == 200,
-              (http.value(forHTTPHeaderField: "Content-Type") ?? "").lowercased().contains("html"),
+        guard let result = try? await session.data(for: request), let http = result.1 as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+        let kind = ContentKind.classify(mime: http.mimeType, url: http.url ?? url)
+        if kind.isDocument, result.0.count <= 15_000_000, let read = await DocumentText.read(data: result.0, kind: kind) {
+            let text = DocumentRead.excerpt(read.text, query: query)
+            return text.isEmpty ? nil : text
+        }
+        guard (http.value(forHTTPHeaderField: "Content-Type") ?? "").lowercased().contains("html"),
               result.0.count < 3_000_000, let final = http.url, case .allowed(_) = WebPolicy.normalize(final.absoluteString),
               let html = String(data: result.0, encoding: .utf8) ?? String(data: result.0, encoding: .isoLatin1) else { return nil }
         let text = PageExtract.excerpt(html: html, query: query)
@@ -191,8 +196,32 @@ struct SearchWebExecutor: ToolExecutor {
         }
         guard http.statusCode == 200 else { DiagnosticsLog.shared.record("web search", "parallel status \(http.statusCode)"); return nil }
         guard data.count < 1_500_000, let hits = ParallelSearch.parse(data) else { DiagnosticsLog.shared.record("web search", "parallel no usable answer"); return nil }
+        let filled = await readDocuments(in: hits)
         DiagnosticsLog.shared.record("web search", "parallel \(hits.count) results")
-        return ParallelSearch.render(hits, query: query)
+        return ParallelSearch.render(filled, query: query)
+    }
+
+    /// A result that is a PDF or a picture has little or no text in the search answer: fetch it and read it with on-device text recognition.
+    static func readDocuments(in hits: [ParallelSearch.Hit]) async -> [ParallelSearch.Hit] {
+        let wanted = hits.indices.filter { i in
+            ContentKind.classify(mime: nil, url: hits[i].url).isDocument && hits[i].excerpt.count < 400
+        }.prefix(2)
+        guard !wanted.isEmpty else { return hits }
+        var out = hits
+        await withTaskGroup(of: (Int, String?).self) { group in
+            for i in wanted {
+                let url = hits[i].url
+                group.addTask {
+                    guard let file = await DocumentFetch.get(url), let read = await DocumentText.read(data: file.data, kind: file.kind) else { return (i, nil) }
+                    return (i, DocumentRead.clean(read.text))
+                }
+            }
+            for await (i, text) in group {
+                if let text, !text.isEmpty { out[i] = ParallelSearch.Hit(title: hits[i].title, url: hits[i].url, excerpt: String(text.prefix(20_000))) }
+            }
+        }
+        DiagnosticsLog.shared.record("web search", "read \(wanted.count) document results with text recognition")
+        return out
     }
 
     private enum Round {
@@ -415,7 +444,7 @@ struct LiveOpenWebsiteTool: AppTool {
 
 struct LiveLookAtPageTool: AppTool {
     let name = "lookAtPage"
-    let description = "Looks at the open website. Lists the numbered buttons, links and fields in view, or reads the page text. Only for a page the user asked you to use or one search result you opened."
+    let description = "Looks at the open website. Lists the numbered buttons, links and fields in view, or reads the page text. A PDF or an image is read as text on this phone automatically, so use readText true on it. Only for a page the user asked you to use or one search result you opened."
     let gate: PolicyGate; let ctx: TaskContext; let reporter: any ToolReporter
 
     struct Arguments {

@@ -27,6 +27,10 @@ public enum ParallelSearch {
         public let title: String
         public let url: URL
         public let excerpt: String
+
+        public init(title: String, url: URL, excerpt: String) {
+            self.title = title; self.url = url; self.excerpt = excerpt
+        }
     }
 
     /// Nil on an error answer, a rate limit or an unknown shape, so the caller can fall back to another search.

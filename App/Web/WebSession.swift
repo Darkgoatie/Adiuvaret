@@ -48,6 +48,7 @@ final class WebSession: NSObject {
     @ObservationIgnored private var owner: UUID?
     @ObservationIgnored private var elements: [Int: PageElement] = [:]
     @ObservationIgnored private var lastHasPassword = false
+    @ObservationIgnored private var pageKind: ContentKind = .html
     @ObservationIgnored private var lastLoadError: String?
     @ObservationIgnored private var summaries: [UUID: WebSummary] = [:]
     @ObservationIgnored private var waiters: [Waiter] = []
@@ -104,6 +105,10 @@ final class WebSession: NSObject {
                 summarize(callID, String(localized: "Couldn't open \(host)"), [], failed: true)
                 return "Could not open the page: \(error)"
             }
+            if pageKind.isDocument, let text = await documentText(part: 1) {
+                summarize(callID, String(localized: "Opened \(host) · read the document"), [], failed: false)
+                return text
+            }
             let known = SiteNoteRules.render(siteNotes.note(for: host))
             return await observe(callID, title: String(localized: "Opened \(host)"), budget: 1200, extra: known)
         }
@@ -113,12 +118,19 @@ final class WebSession: NSObject {
         if let problem = notReady(chat) { summarize(callID, String(localized: "No website is open"), [], failed: true); return problem }
         return await busy {
             let query = find.trimmingCharacters(in: .whitespacesAndNewlines)
+            if pageKind.isDocument, let text = await documentText(part: part) {
+                summarize(callID, String(localized: "Read the document · part \(max(part, 1))"), [], failed: false)
+                return text
+            }
             if controls || !query.isEmpty { return await observe(callID, title: nil, budget: 1500, query: query) }
             let raw = (try? await webView.callAsyncJavaScript("return window.__agent ? window.__agent.readText() : ''", contentWorld: world)) as? String ?? ""
             let parts = SnapshotFormat.partCount(of: raw)
             let shown = min(max(part, 1), parts)
             summarize(callID, String(localized: "Read the page · part \(shown) of \(parts)"), [], failed: false)
-            return SnapshotFormat.page(text: raw, part: shown)
+            var pageText = SnapshotFormat.page(text: raw, part: shown)
+            // A page made of pictures has almost no text: read the large pictures with text recognition.
+            if shown == 1, SnapshotFormat.collapse(raw).count < 300, let fromImages = await imageText() { pageText += "\n" + fromImages }
+            return pageText
         }
     }
 
@@ -208,6 +220,41 @@ final class WebSession: NSObject {
         owner = chat
         allowed = []
         elements = [:]
+    }
+
+    /// The words of the open PDF or image, read on this phone, in parts like page text.
+    private func documentText(part: Int) async -> String? {
+        guard let url = webView.url, let file = await DocumentFetch.get(url, cookieHeader: await cookieHeader(for: url)),
+              let read = await DocumentText.read(data: file.data, kind: file.kind) else { return nil }
+        return DocumentRead.render(text: read.text, kind: file.kind, part: part, note: read.note)
+    }
+
+    /// Text recognised in the large pictures of the open page, or nil when there are none or they hold no words.
+    private func imageText() async -> String? {
+        guard let json = (try? await webView.callAsyncJavaScript("return window.__agent ? window.__agent.images() : '[]'", contentWorld: world)) as? String,
+              let list = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [[String: Any]], !list.isEmpty else { return nil }
+        var blocks: [String] = []
+        for item in list.prefix(3) {
+            guard let src = item["src"] as? String, case .allowed(let url) = WebPolicy.normalize(src),
+                  let file = await DocumentFetch.get(url, cookieHeader: await cookieHeader(for: url)), file.kind == .image,
+                  let read = await DocumentText.read(data: file.data, kind: .image) else { continue }
+            let words = DocumentRead.clean(read.text)
+            guard words.count >= 12 else { continue }
+            let alt = (item["alt"] as? String) ?? ""
+            blocks.append("Text read from a picture on the page\(alt.isEmpty ? "" : " (\(alt))") with text recognition:\n" + String(words.prefix(1500)))
+        }
+        return blocks.isEmpty ? nil : blocks.joined(separator: "\n")
+    }
+
+    /// Cookies the browser holds for exactly this host, so a document behind a sign-in can be fetched.
+    private func cookieHeader(for url: URL) async -> String? {
+        let host = WebPolicy.host(of: url)
+        let cookies = await webView.configuration.websiteDataStore.httpCookieStore.allCookies()
+        let mine = cookies.filter { c in
+            let d = c.domain.hasPrefix(".") ? String(c.domain.dropFirst()) : c.domain
+            return host == d || host.hasSuffix("." + d)
+        }
+        return mine.isEmpty ? nil : mine.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
     }
 
     private func notReady(_ chat: UUID) -> String? {
@@ -329,7 +376,10 @@ extension WebSession: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
-        navigationResponse.canShowMIMEType ? .allow : .cancel
+        if navigationResponse.isForMainFrame {
+            pageKind = ContentKind.classify(mime: navigationResponse.response.mimeType, url: navigationResponse.response.url)
+        }
+        return navigationResponse.canShowMIMEType ? .allow : .cancel
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {

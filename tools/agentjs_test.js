@@ -122,5 +122,15 @@ const clicked = JSON.parse(menu.window.__agent.act(found.elements[0].id, "click"
 check("found link can be clicked", clicked.ok === true && clicked.label === "Calendar", clicked);
 check("find with no match is empty", JSON.parse(menu.window.__agent.snapshot(60, "zzz")).elements.length === 0);
 
+const pics = new JSDOM('<body><img src="https://cdn.example.com/menu.png" alt="Lunch menu"><img src="https://cdn.example.com/icon.png"><img src="http://cdn.example.com/plain.png" alt="x"><img src="https://cdn.example.com/menu.png" alt="again"></body>', { runScripts: "outside-only", pretendToBeVisual: true, url: "https://s.example.com/" });
+pics.window.Element.prototype.getBoundingClientRect = function () { return { top: 10, bottom: 28, left: 0, right: 200, width: 200, height: 18 }; };
+pics.window.document.elementFromPoint = () => null;
+pics.window.Element.prototype.scrollIntoView = function () {};
+Object.defineProperty(pics.window.HTMLImageElement.prototype, "naturalWidth", { get() { return this.src.includes("icon") ? 32 : 800; } });
+Object.defineProperty(pics.window.HTMLImageElement.prototype, "naturalHeight", { get() { return this.src.includes("icon") ? 32 : 600; } });
+pics.window.eval(script);
+const found2 = JSON.parse(pics.window.__agent.images());
+check("images lists large https pictures once", found2.length === 1 && found2[0].src === "https://cdn.example.com/menu.png" && found2[0].alt === "Lunch menu", found2);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
