@@ -69,6 +69,11 @@ enum ToolRouter {
             chosen = catalog.withRequirements(wanted + chosen, cap: 5)
             note += " browse-intent"
         }
+        // A page is already open in the in-app browser (the user signed in there): offer the page tools next to whatever else matched, so "check my calendar" can mean that site's own calendar.
+        if await MainActor.run(body: { WebSession.shared.hasPage }), let look = catalog.entry("lookAtPage") {
+            chosen = catalog.withRequirements([look] + chosen, cap: 6)
+            note += " page-open"
+        }
         // A question that names a connected app goes to that app's tool, whatever the router said.
         if let match = ConnectorIntent.detect(prompt), ConnectorCatalog.isOn(match.connector), let entry = catalog.entry(match.tool) {
             chosen = catalog.withRequirements([entry])
