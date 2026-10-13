@@ -75,12 +75,16 @@ enum LiveDescriptors {
     static let searchNotion = ToolDescriptor(name: "searchNotion", summary: "Searches Notion titles.", permission: .readOnly, outputSensitivity: .personal)
     static let saveItem = ToolDescriptor(name: "saveItem", summary: "Keeps a note or task inside the app.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let findSavedItems = ToolDescriptor(name: "findSavedItems", summary: "Searches the notes and tasks kept inside the app.", permission: .readOnly, outputSensitivity: .personal)
+    static let callAPI = ToolDescriptor(name: "callAPI", summary: "Reads from a web API.", permission: .readOnly, outputSensitivity: .personal)
+    /// Any method but GET. Always asks, whatever the chat has been allowed before.
+    static let callAPIWrite = ToolDescriptor(name: "callAPIWrite", summary: "Sends or changes data through a web API.", permission: .irreversible, outputSensitivity: .personal)
+    static let approveAPIHost = ToolDescriptor(name: "approveAPIHost", summary: "Allows calls to a new API host.", permission: .reversibleWrite, outputSensitivity: .personal)
     static let skillUse = ToolDescriptor(name: "skill_use", summary: "Finds and reads saved skills.", permission: .readOnly, outputSensitivity: .personal)
     static let all: [ToolDescriptor] = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
                       searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky,
                       searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail,
                       listGitHubIssues, listGitHubRepos, listGitHubCommits, searchNotion, searchPastChats, skillUse,
-                      saveItem, findSavedItems] + manifest
+                      saveItem, findSavedItems, callAPI, callAPIWrite, approveAPIHost] + manifest
 }
 
 enum CalendarRange {

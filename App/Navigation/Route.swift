@@ -11,6 +11,7 @@ enum Route: Hashable {
     case memory
     case activity
     case integrations
+    case apiAccess
     case models
     case privacy
     case settings
@@ -19,12 +20,13 @@ enum Route: Hashable {
 
 /// Rows of the Advanced and Settings sub-screens. Each opens its own screen.
 enum SubItem: Identifiable {
-    case integrations, models, activity, memory, privacy, briefings, notes
+    case integrations, apiAccess, models, activity, memory, privacy, briefings, notes
     var id: Self { self }
 
     var title: String {
         switch self {
         case .integrations: String(localized: "Integrations")
+        case .apiAccess: String(localized: "API access")
         case .models: String(localized: "Models")
         case .activity: String(localized: "Activity log")
         case .memory: String(localized: "What I know about you")
@@ -37,6 +39,7 @@ enum SubItem: Identifiable {
     var symbol: String {
         switch self {
         case .integrations: "puzzlepiece.extension"
+        case .apiAccess: "network"
         case .models: "cpu"
         case .activity: "list.bullet.rectangle"
         case .memory: "brain.head.profile"
@@ -49,6 +52,7 @@ enum SubItem: Identifiable {
     var route: Route {
         switch self {
         case .integrations: .integrations
+        case .apiAccess: .apiAccess
         case .models: .models
         case .activity: .activity
         case .memory: .memory
@@ -58,6 +62,6 @@ enum SubItem: Identifiable {
         }
     }
 
-    static let advanced: [SubItem] = [.notes, .briefings, .integrations, .models, .activity, .memory]
+    static let advanced: [SubItem] = [.notes, .briefings, .integrations, .apiAccess, .models, .activity, .memory]
     static let settings: [SubItem] = [.privacy]
 }

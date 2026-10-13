@@ -136,5 +136,11 @@ public extension ToolCatalog {
             description: "Lists or reads the user's saved skills, which are named sets of steps. Find one by words, then read it and follow it with the other tools.",
             keywords: ["skill", "skills", "playbook"],
             examples: ["Use my weekly review skill", "What skills do you have?", "Run the plan my day skill", "Which saved skills are available?"]),
+        CatalogEntry(
+            id: "callAPI", title: "Call a web API", category: "API",
+            description: "Calls any web API over HTTPS on a host the user allows, to read or change data on a service. Read its documentation first with the web tools, or use documentation the user pasted. Changes ask the user first.",
+            keywords: ["api", "apis", "endpoint", "endpoints", "curl", "webhook", "openapi", "swagger", "rest api"],
+            examples: ["Use the Hetzner API to list my servers", "Here is the API documentation, create a project with it", "Call this endpoint and tell me the result", "Send a JSON request to this webhook URL"],
+            requires: ["searchWeb"]),
     ] + ConnectorRegistry.manifests.flatMap(\.catalogEntries))
 }

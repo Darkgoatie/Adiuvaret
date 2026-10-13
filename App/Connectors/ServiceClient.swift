@@ -77,7 +77,7 @@ enum ServiceClient {
 }
 
 /// A token must never follow a redirect to another address.
-private final class NoRedirect: NSObject, URLSessionTaskDelegate {
+final class NoRedirect: NSObject, URLSessionTaskDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         completionHandler(nil)

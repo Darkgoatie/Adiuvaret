@@ -87,6 +87,12 @@ enum ToolRouter {
             chosen = catalog.withRequirements([entry])
             note += " connector=\(match.connector)"
         }
+        // Naming an API, an endpoint or a webhook offers the API tool plus the web tools that read its documentation.
+        if APIIntent.looksLikeAPIRequest(prompt), let api = catalog.entry("callAPI") {
+            let docs = ["searchWeb", "openWebsite", "lookAtPage"].compactMap { catalog.entry($0) }
+            chosen = catalog.withRequirements([api] + docs + chosen, cap: 6)
+            note += " api-intent"
+        }
         // A small model sometimes answers "look it up yourself" instead of using a tool. A plain web question always gets the search tool.
         if chosen.isEmpty, WebIntent.looksLikeWebRequest(prompt), let search = catalog.entry("searchWeb") {
             chosen = catalog.withRequirements([search])

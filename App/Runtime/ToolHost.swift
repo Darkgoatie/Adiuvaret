@@ -41,6 +41,7 @@ final class ToolHost {
         let ctx = self.ctx
         var rawExecutors: [String: any ToolExecutor] = ["readCalendar": LiveCalendarExecutor(handles: handles),
                                          "findFreeTime": FreeTimeExecutor(),
+                                         "callAPI": CallAPIExecutor(), "callAPIWrite": CallAPIExecutor(), "approveAPIHost": ApproveAPIHostExecutor(),
                                          "createEvent": CreateEventExecutor(reporter: bridge),
                                          "moveEvent": MoveEventExecutor(reporter: bridge, handles: handles),
                                          "deleteEvent": DeleteEventExecutor(reporter: bridge, handles: handles),
@@ -83,6 +84,7 @@ final class ToolHost {
             "listGitHubCommits": LiveListGitHubCommitsTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchNotion": LiveSearchNotionTool(gate: gate, ctx: ctx, reporter: bridge),
             "searchPastChats": LiveSearchPastChatsTool(gate: gate, ctx: ctx, reporter: bridge),
+            "callAPI": LiveCallAPITool(gate: gate, ctx: ctx, reporter: bridge),
             "skill_use": LiveSkillUseTool(gate: gate, ctx: ctx, reporter: bridge)]
         all.merge(makeConnectorTools(gate: gate, ctx: ctx, reporter: bridge)) { a, _ in a }
         built = all
@@ -125,6 +127,16 @@ final class ToolHost {
         case "deleteEvent":
             title = String(localized: "Delete this event?")
             rows = [DetailRow(String(localized: "Event"), eventName(args["event"])), DetailRow(String(localized: "Note"), String(localized: "This can't be undone."))]
+        case "approveAPIHost":
+            title = String(localized: "Allow calls to this host?")
+            rows = [DetailRow(String(localized: "Host"), (args["host"] as? String) ?? ""),
+                    DetailRow(String(localized: "Note"), String(localized: "Reading from it then runs without asking. Sending or changing data still asks every time. Add a token in Advanced, API access."))]
+        case "callAPIWrite":
+            title = String(localized: "Send this to the service?")
+            rows = [DetailRow(String(localized: "Host"), (args["host"] as? String) ?? ""),
+                    DetailRow(String(localized: "Request"), ((args["method"] as? String) ?? "") + " " + String(((args["path"] as? String) ?? "").prefix(120))),
+                    DetailRow(String(localized: "Data"), String(((args["body"] as? String) ?? "").isEmpty ? ((args["query"] as? String) ?? "") : ((args["body"] as? String) ?? "").prefix(300))),
+                    DetailRow(String(localized: "Note"), String(localized: "This may not be undoable."))]
         case "openOtherSite":
             title = String(localized: "Open another website?")
             rows = [DetailRow(String(localized: "Site"), WebPolicy.normalize((args["url"] as? String) ?? "").hostText),

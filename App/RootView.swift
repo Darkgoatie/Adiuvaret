@@ -110,6 +110,7 @@ struct RootView: View {
         case .briefing: EmptyView()
         case .activity: ActivityView()
         case .integrations: IntegrationsView()
+        case .apiAccess: APIHostsView()
         case .models: ModelsView(use: { id in ModelSettings.shared.select(id); if store.current.items.isEmpty { store.switchModel(to: id) } })
         case .privacy: PrivacyView()
         case .advanced:
