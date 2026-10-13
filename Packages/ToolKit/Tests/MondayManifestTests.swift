@@ -135,8 +135,11 @@ import Foundation
 
         let boardsSpec = try #require(m.tool("listMondayBoards")?.list)
         let boardsFromNested = ConnectorEngine.lines(boardsSpec, data: boardsFixture, args: [:])
-        #expect(boardsFromNested.isEmpty,
-                Comment(rawValue: "Known engine limitation: itemsKey dotted paths are not resolved in lines()."))
+        #expect(boardsFromNested == [
+            "Product Roadmap (id 1234567890, active)",
+            "Marketing Launch (id 2345678901, active)",
+            "Archived Board (id 3456789012, archived)",
+        ])
         let boardsWorkaround = ConnectorEngine.lines(inline(boardsSpec), data: boardsInnerArray, args: [:])
         #expect(boardsWorkaround == [
             "Product Roadmap (id 1234567890, active)",
@@ -146,8 +149,11 @@ import Foundation
 
         let itemsSpec = try #require(m.tool("listMondayItems")?.list)
         let itemsFromNested = ConnectorEngine.lines(itemsSpec, data: boardItemsFixture, args: ["boardID": "1234567890"])
-        #expect(itemsFromNested.isEmpty,
-                Comment(rawValue: "Known engine limitation: itemsKey dotted paths (and array steps) are not resolved in lines()."))
+        #expect(itemsFromNested == [
+            "Ship alpha (id 9001)",
+            "Write docs (id 9002)",
+            "Plan beta rollout (id 9003)",
+        ])
         let itemsWorkaround = ConnectorEngine.lines(inline(itemsSpec), data: itemsInnerArray, args: ["boardID": "1234567890"])
         #expect(itemsWorkaround == [
             "Ship alpha (id 9001)",

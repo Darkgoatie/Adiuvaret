@@ -25,7 +25,7 @@ public enum SlackManifest {
                                         requiredField: "id", filterArgument: "search", filterField: "name", limit: 30,
                                         header: "Slack conversations", empty: "No Slack conversations were returned.",
                                         emptyFiltered: "No Slack conversations matching '{value}'."),
-                intent: ConnectorIntentRule(triggers: ["slack"], blockers: ["add", "create", "post", "send", "write", "new"],
+                intent: ConnectorIntentRule(triggers: ["channels", "channel", "conversations", "conversation", "dms"], blockers: ["add", "create", "post", "send", "write", "new"],
                                             skip: ["slack", "conversation", "conversations", "channel", "channels", "list", "show", "my", "what", "can", "this", "token", "read", "in", "the", "me"],
                                             argument: "search", maxWords: 3),
                 keywords: ["slack", "slack channels", "slack conversations", "slack dms", "slack list"],

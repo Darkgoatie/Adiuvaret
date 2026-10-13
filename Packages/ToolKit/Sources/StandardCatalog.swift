@@ -132,15 +132,25 @@ public extension ToolCatalog {
             keywords: ["notion", "workspace", "wiki", "page in notion", "notion page"],
             examples: ["Find my roadmap page in Notion", "Search Notion for meeting notes", "Is there a Notion page about onboarding?"]),
         CatalogEntry(
-            id: "skill_use", title: "Use a skill", category: "Skills",
-            description: "Lists or reads the user's saved skills, which are named sets of steps. Find one by words, then read it and follow it with the other tools.",
-            keywords: ["skill", "skills", "playbook"],
+            id: "skill_use", title: "Use a workflow", category: "Skills",
+            description: "Lists or reads the user's saved workflows, which are named sets of steps. Find one by words, then read it and follow it with the other tools.",
+            keywords: ["skill", "skills", "playbook", "workflow", "workflows"],
             examples: ["Use my weekly review skill", "What skills do you have?", "Run the plan my day skill", "Which saved skills are available?"]),
         CatalogEntry(
             id: "callAPI", title: "Call a web API", category: "API",
             description: "Calls any web API over HTTPS on a host the user allows, to read or change data on a service. Read its documentation first with the web tools, or use documentation the user pasted. Changes ask the user first.",
             keywords: ["api", "apis", "endpoint", "endpoints", "curl", "webhook", "openapi", "swagger", "rest api"],
             examples: ["Use the Hetzner API to list my servers", "Here is the API documentation, create a project with it", "Call this endpoint and tell me the result", "Send a JSON request to this webhook URL"],
-            requires: ["searchWeb"]),
+            requires: ["searchWeb", "saveSkill"]),
+        CatalogEntry(
+            id: "saveSkill", title: "Save what was learned as a skill", category: "Skills",
+            description: "Saves a procedure the assistant just learned, such as how to use a service's API for a task, so it can repeat it later. The user confirms on a card. Never holds passwords or tokens.",
+            keywords: ["teach", "learn", "remember how", "save as skill", "new skill", "learn how to"],
+            examples: ["Learn how to do this and remember it", "Teach yourself how to use this API", "Save what you just did as a new skill", "Remember how to restart my server like this"]),
+        CatalogEntry(
+            id: "runScript", title: "Run a script", category: "Scripts",
+            description: "Runs a short JavaScript snippet with no network or file access to parse, convert, count or calculate on text the assistant already has, and returns the printed result.",
+            keywords: ["script", "javascript", "regex", "parse json", "convert csv", "transform"],
+            examples: ["Run a script to sum these numbers", "Convert this JSON to CSV with a script", "Write JavaScript that counts the words in this text"]),
     ] + ConnectorRegistry.manifests.flatMap(\.catalogEntries))
 }

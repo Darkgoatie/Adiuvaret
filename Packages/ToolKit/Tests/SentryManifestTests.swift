@@ -86,7 +86,8 @@ import Foundation
         let issuesRequest = try #require(ConnectorEngine.request(manifest, issuesTool, ["organization": "the-interstellar-jurisdiction"]))
         let url = try #require(issuesRequest.url)
         #expect(url.host == "sentry.io")
-        #expect(url.path == "/api/0/organizations/the-interstellar-jurisdiction/issues/")
+        #expect(url.path.hasPrefix("/api/0/organizations/the-interstellar-jurisdiction/issues"))
+        #expect(url.absoluteString.hasPrefix("https://sentry.io/api/0/organizations/the-interstellar-jurisdiction/issues/?"))
         let q = url.query ?? ""
         #expect(q.contains("query=is:unresolved") || q.contains("query=is%3Aunresolved"), Comment(rawValue: q))
         #expect(q.contains("limit=15"), Comment(rawValue: q))

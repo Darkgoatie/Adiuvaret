@@ -69,11 +69,20 @@ public enum ConnectorEngine {
     }
 
     static func slots(in template: String) -> [String] {
+        // Only {name} with a plain identifier is a slot; braces of a GraphQL query are text.
         var out: [String] = []
         var rest = Substring(template)
-        while let open = rest.firstIndex(of: "{"), let close = rest[open...].firstIndex(of: "}") {
-            out.append(String(rest[rest.index(after: open)..<close]))
-            rest = rest[rest.index(after: close)...]
+        while let open = rest.firstIndex(of: "{") {
+            let after = rest.index(after: open)
+            guard let close = rest[after...].firstIndex(of: "}") else { break }
+            let name = rest[after..<close]
+            if let first = name.first, first.isASCII, first.isLetter || first == "_",
+               name.allSatisfy({ $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }) {
+                out.append(String(name))
+                rest = rest[rest.index(after: close)...]
+            } else {
+                rest = rest[after...]
+            }
         }
         return out
     }
