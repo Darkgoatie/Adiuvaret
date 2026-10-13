@@ -63,11 +63,6 @@ enum ToolRouter {
             chosen = catalog.withRequirements([search])
             note += " public-date->web"
         }
-        // "Open apple.com", "log in to Tumonline": the browser tools are always offered, whatever the router said.
-        if SiteRequest.detect(prompt) != nil, let open = catalog.entry("openWebsite") {
-            chosen = catalog.withRequirements([open])
-            note += " open-site"
-        }
         // A question that names a connected app goes to that app's tool, whatever the router said.
         if let match = ConnectorIntent.detect(prompt), ConnectorCatalog.isOn(match.connector), let entry = catalog.entry(match.tool) {
             chosen = catalog.withRequirements([entry])

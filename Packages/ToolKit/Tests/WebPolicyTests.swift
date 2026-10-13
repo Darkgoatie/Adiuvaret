@@ -140,38 +140,4 @@ import Foundation
         let s = try JSONDecoder().decode(PageSnapshot.self, from: Data(json.utf8))
         #expect(s.elements.first?.id == 5 && s.elements.first?.type == "submit" && s.scrollY == 10)
     }
-
-    @Test func loginLinksAreNavigationButSubmitsAreStillRisky() {
-        for label in ["Login", "Log in", "Sign in", "Anmelden", "Login to TUMonline", "Giris"] {
-            #expect(WebPolicy.isLoginLink(role: "link", label: label), Comment(rawValue: label))
-        }
-        #expect(!WebPolicy.isLoginLink(role: "button", label: "Log in"))
-        for label in ["Sign up", "Register", "Log in and pay now", "Buy now", "Delete account", ""] {
-            #expect(!WebPolicy.isLoginLink(role: "link", label: label), Comment(rawValue: label))
-        }
-        #expect(WebPolicy.clickNeedsApproval(label: "Log in"))
-    }
-
-    @Test func tumLoginHostsAreRelated() {
-        #expect(WebPolicy.relatedSites(of: "campus.tum.de") == ["tum.de"])
-        #expect(WebPolicy.isAllowed("login.tum.de", in: ["tum.de"]))
-        #expect(WebPolicy.relatedSites(of: "tum.de.evil.net").isEmpty)
-        #expect(WebPolicy.relatedSites(of: "apple.com").isEmpty)
-    }
-
-    @Test func siteRequestsFindTheAddress() {
-        #expect(SiteRequest.detect("Open Tumonline and log in.") == SiteRequest(address: "https://campus.tum.de", wantsLogin: true))
-        #expect(SiteRequest.detect("open tum online") == SiteRequest(address: "https://campus.tum.de", wantsLogin: false))
-        #expect(SiteRequest.detect("Go to apple.com") == SiteRequest(address: "https://apple.com", wantsLogin: false))
-        #expect(SiteRequest.detect("please log in to github.com.") == SiteRequest(address: "https://github.com", wantsLogin: true))
-        for text in ["What's the weather in Seville?", "open the window", "email me at a@b.com", "log in", "tell me about tumonline", ""] {
-            #expect(SiteRequest.detect(text) == nil, Comment(rawValue: text))
-        }
-    }
-
-    @Test func siteInstructionStopsAtTheSignInForm() {
-        let t = SiteRequest(address: "https://campus.tum.de", wantsLogin: true).instruction
-        #expect(t.contains("https://campus.tum.de") && t.contains("globe") && t.contains("Never type"))
-        #expect(!SiteRequest(address: "https://apple.com", wantsLogin: false).instruction.contains("globe"))
-    }
 }

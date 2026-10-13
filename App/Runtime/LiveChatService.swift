@@ -199,8 +199,7 @@ final class LiveChatService: ChatService {
         ctx.notePrivate(prepared.documents.map(\.text).joined(separator: " "))
         let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt)
         if skill?.untrusted == true { ctx.markUntrusted(personal: false) }
-        let siteLine = AppSettings.shared.actionsOff ? "" : (SiteRequest.detect(prompt)?.instruction ?? "")
-        let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), siteLine].filter { !$0.isEmpty }.joined(separator: "\n")
+        let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill)].filter { !$0.isEmpty }.joined(separator: "\n")
         ctx.notePrivate(block)
         if block != memoryBlock { memoryBlock = block; session = nil }
         var prior = items

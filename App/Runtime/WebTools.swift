@@ -423,7 +423,7 @@ struct LiveActOnPageTool: Tool {
             }
             let onLoginPage = await WebSession.shared.pageHasPassword
             switch a.action {
-            case .click: risky = (WebPolicy.clickNeedsApproval(label: e.label) && !WebPolicy.isLoginLink(role: e.role, label: e.label)) || (onLoginPage && e.type == "submit")
+            case .click: risky = WebPolicy.clickNeedsApproval(label: e.label) || (onLoginPage && e.type == "submit")
             case .typeAndEnter: risky = onLoginPage
             default: break
             }

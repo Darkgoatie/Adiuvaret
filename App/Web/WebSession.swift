@@ -85,7 +85,6 @@ final class WebSession: NSObject {
         claim(chat)
         let host = WebPolicy.host(of: url)
         if !WebPolicy.isAllowed(host, in: allowed) { allowed.append(host) }
-        for related in WebPolicy.relatedSites(of: host) where !WebPolicy.isAllowed(related, in: allowed) { allowed.append(related) }
         blocked = nil
         lastLoadError = nil
         elements = [:]
