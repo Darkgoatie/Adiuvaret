@@ -36,3 +36,12 @@ Device report 1: "Check my TUM Calendar" after sign-in answered from the iPhone 
 Device report 2: the agent looped Looked at page / Close. Cause: the listing only held elements in view and uncovered; the Calendar link was not listed. Fix be7f6d3 and fcc4043 (task 69): `find` searches the whole page by label, off-screen matches are marked, an identical listing triggers a repeat notice.
 Site notes (decision 20, task 67, 59cd81f): click labels per host kept on the phone and shown on the next openWebsite.
 Open: a link behind an open overlay is still skipped; the model could ignore the repeat notice (a hard stop after N identical steps is the stricter option); TUMOnline's real markup was never seen. Swift for 67 to 69 is compiled for the first time by the next Xcode Cloud run.
+
+## Tasks 20, 21, 26, 70 and the Privacy screen (2026-10-13)
+Built, committed, not compiled and not pushed. Order of commits: c087116 site notes screen, 116a8f2 activity log, c29873c privacy screen, 0c745db notes and tasks, 7932086 evals.
+- 70: Settings > Site notes lists click routes per host; SiteNoteStore.shared is used by WebSession and the screen.
+- 21: PolicyGate takes an optional observer; ToolHost passes one that writes an ActivityEntry. Advanced > Activity log shows them. No arguments or results are stored.
+- Privacy: Settings > Privacy reads live state (providers connected, source per category, connector switches, strict web, kill switch) and has five erase buttons.
+- 20: SavedItem store in ToolKit; tools saveItem (reversibleWrite, approval card, Undo) and findSavedItems; Advanced > Notes and Tasks with a Send to Reminders swipe. The catalog wording was tuned in a Python port of the scorer so every example still finds its own tool.
+- 26: Packages/Evals with 64 cases, EvalsTests, and Settings > Testing > Evals. The package is a new library in Package.swift and project.yml.
+Open: every Swift file here compiles for the first time in the next Xcode Cloud run; the catalog test and the new package tests run only on a runner. Nothing was tested on the phone. The blueprint in Obsidian does not mention these screens yet.
