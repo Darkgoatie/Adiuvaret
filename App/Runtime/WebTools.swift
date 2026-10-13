@@ -141,6 +141,9 @@ struct SearchWebExecutor: ToolExecutor {
         }
         if let subject = InfoFeeds.referenceSubject(for: asked), let text = await InfoFetcher.reference(subject: subject) { return text }
 
+        // With a Tavily key the model's own query is searched by a service that returns an answer and the matching passages.
+        if let key = SecretStore.token(for: Self.tavilyID), let text = await Self.tavily(asked, key: key) { return text }
+
         // Up to three rounds: search, read the top pages, and if they do not cover the question try better words.
         var query = WebSearch.queryFrom(asked)
         var best: (results: [SearchResult], pages: [Int: String])?
@@ -168,6 +171,25 @@ struct SearchWebExecutor: ToolExecutor {
         if let best { return WebSearch.render(best.results, query: asked, excerpts: best.pages) }
         if blocked { return "Not done: the search service is blocking requests right now. Tell the user." }
         return failure ?? WebSearch.render([], query: asked)
+    }
+
+    static let tavilyID = "websearch.tavily"
+
+    /// Tavily's answer, or nil on any failure so the built-in search can still answer.
+    static func tavily(_ query: String, key: String) async -> String? {
+        guard let request = TavilySearch.request(query: query, key: key) else { return nil }
+        let config = URLSessionConfiguration.ephemeral
+        config.httpCookieStorage = nil; config.urlCache = nil
+        config.timeoutIntervalForRequest = 20; config.timeoutIntervalForResource = 25
+        let session = URLSession(configuration: config, delegate: NoRedirect(), delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        guard let (data, response) = try? await session.data(for: request), let http = response as? HTTPURLResponse else {
+            DiagnosticsLog.shared.record("web search", "tavily unreachable"); return nil
+        }
+        guard http.statusCode == 200 else { DiagnosticsLog.shared.record("web search", "tavily status \(http.statusCode)"); return nil }
+        guard data.count < 800_000, let answer = TavilySearch.parse(data) else { DiagnosticsLog.shared.record("web search", "tavily unreadable"); return nil }
+        DiagnosticsLog.shared.record("web search", "tavily \(answer.hits.count) results, answer \(answer.summary.isEmpty ? "no" : "yes")")
+        return TavilySearch.render(answer, query: query)
     }
 
     private enum Round {
@@ -306,7 +328,7 @@ struct LiveSearchWebTool: AppTool {
     }
 
     let params: [ToolParam] = [
-        .string("query", "Three to eight plain search words, for example: Real Betis next match"),
+        .string("query", "A clear search query in plain words, for example: Real Betis next match date"),
     ]
 
     func run(_ args: ToolArgs) async -> String {

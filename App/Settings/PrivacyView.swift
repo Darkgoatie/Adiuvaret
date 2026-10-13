@@ -119,7 +119,7 @@ struct PrivacyView: View {
         case .browsing: Task { await WebSession.shared.clearWebsiteData() }
         case .siteNotes: SiteNoteStore.shared.clear()
         case .memory: MemoryHub.store.removeAll()
-        case .apiHosts: APIHostStore.shared.removeAll()
+        case .apiHosts: APIHostStore.shared.removeAll(); SecretStore.delete(SearchWebExecutor.tavilyID)
         case .skills: TaughtSkillHub.store.removeAll()
         case .activity: ActivityStore.shared.clear()
         case .diagnostics: DiagnosticsLog.shared.clear()

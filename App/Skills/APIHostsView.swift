@@ -23,6 +23,8 @@ struct APIHostsView: View {
     @State private var fieldName = ""
     @State private var token = ""
     @State private var problem: String?
+    @State private var searchKey = ""
+    @State private var hasSearchKey = SecretStore.has(SearchWebExecutor.tavilyID)
 
     var body: some View {
         List {
@@ -67,6 +69,22 @@ struct APIHostsView: View {
                 if let problem { Text(verbatim: problem).font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary) }
             } header: { Text("Add a host") } footer: {
                 Text("The token is stored in this iPhone's Keychain and only sent to this host. It never goes to the AI model.")
+                    .font(DS.Typography.caption)
+            }
+            Section {
+                if hasSearchKey {
+                    Text("A Tavily key is stored. Web searches use it.").font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
+                    Button(String(localized: "Remove key"), role: .destructive) { SecretStore.delete(SearchWebExecutor.tavilyID); hasSearchKey = false }.frame(minHeight: 44)
+                } else {
+                    SecureField("Tavily key", text: $searchKey).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    Button(String(localized: "Save key")) {
+                        let k = searchKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if APIToken.isPlausible(k), SecretStore.save(k, for: SearchWebExecutor.tavilyID) { hasSearchKey = true }
+                        searchKey = ""
+                    }.frame(minHeight: 44).accessibilityIdentifier("websearch.key.save")
+                }
+            } header: { Text("Better web search") } footer: {
+                Text("With a Tavily key (free plan at tavily.com), web searches return a direct answer and the matching page passages. Your search words go to Tavily. Without a key the built-in search is used.")
                     .font(DS.Typography.caption)
             }
         }
