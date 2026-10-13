@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import DesignSystem
 import AdiuvaretCore
 import PolicyEngine
 import ToolKit
