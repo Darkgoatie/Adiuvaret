@@ -147,7 +147,7 @@ final class ToolHost {
             title = String(localized: "Send this to the service?")
             rows = [DetailRow(String(localized: "Host"), (args["host"] as? String) ?? ""),
                     DetailRow(String(localized: "Request"), ((args["method"] as? String) ?? "") + " " + String(((args["path"] as? String) ?? "").prefix(120))),
-                    DetailRow(String(localized: "Data"), String(((args["body"] as? String) ?? "").isEmpty ? ((args["query"] as? String) ?? "") : ((args["body"] as? String) ?? "").prefix(300))),
+                    DetailRow(String(localized: "Data"), String((((args["body"] as? String) ?? "").isEmpty ? ((args["query"] as? String) ?? "") : ((args["body"] as? String) ?? "")).prefix(300))),
                     DetailRow(String(localized: "Note"), String(localized: "This may not be undoable."))]
         case "openOtherSite":
             title = String(localized: "Open another website?")
