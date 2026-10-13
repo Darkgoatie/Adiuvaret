@@ -111,7 +111,7 @@ struct RootView: View {
         case .activity: ActivityView()
         case .integrations: IntegrationsView()
         case .models: ModelsView(use: { id in ModelSettings.shared.select(id); if store.current.items.isEmpty { store.switchModel(to: id) } })
-        case .privacy: PlaceholderScreen(title: String(localized: "Privacy"), icon: "lock.shield")
+        case .privacy: PrivacyView()
         case .advanced:
             SubMenu(title: String(localized: "Advanced"), items: SubItem.advanced)
         case .settings:
