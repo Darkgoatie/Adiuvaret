@@ -28,7 +28,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
     /// When set, the chat uses exactly these tools and skips the router. Briefings use it so only reading tools exist.
     @ObservationIgnored var fixedTools: [String]?
     /// Most steps one reply may take: model turns that ask for tools, then the final answer.
-    private static let maxRounds = 8
+    private static let maxRounds = 10
 
     private var parsed: (provider: Provider, model: String)? { Providers.parseModelID(modelID) }
     var modelName: String { parsed.map { "\($0.model) · \($0.provider.name)" } ?? modelID }
@@ -130,9 +130,18 @@ final class CloudChatService: ChatService, FixedToolsChat {
             ctx.notePrivate(memoryBlock)
             var prior = items
             if case .user? = prior.last { prior.removeLast() }
-            let toolIDs = await chooseTools(prompt: prompt, prior: prior, skill: skill, taught: taught)
-            var system = AssistantPrompt.instructions(ids: toolIDs, memory: memoryBlock.isEmpty ? "" : " " + memoryBlock, online: true)
-            let wireTools = host.tools(for: toolIDs).map { ToolBridge.wireTool($0) }
+            let hints = await chooseTools(prompt: prompt, prior: prior, skill: skill, taught: taught)
+            // The model finds what it needs with findTools. The code-side choice above only pre-loads likely tools, so a model that
+            // never searches still has them. Briefings and the kill switch skip discovery.
+            let discovery = fixedTools == nil && !AppSettings.shared.actionsOff
+            let visibleNow = Set(host.visibleToolIDs())
+            var loaded = discovery ? ToolDiscovery.initial(hints: hints, core: ToolDiscovery.core.filter { $0 == ToolDiscovery.toolName || visibleNow.contains($0) }) : hints
+            let listing = discovery ? ToolDiscovery.listing(ConnectorCatalog.visible(.standard)) : ""
+            var system = AssistantPrompt.instructions(ids: loaded, memory: memoryBlock.isEmpty ? "" : " " + memoryBlock, online: true, discovery: listing)
+            func wireList() -> [WireTool] {
+                host.tools(for: loaded).map { ToolBridge.wireTool($0) } + (discovery ? [ToolBridge.wireTool(FindToolsTool())] : [])
+            }
+            var wireTools = wireList()
             var useTools = !wireTools.isEmpty && !toolsRefused && !AppSettings.shared.actionsOff
 
             var history: [ProviderWire.Message] = []
@@ -191,7 +200,13 @@ final class CloudChatService: ChatService, FixedToolsChat {
                     turns.append(.assistant(text: roundText, calls: calls))
                     var results: [WireTurn.ToolResult] = []
                     for call in calls {
-                        let output = await runCall(call, allowed: toolIDs)
+                        let output: String
+                        if discovery, call.name == ToolDiscovery.toolName {
+                            output = discover(call, loaded: &loaded, visible: visibleNow)
+                            wireTools = wireList()
+                        } else {
+                            output = await runCall(call, allowed: loaded)
+                        }
                         results.append(.init(callID: call.id, name: call.name, output: String(output.prefix(6000))))
                     }
                     turns.append(.toolResults(results))
@@ -247,6 +262,18 @@ final class CloudChatService: ChatService, FixedToolsChat {
         let ids = chosen.map(\.id).filter(visible.contains)
         DiagnosticsLog.shared.record("route", "cloud tools=[\(ids.joined(separator: ","))] \(routed.1)")
         return ids
+    }
+
+    /// Answers findTools: the matching tools are added to the loaded list, so the next request offers them.
+    private func discover(_ call: WireCall, loaded: inout [String], visible: Set<String>) -> String {
+        let query = ToolArgs(json: call.argumentsJSON.isEmpty ? "{}" : call.argumentsJSON)?.string("query") ?? ""
+        let catalog = ConnectorCatalog.visible(.standard)
+        let matches = ToolDiscovery.find(query, in: catalog, loaded: []).filter { visible.contains($0.id) }
+        let fresh = matches.filter { !loaded.contains($0.id) }
+        let added = Set(ToolDiscovery.grow(&loaded, with: fresh.map(\.id)))
+        let text = ToolDiscovery.render(found: fresh.filter { added.contains($0.id) }, alreadyLoaded: matches.filter { !fresh.contains($0) }, query: query)
+        DiagnosticsLog.shared.record("cloud tools", "findTools loaded \(added.count), now \(loaded.count)")
+        return fresh.count > added.count ? text + "\nThe tool limit for this reply is reached; the rest were not loaded." : text
     }
 
     /// Runs one tool call from the model through the same tool objects and policy checks as the on-device chat.

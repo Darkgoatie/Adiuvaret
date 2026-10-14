@@ -148,6 +148,11 @@ public extension ToolCatalog {
             keywords: ["teach", "learn", "remember how", "save as skill", "new skill", "learn how to"],
             examples: ["Learn how to do this and remember it", "Teach yourself how to use this API", "Save what you just did as a new skill", "Remember how to restart my server like this"]),
         CatalogEntry(
+            id: "findTools", title: "Find a tool", category: "Tools",
+            description: "Looks up the tools that can do something, such as reading the calendar, sending a Slack message or searching notes, and loads them so they can be called next.",
+            keywords: ["find a tool", "which tool", "what tools", "available tools", "load tool"],
+            examples: ["Which tools can read my calendar?", "Find a tool to post to Slack", "What tools do you have for notes?"]),
+        CatalogEntry(
             id: "runScript", title: "Run a script", category: "Scripts",
             description: "Runs a short JavaScript snippet with no network or file access to parse, convert, count or calculate on text the assistant already has, and returns the printed result.",
             keywords: ["script", "javascript", "regex", "parse json", "convert csv", "transform"],
