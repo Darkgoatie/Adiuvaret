@@ -17,10 +17,18 @@ enum TaughtSkillHub {
     }()
 
     /// The best enabled taught skill for a message, or nil. The same call for every provider.
-    static func match(for message: String) -> TaughtUse? {
-        guard let hit = store.find(message, limit: 1).first, let used = try? store.use(hit.id) else { return nil }
+    static func match(for message: String, previous: String? = nil) -> TaughtUse? {
+        guard let hit = store.find(message, previous: previous, limit: 1).first, let used = try? store.use(hit.id) else { return nil }
         DiagnosticsLog.shared.record("skills", "matched taught skill \(used.id), tools=\(used.tools.count)")
         return used
+    }
+
+    /// A short list of what was taught, so the model can recognise a request that does not share words with a skill's name and read it with skill_use.
+    static func indexLine(excluding used: TaughtUse?) -> String {
+        let all = store.all().filter { $0.enabled && $0.id != used?.id }
+        guard !all.isEmpty else { return "" }
+        let lines = all.prefix(8).map { "\($0.id): \(String($0.description.prefix(80)))" }.joined(separator: "; ")
+        return "Skills you were taught (read one with skill_use, action use, when the request fits it): \(lines)."
     }
 
     /// What enters the prompt: the short instructions only, marked as guidance. Credentials are never part of it.

@@ -143,9 +143,11 @@ final class LiveChatService: ChatService, FixedToolsChat {
         ctx.notePrivate(prepared.documents.map(\.text).joined(separator: " "))
         let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt)
         if skill?.untrusted == true { ctx.markUntrusted(personal: false) }
-        let taught = AppSettings.shared.actionsOff ? nil : TaughtSkillHub.match(for: prompt)
+        let lastUser = items.reversed().dropFirst().compactMap { item -> String? in if case .user(_, let t) = item { return t } else { return nil } }.first
+        let taught = AppSettings.shared.actionsOff ? nil : TaughtSkillHub.match(for: prompt, previous: lastUser)
         if taught?.untrusted == true { ctx.markUntrusted(personal: false) }
-        let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), TaughtSkillHub.block(from: taught)].filter { !$0.isEmpty }.joined(separator: "\n")
+        let taughtIndex = AppSettings.shared.actionsOff ? "" : TaughtSkillHub.indexLine(excluding: taught)
+        let block = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), TaughtSkillHub.block(from: taught), taughtIndex].filter { !$0.isEmpty }.joined(separator: "\n")
         ctx.notePrivate(block)
         if block != memoryBlock { memoryBlock = block; session = nil }
         var prior = items

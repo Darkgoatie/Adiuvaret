@@ -173,9 +173,16 @@ public final class TaughtSkillStore: @unchecked Sendable {
         persist()
     }
 
-    /// Enabled skills ranked by shared words. Two words must match (or the single word of a one-word query).
-    public func find(_ query: String, limit: Int = 3) -> [TaughtSkill] {
-        let wanted = SkillTerms.terms(query)
+    /// One line per enabled skill (id and what it does), for a prompt that lets the model recognise something taught earlier.
+    public func index(limit: Int = 8) -> String {
+        all().filter(\.enabled).prefix(limit).map { "- \($0.id): \(String($0.description.prefix(90)))" }.joined(separator: "\n")
+    }
+
+    /// Enabled skills ranked by shared words. Two words must match, or one word that names the skill (its name and keywords, or its host).
+    /// A short message such as "do it again" is read together with the message before it (`previous`).
+    public func find(_ query: String, previous: String? = nil, limit: Int = 3) -> [TaughtSkill] {
+        var wanted = SkillTerms.terms(query)
+        if wanted.count < 3, let previous { for t in SkillTerms.terms(previous) where !wanted.contains(t) { wanted.append(t) } }
         guard !wanted.isEmpty else { return [] }
         let needed = min(2, wanted.count)
         let scored: [(TaughtSkill, Int)] = all().filter(\.enabled).compactMap { s in
@@ -184,11 +191,13 @@ public final class TaughtSkillStore: @unchecked Sendable {
             let hosts = Set(s.hosts.flatMap { SkillTerms.terms($0.replacingOccurrences(of: ".", with: " ")) })
             let text = Set(SkillTerms.terms(s.description))
             var score = 0, matched = 0
+            var identity = false
             for w in wanted {
                 let part = (name.contains(w) ? 4 : 0) + (keys.contains(w) ? 3 : 0) + (hosts.contains(w) ? 2 : 0) + (text.contains(w) ? 1 : 0)
                 if part > 0 { matched += 1; score += part }
+                if (name.contains(w) && keys.contains(w)) || hosts.contains(w) { identity = true }
             }
-            return matched >= needed ? (s, score) : nil
+            return (matched >= needed || (matched >= 1 && identity)) ? (s, score) : nil
         }
         return scored.sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.0.id < $1.0.id }.prefix(max(0, limit)).map(\.0)
     }

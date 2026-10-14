@@ -60,6 +60,23 @@ import Foundation
         #expect(throws: TaughtError.notFound) { try s.use("hetzner-servers") }
     }
 
+    @Test func aFollowUpIsReadTogetherWithTheMessageBefore() throws {
+        let s = store()
+        try s.register(hetzner())
+        #expect(s.find("do it again").isEmpty)
+        #expect(s.find("do it again", previous: "restart my hetzner server").first?.id == "hetzner-servers")
+        #expect(s.find("hetzner").first?.id == "hetzner-servers")
+        #expect(s.find("what is the weather", previous: "tell me a joke").isEmpty)
+    }
+
+    @Test func theIndexListsEnabledSkillsOnly() throws {
+        let s = store()
+        try s.register(hetzner())
+        #expect(s.index() == "- hetzner-servers: List and restart servers on Hetzner Cloud")
+        s.setEnabled("hetzner-servers", false)
+        #expect(s.index().isEmpty)
+    }
+
     @Test func savingTheSameIDAgainBumpsTheVersion() throws {
         let s = store()
         try s.register(hetzner())

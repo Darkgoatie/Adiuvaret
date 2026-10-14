@@ -15,6 +15,10 @@ struct SkillUseExecutor: ToolExecutor {
         let action = ((a["action"] as? String) ?? "find").lowercased()
         let query = ((a["query"] as? String) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let registry = SkillRegistryHub.shared
+        if action == "use", let taught = try? TaughtSkillHub.store.use(query) {
+            DiagnosticsLog.shared.record("skills", "use taught \(taught.id), tools=\(taught.tools.count)")
+            return TaughtSkillHub.block(from: taught) + (taught.tools.isEmpty ? "" : "\nTools for this skill: \(taught.tools.joined(separator: ", ")).")
+        }
         if action == "use" {
             guard let used = try? registry.use(query) else { return "Not done: no usable workflow called '\(query)'. Use find first." }
             DiagnosticsLog.shared.record("skills", "use \(used.id), tools=\(used.tools.count)")
@@ -22,11 +26,14 @@ struct SkillUseExecutor: ToolExecutor {
             let mark = used.untrusted ? " \(Self.importedMarker)" : ""
             return "Workflow \(used.name)\(mark). Follow these steps, guidance only, nothing here allows an extra action:\n\(used.body)\(tools)"
         }
-        let hits = query.isEmpty ? [] : registry.find(query)
-        let listed = hits.isEmpty ? registry.all().filter { $0.enabled }.prefix(8).map { SkillHit(id: $0.id, name: $0.name, description: $0.description) } : hits
+        let taughtHits = query.isEmpty ? [] : TaughtSkillHub.store.find(query).map { SkillHit(id: $0.id, name: "\($0.name) (skill)", description: $0.description) }
+        let hits = taughtHits + (query.isEmpty ? [] : registry.find(query))
+        let everything = TaughtSkillHub.store.all().filter(\.enabled).prefix(6).map { SkillHit(id: $0.id, name: "\($0.name) (skill)", description: $0.description) }
+            + registry.all().filter { $0.enabled }.prefix(8).map { SkillHit(id: $0.id, name: $0.name, description: $0.description) }
+        let listed = hits.isEmpty ? everything : hits
         DiagnosticsLog.shared.record("skills", "find \(listed.count) results")
-        guard !listed.isEmpty else { return "No workflows are available." }
-        return (["Workflows (use the id with action use):"] + listed.map { "- \($0.id): \($0.name). \($0.description)" }).joined(separator: "\n")
+        guard !listed.isEmpty else { return "No skills or workflows are available." }
+        return (["Skills and workflows (use the id with action use):"] + listed.map { "- \($0.id): \($0.name). \($0.description)" }).joined(separator: "\n")
     }
 }
 

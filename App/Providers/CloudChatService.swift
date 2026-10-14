@@ -122,9 +122,11 @@ final class CloudChatService: ChatService, FixedToolsChat {
             // Memory, skills and the tools for this message: the same steps as the on-device chat.
             let skill = AppSettings.shared.actionsOff ? nil : SkillHub.match(for: prompt)
             if skill?.untrusted == true { ctx.markUntrusted(personal: false) }
-            let taught = AppSettings.shared.actionsOff ? nil : TaughtSkillHub.match(for: prompt)
+            let lastUser = items.reversed().dropFirst().compactMap { item -> String? in if case .user(_, let t) = item { return t } else { return nil } }.first
+            let taught = AppSettings.shared.actionsOff ? nil : TaughtSkillHub.match(for: prompt, previous: lastUser)
             if taught?.untrusted == true { ctx.markUntrusted(personal: false) }
-            memoryBlock = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), TaughtSkillHub.block(from: taught)].filter { !$0.isEmpty }.joined(separator: "\n")
+            let taughtIndex = AppSettings.shared.actionsOff ? "" : TaughtSkillHub.indexLine(excluding: taught)
+            memoryBlock = [MemoryHub.block(for: prompt), SkillHub.block(from: skill), TaughtSkillHub.block(from: taught), taughtIndex].filter { !$0.isEmpty }.joined(separator: "\n")
             ctx.notePrivate(memoryBlock)
             var prior = items
             if case .user? = prior.last { prior.removeLast() }
@@ -236,6 +238,10 @@ final class CloudChatService: ChatService, FixedToolsChat {
         if let taught {
             let wanted = taught.tools.compactMap { ToolCatalog.standard.entry($0) }
             chosen = ToolCatalog.standard.withRequirements(chosen + wanted, cap: 7)
+        }
+        // Something was taught: the model must be able to read it by name, so skill_use is always on offer.
+        if !TaughtSkillHub.store.all().filter(\.enabled).isEmpty, let entry = ToolCatalog.standard.entry("skill_use") {
+            chosen = ToolCatalog.standard.withRequirements(chosen + [entry], cap: 8)
         }
         let visible = Set(host.visibleToolIDs())
         let ids = chosen.map(\.id).filter(visible.contains)

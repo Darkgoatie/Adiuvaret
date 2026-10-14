@@ -40,6 +40,7 @@ enum ToolRouter {
         var needsTool = true
         var words = ""
         var note = "router ok"
+        var modelRouted = false
         // Apple's model, when this iPhone has it, reads the message first. Without it the raw message searches the catalog directly.
         if !askModel {
             note = "router skipped, online chat"
@@ -52,6 +53,7 @@ enum ToolRouter {
                 let route = try await session.respond(to: text, generating: ToolRoute.self).content
                 needsTool = route.needsTool
                 words = route.searchWords
+                modelRouted = true
             } catch {
                 note = "router failed (\(type(of: error))): \(String(String(describing: error).prefix(120)))"
             }
@@ -62,6 +64,13 @@ enum ToolRouter {
         if needsTool {
             let hits = catalog.search(primary: words, secondary: prompt)
             chosen = catalog.withRequirements(hits.map(\.entry))
+            // No model read the message: calendar and reminder tools need real evidence in it, or one generic word ("schedule", "list")
+            // pulls them into a request about a server or an API.
+            if !modelRouted {
+                let kept = ToolEvidence.filter(chosen, prompt: prompt, previous: previous)
+                if kept.count != chosen.count { note += " calendar-dropped" }
+                chosen = kept
+            }
             note += " needsTool=true words=\(words.split(separator: " ").count) hits=\(hits.count)"
         } else {
             note += " needsTool=false"
