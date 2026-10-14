@@ -162,6 +162,44 @@ public enum WebIntent {
         "how much does", "how much are", "exchange rate", "stock price", "release date", "next match", "next game", "next fixture",
         "opening hours", "browse", "wikipedia", "what happened", "matchday", "fixtures", "standings", "lineup", "transfer", "transfers"
     ]
+    /// Questions about the world outside the user's phone: local services, rules and rights, official procedures, current figures.
+    /// They are answered from a search, not from the model's memory.
+    private static let lookupPhrases: [String] = [
+        "bus", "buses", "metro", "tram", "train", "trains", "ferry", "timetable", "departure", "departures", "arrives", "last bus", "last train",
+        "opening hours", "open now", "closing time", "pharmacy", "pharmacies", "hospital", "nearest", "nearby", "near me", "closest",
+        "legal", "illegal", "law", "laws", "legislation", "regulation", "regulations", "my rights", "tenant", "landlord", "contract", "visa", "residence permit",
+        "tax", "taxes", "vat", "deadline", "fine", "penalty", "notice period", "minimum wage", "inflation", "interest rate",
+        "will it rain", "rain tomorrow", "snow", "temperature", "how to apply", "how do i renew", "how do i apply", "requirements for", "documents needed",
+        "population of", "capital of", "ceo of", "president of", "mayor of"]
+
+    /// Words that say the user wants something made or done, not looked up.
+    private static let makingWords: Set<String> = ["write", "draft", "rewrite", "compose", "translate", "joke", "poem", "story", "essay", "summarise", "summarize",
+                                                   "code", "remind", "reminder", "email", "letter", "message", "tell", "pretend", "imagine"]
+
+    private static let whyOrHow: [String] = ["how does", "how do", "how is", "what is", "what are", "what was", "explain", "difference between", "meaning of", "definition of"]
+
+    /// A question that needs a lookup even though no keyword like "latest" or "news" is in it.
+    public static func looksLikeLookupQuestion(_ text: String) -> Bool {
+        let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard words.count >= 3 else { return false }
+        let padded = " " + words.joined(separator: " ") + " "
+        if blockers.contains(where: { padded.contains(" " + $0 + " ") }) { return false }
+        if words.contains(where: { makingWords.contains($0) }) { return false }
+        if personal.contains(where: { words.first == $0 }) && !padded.contains(" my rights ") { return false }
+        return lookupPhrases.contains { padded.contains(" " + $0 + " ") }
+    }
+
+    /// An explanation or a fact question. The model may answer these from memory, but the search tool is offered next to the question
+    /// so it can check instead of answering "I don't know".
+    public static func looksLikeKnowledgeQuestion(_ text: String) -> Bool {
+        let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard words.count >= 4 else { return false }
+        let padded = " " + words.joined(separator: " ") + " "
+        if blockers.contains(where: { padded.contains(" " + $0 + " ") }) { return false }
+        if words.contains(where: { makingWords.contains($0) }) { return false }
+        return whyOrHow.contains { padded.hasPrefix(" " + $0 + " ") }
+    }
+
     private static let blockers: [String] = ["calendar", "reminder", "reminders", "my events", "meeting", "meetings", "appointment", "my schedule", "free time"]
 
     private static let dateOpeners: [String] = [
@@ -197,6 +235,7 @@ public enum WebIntent {
         if blockers.contains(where: { padded.contains(" " + $0 + " ") }) { return false }
         if phrases.contains(where: { padded.contains(" " + $0 + " ") }) { return true }
         if looksLikePublicDateQuestion(text) { return true }
+        if looksLikeLookupQuestion(text) { return true }
         return Weather.place(in: text) != nil || DirectSources.request(for: text) != nil || Standings.request(for: text) != nil
             || InfoFeeds.cryptoRequest(for: text) != nil || InfoFeeds.stockRequest(for: text) != nil || InfoFeeds.holidayRequest(for: text) != nil
             || InfoFeeds.newsTopic(for: text) != nil || InfoFeeds.referenceSubject(for: text) != nil || SportsScores.request(for: text) != nil

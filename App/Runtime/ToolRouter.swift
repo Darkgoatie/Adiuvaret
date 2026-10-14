@@ -107,6 +107,12 @@ enum ToolRouter {
             chosen = catalog.withRequirements([search])
             note += " web-intent"
         }
+        // A knowledge question ("what is...", "how does...") can be answered from memory, but the search tool is offered so the model
+        // checks instead of answering "I don't know".
+        if chosen.isEmpty, WebIntent.looksLikeKnowledgeQuestion(prompt), let search = catalog.entry("searchWeb") {
+            chosen = catalog.withRequirements([search])
+            note += " knowledge-question"
+        }
         // Asking for a skill by name or listing skills always offers skill_use, whatever the router said.
         if SkillIntent.looksLikeSkillRequest(prompt), let entry = catalog.entry("skill_use") {
             chosen = catalog.withRequirements(chosen + [entry])

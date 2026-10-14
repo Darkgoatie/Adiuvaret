@@ -101,6 +101,35 @@ import Foundation
         }
     }
 
+    @Test func localLegalAndOfficialQuestionsAreLookups() {
+        for t in ["When does the 34 bus leave from Kadikoy", "what time is the last bus to Besiktas", "will it rain this weekend in Berlin",
+                  "Can a landlord raise the rent by 50 percent in Turkey", "what is the notice period for quitting a job in Germany",
+                  "is it legal to record a phone call", "what are my rights if my flight is cancelled", "what is the VAT rate in Turkey",
+                  "is the pharmacy near me open", "nearest hospital to me", "how do I renew my passport", "tax deadline this year",
+                  "what is the minimum wage in Spain"] {
+            #expect(WebIntent.looksLikeWebRequest(t), Comment(rawValue: t))
+        }
+    }
+
+    @Test func makingOrChattingIsNotALookup() {
+        for t in ["Tell me a joke about cats", "thanks, that was great", "hello how are you", "write an email to my landlord saying the heater is broken",
+                  "What's on my calendar tomorrow?", "remind me to pay the tax", "I will try this", "draft a contract for me",
+                  "help me write a poem about the bus", "can you summarise this text for me", "tell me about the history of Rome"] {
+            #expect(!WebIntent.looksLikeWebRequest(t), Comment(rawValue: t))
+        }
+    }
+
+    @Test func explanationsGetTheSearchToolAsACheck() {
+        for t in ["explain the difference between TCP and UDP", "what is the P versus NP problem", "how does a transformer neural network work",
+                  "what is the speed of light in vacuum"] {
+            #expect(WebIntent.looksLikeKnowledgeQuestion(t), Comment(rawValue: t))
+        }
+        for t in ["Tell me a joke about cats", "hello how are you", "write an email to my landlord saying the heater is broken",
+                  "What's on my calendar tomorrow?", "remind me to pay the tax", "what is up"] {
+            #expect(!WebIntent.looksLikeKnowledgeQuestion(t), Comment(rawValue: t))
+        }
+    }
+
     @Test func datesOfPublicEventsAreWebQuestions() {
         for t in ["When is the Super Bowl?", "What is the date of WWDC 2027?", "When does the Champions League final take place?", "When was the Berlin Wall torn down?", "What day is Eid this year?", "when is the next major event in tech"] {
             #expect(WebIntent.looksLikePublicDateQuestion(t), Comment(rawValue: t))
