@@ -22,7 +22,7 @@ import Foundation
 
     @Test func serverAndApiRequestsGetNoCalendar() {
         for p in ["restart my hetzner server", "schedule the backup job on the server", "list my servers again", "move the files to the server",
-                  "add the invoice to my list", "what is on for the project", "set up the webhook", "create a new project in linear"] {
+                  "add the invoice to my list", "what is on for the project", "set up the webhook", "create a new project in linear", "book a server on hetzner", "schedule a call to the api"] {
             let ids = offered(p)
             #expect(!ids.contains { catalog.entry($0)?.category == "Calendar" || catalog.entry($0)?.category == "Reminders" }, Comment(rawValue: "\(p) -> \(ids)"))
         }

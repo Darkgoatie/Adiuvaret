@@ -21,12 +21,22 @@ public enum ToolEvidence {
     private static let weak: Set<String> = ["task", "tasks", "schedule", "scheduled", "free", "busy", "available", "availability",
                                             "tomorrow", "today", "tonight", "week", "weekend"]
 
+    /// Words that mean the request is about a machine or a service, so a bare "book a" or "schedule a" is not a calendar clue.
+    private static let technical: Set<String> = ["server", "servers", "api", "apis", "endpoint", "webhook", "deploy", "deployment", "deployments",
+                                                 "database", "cluster", "container", "docker", "domain", "dns", "bucket", "instance", "vps", "ssh", "script", "cron"]
+
     private static func padded(_ text: String) -> String {
         " " + text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).joined(separator: " ") + " "
     }
 
     public static func calendarAllowed(prompt: String, previous: String?, otherMatch: Bool) -> Bool {
         let p = padded(prompt)
+        let words = Set(p.split(separator: " ").map(String.init))
+        let hardEvidence = [" calendar ", " calendars ", " event ", " events ", " appointment ", " appointments ", " meeting ", " meetings ",
+                            " remind ", " reminder ", " reminders ", " my day ", " my week ", " my schedule ", " am i free ", " am i busy "]
+        if hardEvidence.contains(where: { p.contains($0) }) { return true }
+        // "Book a server", "schedule a call to the API": the technical word wins over the generic calendar phrase.
+        if !words.isDisjoint(with: technical) { return false }
         if strong.contains(where: { p.contains($0) }) { return true }
         // A clock time ("at 3pm", "10:30") is a calendar clue.
         if p.range(of: #"\b\d{1,2}:\d\d\b|\b\d{1,2}\s?(am|pm)\b"#, options: .regularExpression) != nil { return true }
