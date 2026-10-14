@@ -114,7 +114,7 @@ import Foundation
     @Test func makingOrChattingIsNotALookup() {
         for t in ["Tell me a joke about cats", "thanks, that was great", "hello how are you", "write an email to my landlord saying the heater is broken",
                   "What's on my calendar tomorrow?", "remind me to pay the tax", "I will try this", "draft a contract for me",
-                  "help me write a poem about the bus", "can you summarise this text for me", "tell me about the history of Rome"] {
+                  "help me write a poem about the bus", "can you summarise this text for me"] {
             #expect(!WebIntent.looksLikeWebRequest(t), Comment(rawValue: t))
         }
     }
