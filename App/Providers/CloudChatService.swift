@@ -138,7 +138,7 @@ final class CloudChatService: ChatService, FixedToolsChat {
             var loaded = discovery ? ToolDiscovery.initial(hints: hints, core: ToolDiscovery.core.filter { $0 == ToolDiscovery.toolName || visibleNow.contains($0) }) : hints
             let listing = discovery ? ToolDiscovery.listing(ConnectorCatalog.visible(.standard)) : ""
             var system = AssistantPrompt.instructions(ids: loaded, memory: memoryBlock.isEmpty ? "" : " " + memoryBlock, online: true, discovery: listing)
-            func wireList() -> [WireTool] {
+            @MainActor func wireList() -> [WireTool] {
                 host.tools(for: loaded).map { ToolBridge.wireTool($0) } + (discovery ? [ToolBridge.wireTool(FindToolsTool())] : [])
             }
             var wireTools = wireList()
