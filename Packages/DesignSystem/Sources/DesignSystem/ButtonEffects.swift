@@ -65,17 +65,67 @@ public enum GradientMath {
     }
 }
 
+/// The gradient colours, for places that paint a static gradient (a ring, a stroke).
+public enum EffectColors {
+    public static var gradient: LinearGradient {
+        LinearGradient(colors: MovingGradient.colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+}
+
+/// A rounded background that follows the chosen effect. `active` false paints the flat colour.
+public struct EffectBackground: View {
+    public let cornerRadius: CGFloat
+    public let flat: Color
+    public let active: Bool
+    public init(cornerRadius: CGFloat, flat: Color, active: Bool = true) {
+        self.cornerRadius = cornerRadius; self.flat = flat; self.active = active
+    }
+
+    public var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius)
+        switch active ? ButtonEffectStore.shared.effect : .flat {
+        case .flat:
+            shape.fill(flat)
+        case .gradient:
+            MovingGradient().clipShape(shape)
+        case .glow:
+            MovingGradient().clipShape(shape)
+                .background { MovingGradient().clipShape(shape).blur(radius: 12).opacity(0.8).offset(y: 7) }
+        }
+    }
+}
+
+public extension View {
+    /// Text or an icon in `flat` colour, or filled with the moving gradient when a gradient effect is chosen.
+    func effectForeground(flat: Color) -> some View {
+        modifier(EffectForeground(flat: flat))
+    }
+}
+
+private struct EffectForeground: ViewModifier {
+    let flat: Color
+    func body(content: Content) -> some View {
+        if ButtonEffectStore.shared.effect == .flat {
+            content.foregroundStyle(flat)
+        } else {
+            content.foregroundStyle(.clear).overlay { MovingGradient().mask { content } }
+        }
+    }
+}
+
 /// The four-colour gradient that slides slowly behind a button label. Standing still when Reduce Motion is on.
-struct MovingGradient: View {
+public struct MovingGradient: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    static let colors: [Color] = [
+    public static let colors: [Color] = [
         Color(red: 1.0, green: 0.651, blue: 0.239),   // #FFA63D
         Color(red: 1.0, green: 0.239, blue: 0.467),   // #FF3D77
         Color(red: 0.2, green: 0.541, blue: 1.0),     // #338AFF
         Color(red: 0.235, green: 0.941, blue: 0.773), // #3CF0C5
     ]
 
-    var body: some View {
+    public init() {}
+
+    public var body: some View {
         GeometryReader { geo in
             TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { context in
                 let phase = reduceMotion ? 0.3 : GradientMath.phase(at: context.date.timeIntervalSinceReferenceDate)

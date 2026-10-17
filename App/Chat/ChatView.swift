@@ -138,7 +138,7 @@ struct ChatView: View {
             Button("Manage models", systemImage: "cpu", action: openModels)
         } label: {
             HStack(spacing: Spacing.xs) {
-                ModelPrivacyChip(model: service.modelName, kind: chipKind, prominent: false)
+                ModelPrivacyChip(model: service.modelName, kind: chipKind, prominent: false, themed: true)
                 ModelStatusDot(state: ModelSettings.shared.loadState(service.modelID))
                 Image(systemName: "chevron.down").imageScale(.small).foregroundStyle(DS.Colors.textSecondary).accessibilityHidden(true)
             }
@@ -369,7 +369,7 @@ struct Composer: View {
                     .accessibilityIdentifier("composer.field")
                 Button(action: isGenerating ? stop : send) {
                     Image(systemName: isGenerating ? "stop.fill" : "arrow.up").imageScale(.large).fontWeight(.semibold).frame(width: 44, height: 44)
-                        .foregroundStyle(DS.Colors.onAccent).background(DS.Colors.accent, in: RoundedRectangle(cornerRadius: Radius.m))
+                        .foregroundStyle(DS.Colors.onAccent).background { EffectBackground(cornerRadius: Radius.m, flat: DS.Colors.accent, active: isGenerating || canSend) }
                 }
                 .disabled(!isGenerating && !canSend)
                 .opacity(!isGenerating && !canSend ? 0.4 : 1)

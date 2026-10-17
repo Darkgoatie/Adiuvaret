@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 import Observation
 
 /// Every semantic colour of one theme, as a light and a dark value.

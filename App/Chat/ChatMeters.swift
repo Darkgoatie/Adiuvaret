@@ -28,14 +28,20 @@ struct ContextRing: View {
     @State private var showing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var warned: Bool { fraction >= 0.75 }
     private var tint: Color { fraction >= 0.9 ? DS.Colors.danger : fraction >= 0.75 ? DS.Colors.warning : DS.Colors.accent }
+    /// Warnings keep their colour; the normal state follows the theme, or the gradient when a gradient effect is chosen.
+    private var ringStyle: AnyShapeStyle {
+        if !warned && ButtonEffectStore.shared.effect != .flat { return AnyShapeStyle(EffectColors.gradient) }
+        return AnyShapeStyle(tint)
+    }
 
     var body: some View {
         Button { showing = true } label: {
             ZStack {
                 Circle().stroke(DS.Colors.separator, lineWidth: 3)
                 Circle().trim(from: 0, to: max(fraction, fraction > 0 ? 0.02 : 0))
-                    .stroke(tint, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .stroke(ringStyle, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: fraction)
             }

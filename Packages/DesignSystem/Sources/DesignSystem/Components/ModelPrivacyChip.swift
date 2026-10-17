@@ -8,9 +8,11 @@ public struct ModelPrivacyChip: View {
     public let model: String
     public let kind: Kind
     public let prominent: Bool
+    /// The chat header turns this on so the name follows the chosen theme and button effect.
+    public let themed: Bool
 
-    public init(model: String, kind: Kind, prominent: Bool = true) {
-        self.model = model; self.kind = kind; self.prominent = prominent
+    public init(model: String, kind: Kind, prominent: Bool = true, themed: Bool = false) {
+        self.model = model; self.kind = kind; self.prominent = prominent; self.themed = themed
     }
 
     public var body: some View {
@@ -19,7 +21,7 @@ public struct ModelPrivacyChip: View {
             Text(verbatim: label.isEmpty ? model : "\(model) · \(label)").lineLimit(2)
         }
         .font(DS.Typography.caption)
-        .foregroundStyle(tint)
+        .modifier(ChipTint(themed: themed, plain: tint, themedFlat: themedFlat))
         .padding(.horizontal, prominent ? Spacing.s : 0)
         .padding(.vertical, prominent ? Spacing.xs : 0)
         .background(prominent ? DS.Colors.surfaceRaised : .clear, in: RoundedRectangle(cornerRadius: Radius.s))
@@ -43,9 +45,30 @@ public struct ModelPrivacyChip: View {
         }
     }
 
+    /// With a flat button effect the on-device name takes the theme colour; an online model keeps its own colour so the two stay apart.
+    private var themedFlat: Color {
+        if case .cloud = kind { return DS.Colors.privacyCloud }
+        return DS.Colors.accentText
+    }
+
     private var tint: Color {
         if case .cloud = kind { return DS.Colors.privacyCloud }
         return DS.Colors.privacyLocal
+    }
+}
+
+private struct ChipTint: ViewModifier {
+    let themed: Bool
+    let plain: Color
+    let themedFlat: Color
+    func body(content: Content) -> some View {
+        if !themed {
+            content.foregroundStyle(plain)
+        } else if ButtonEffectStore.shared.effect == .flat {
+            content.foregroundStyle(themedFlat)
+        } else {
+            content.effectForeground(flat: themedFlat)
+        }
     }
 }
 
