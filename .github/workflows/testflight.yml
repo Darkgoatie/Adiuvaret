@@ -69,6 +69,7 @@ jobs:
           BUILD=$(/tmp/venv/bin/python scripts/next_build_number.py)
           echo "Version $MARKETING_VERSION build $BUILD"
           echo "Build number $BUILD"
+          echo "BUILD_NUMBER=$BUILD" >> "$GITHUB_ENV"
           xcodebuild -project Adiuvaret.xcodeproj -scheme Adiuvaret -destination 'generic/platform=iOS' \
             -configuration Release -archivePath build/Adiuvaret.xcarchive \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CURRENT_PROJECT_VERSION=$BUILD \
@@ -97,6 +98,11 @@ jobs:
         run: |
           xcrun altool --upload-app --type ios -f build/ipa/Adiuvaret.ipa \
             --apiKey $KEY_ID --apiIssuer $ISSUER_ID 2>&1 | tail -3
+          test ${PIPESTATUS[0]} -eq 0
+
+      - name: Verify in TestFlight
+        if: ${{ inputs.upload }}
+        run: /tmp/venv/bin/python scripts/verify_testflight.py
 
       - name: Remove key
         if: always()
