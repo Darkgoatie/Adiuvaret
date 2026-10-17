@@ -24,9 +24,27 @@ public struct DSButtonStyle: ButtonStyle {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.m)
                 .frame(minHeight: 44)
-                .background(background, in: RoundedRectangle(cornerRadius: Radius.m))
+                .background { backgroundView }
                 .opacity(enabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
                 .contentShape(RoundedRectangle(cornerRadius: Radius.m))
+        }
+
+        /// Primary buttons follow the chosen effect; the others stay flat. The label colour never changes, so contrast holds.
+        @ViewBuilder private var backgroundView: some View {
+            let shape = RoundedRectangle(cornerRadius: Radius.m)
+            let effect = kind == .primary && enabled ? ButtonEffectStore.shared.effect : ButtonEffect.flat
+            switch effect {
+            case .flat:
+                shape.fill(background)
+            case .gradient:
+                MovingGradient().clipShape(shape)
+            case .glow:
+                MovingGradient().clipShape(shape)
+                    .background {
+                        MovingGradient().clipShape(shape)
+                            .blur(radius: 12).opacity(0.8).offset(y: 7)
+                    }
+            }
         }
 
         private var foreground: Color {

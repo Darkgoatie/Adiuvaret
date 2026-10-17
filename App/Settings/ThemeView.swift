@@ -4,6 +4,7 @@ import DesignSystem
 /// Settings > Theme: one row per palette with a small preview. The first one is the original palette and the default.
 struct ThemeView: View {
     @Bindable private var store = ThemeStore.shared
+    @Bindable private var effects = ButtonEffectStore.shared
 
     var body: some View {
         List {
@@ -16,6 +17,34 @@ struct ThemeView: View {
                 }
             } footer: {
                 Text("Light and dark mode still follow your phone. The green theme is the original look.")
+                    .font(DS.Typography.caption)
+            }
+            Section {
+                ForEach(ButtonEffect.allCases) { effect in
+                    Button { effects.effect = effect } label: {
+                        HStack(spacing: Spacing.m) {
+                            Text(verbatim: effect.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary)
+                            if effect == ButtonEffect.default {
+                                Text("Default").font(DS.Typography.caption).foregroundStyle(DS.Colors.textSecondary)
+                            }
+                            Spacer()
+                            if effects.effect == effect {
+                                Image(systemName: "checkmark").foregroundStyle(DS.Colors.accentText).accessibilityHidden(true)
+                            }
+                        }
+                        .frame(minHeight: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(effects.effect == effect ? .isSelected : [])
+                    .accessibilityIdentifier("buttonEffect.\(effect.rawValue)")
+                }
+                Button("Preview") {}
+                    .buttonStyle(DSButtonStyle(.primary))
+                    .frame(maxWidth: .infinity).padding(.vertical, Spacing.s)
+                    .listRowBackground(Color.clear)
+                    .accessibilityIdentifier("buttonEffect.preview")
+            } header: { Text("Buttons") } footer: {
+                Text("Applies to filled buttons. The gradient drifts slowly and stands still when Reduce Motion is on.")
                     .font(DS.Typography.caption)
             }
         }
