@@ -6,20 +6,20 @@ import UIKit
 public enum DS {
     /// Read from the chosen theme each time, so a screen that reads a colour repaints when the theme changes.
     public enum Colors {
-        public static var background: Color { color(ThemeStore.shared.palette.background) }
-        public static var surface: Color { color(ThemeStore.shared.palette.surface) }
-        public static var surfaceRaised: Color { color(ThemeStore.shared.palette.surfaceRaised) }
-        public static var separator: Color { color(ThemeStore.shared.palette.separator) }
-        public static var textPrimary: Color { color(ThemeStore.shared.palette.textPrimary) }
-        public static var textSecondary: Color { color(ThemeStore.shared.palette.textSecondary) }
-        public static var accent: Color { color(ThemeStore.shared.palette.accent) }
-        public static var onAccent: Color { color(ThemeStore.shared.palette.onAccent) }
-        public static var accentText: Color { color(ThemeStore.shared.palette.accentText) }
-        public static var success: Color { color(ThemeStore.shared.palette.success) }
-        public static var warning: Color { color(ThemeStore.shared.palette.warning) }
-        public static var danger: Color { color(ThemeStore.shared.palette.danger) }
-        public static var privacyLocal: Color { color(ThemeStore.shared.palette.privacyLocal) }
-        public static var privacyCloud: Color { color(ThemeStore.shared.palette.privacyCloud) }
+        public static var background: Color { ThemeStore.shared.colors.background }
+        public static var surface: Color { ThemeStore.shared.colors.surface }
+        public static var surfaceRaised: Color { ThemeStore.shared.colors.surfaceRaised }
+        public static var separator: Color { ThemeStore.shared.colors.separator }
+        public static var textPrimary: Color { ThemeStore.shared.colors.textPrimary }
+        public static var textSecondary: Color { ThemeStore.shared.colors.textSecondary }
+        public static var accent: Color { ThemeStore.shared.colors.accent }
+        public static var onAccent: Color { ThemeStore.shared.colors.onAccent }
+        public static var accentText: Color { ThemeStore.shared.colors.accentText }
+        public static var success: Color { ThemeStore.shared.colors.success }
+        public static var warning: Color { ThemeStore.shared.colors.warning }
+        public static var danger: Color { ThemeStore.shared.colors.danger }
+        public static var privacyLocal: Color { ThemeStore.shared.colors.privacyLocal }
+        public static var privacyCloud: Color { ThemeStore.shared.colors.privacyCloud }
     }
 
     /// Google Sans carries chat text, Google Sans Flex headings and controls, Archivo Black the chat title only.
@@ -47,7 +47,7 @@ public enum DS {
     }
 }
 
-private func color(_ p: TokenPair) -> Color {
+func dynamicColor(_ p: TokenPair) -> Color {
     #if canImport(UIKit)
     Color(uiColor: UIColor { trait in
         let c = trait.userInterfaceStyle == .dark ? p.dark : p.light

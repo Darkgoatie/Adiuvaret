@@ -7,6 +7,8 @@ import UserNotifications
 struct AdiuvaretApp: App {
     init() {
         DesignSystemFonts.register()
+        _ = ThemeStore.shared
+        _ = ButtonEffectStore.shared
         DownloadKeepAlive.registerAll()
         BriefingHub.registerBackground()
         UNUserNotificationCenter.current().delegate = BriefingNotificationDelegate.shared

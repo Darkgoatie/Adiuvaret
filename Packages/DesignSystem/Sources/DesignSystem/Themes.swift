@@ -89,6 +89,40 @@ public enum AppTheme: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// One theme's colours as ready-made SwiftUI colours. Built once per theme, so reading a colour while a screen redraws costs a lookup.
+struct ResolvedColors {
+    let background: Color
+    let surface: Color
+    let surfaceRaised: Color
+    let separator: Color
+    let textPrimary: Color
+    let textSecondary: Color
+    let accent: Color
+    let onAccent: Color
+    let accentText: Color
+    let success: Color
+    let warning: Color
+    let danger: Color
+    let privacyLocal: Color
+    let privacyCloud: Color
+    init(_ p: ThemePalette) {
+        background = dynamicColor(p.background)
+        surface = dynamicColor(p.surface)
+        surfaceRaised = dynamicColor(p.surfaceRaised)
+        separator = dynamicColor(p.separator)
+        textPrimary = dynamicColor(p.textPrimary)
+        textSecondary = dynamicColor(p.textSecondary)
+        accent = dynamicColor(p.accent)
+        onAccent = dynamicColor(p.onAccent)
+        accentText = dynamicColor(p.accentText)
+        success = dynamicColor(p.success)
+        warning = dynamicColor(p.warning)
+        danger = dynamicColor(p.danger)
+        privacyLocal = dynamicColor(p.privacyLocal)
+        privacyCloud = dynamicColor(p.privacyCloud)
+    }
+}
+
 /// The chosen theme. `DS.Colors` reads it, and because it is observable every screen that reads a colour repaints when it changes.
 /// It is only ever set from the main thread (the Theme screen).
 @Observable
@@ -102,7 +136,12 @@ public final class ThemeStore: @unchecked Sendable {
 
     public var palette: ThemePalette { theme.palette }
 
+    /// Every theme resolved at launch, so switching themes and drawing screens never builds a colour.
+    private let resolved: [AppTheme: ResolvedColors]
+    var colors: ResolvedColors { resolved[theme] ?? resolved[.default]! }
+
     private init() {
         theme = AppTheme.resolve(UserDefaults.standard.string(forKey: Self.key))
+        resolved = Dictionary(uniqueKeysWithValues: AppTheme.allCases.map { ($0, ResolvedColors($0.palette)) })
     }
 }
