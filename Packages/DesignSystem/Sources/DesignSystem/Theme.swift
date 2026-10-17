@@ -4,21 +4,22 @@ import UIKit
 #endif
 
 public enum DS {
+    /// Read from the chosen theme each time, so a screen that reads a colour repaints when the theme changes.
     public enum Colors {
-        public static let background = color(Palette.background)
-        public static let surface = color(Palette.surface)
-        public static let surfaceRaised = color(Palette.surfaceRaised)
-        public static let separator = color(Palette.separator)
-        public static let textPrimary = color(Palette.textPrimary)
-        public static let textSecondary = color(Palette.textSecondary)
-        public static let accent = color(Palette.accent)
-        public static let onAccent = color(Palette.onAccent)
-        public static let accentText = color(Palette.accentText)
-        public static let success = color(Palette.success)
-        public static let warning = color(Palette.warning)
-        public static let danger = color(Palette.danger)
-        public static let privacyLocal = color(Palette.privacyLocal)
-        public static let privacyCloud = color(Palette.privacyCloud)
+        public static var background: Color { color(ThemeStore.shared.palette.background) }
+        public static var surface: Color { color(ThemeStore.shared.palette.surface) }
+        public static var surfaceRaised: Color { color(ThemeStore.shared.palette.surfaceRaised) }
+        public static var separator: Color { color(ThemeStore.shared.palette.separator) }
+        public static var textPrimary: Color { color(ThemeStore.shared.palette.textPrimary) }
+        public static var textSecondary: Color { color(ThemeStore.shared.palette.textSecondary) }
+        public static var accent: Color { color(ThemeStore.shared.palette.accent) }
+        public static var onAccent: Color { color(ThemeStore.shared.palette.onAccent) }
+        public static var accentText: Color { color(ThemeStore.shared.palette.accentText) }
+        public static var success: Color { color(ThemeStore.shared.palette.success) }
+        public static var warning: Color { color(ThemeStore.shared.palette.warning) }
+        public static var danger: Color { color(ThemeStore.shared.palette.danger) }
+        public static var privacyLocal: Color { color(ThemeStore.shared.palette.privacyLocal) }
+        public static var privacyCloud: Color { color(ThemeStore.shared.palette.privacyCloud) }
     }
 
     /// Google Sans carries chat text, Google Sans Flex headings and controls, Archivo Black the chat title only.

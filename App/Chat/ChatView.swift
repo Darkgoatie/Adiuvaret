@@ -220,7 +220,7 @@ private struct ItemView: View, Equatable {
     let speed: String?
 
     init(item: ThreadItem, service: any ChatService, speed: String? = nil) {
-        self.item = item; self.service = service; self.speed = speed; self.key = item.renderKey + (speed ?? "")
+        self.item = item; self.service = service; self.speed = speed; self.key = item.renderKey + (speed ?? "") + ThemeStore.shared.theme.rawValue
     }
 
     /// Two rows are the same when their content is, so a streaming reply redraws only itself instead of every earlier message.

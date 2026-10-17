@@ -17,6 +17,13 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.preferences")
                 NavigationLink {
+                    ThemeView()
+                } label: {
+                    Label { Text("Theme").font(DS.Typography.body) } icon: { Image(systemName: "paintpalette") }
+                        .frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("settings.theme")
+                NavigationLink {
                     ProvidersView()
                 } label: {
                     Label { Text("Providers").font(DS.Typography.body) } icon: { Image(systemName: "cloud") }
