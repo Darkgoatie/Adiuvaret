@@ -11,7 +11,7 @@ import Diagnostics
 @MainActor @Observable
 final class BriefingHub {
     static let shared = BriefingHub()
-    nonisolated static let refreshID = "com.halit.adiuvaret.briefing.refresh"
+    nonisolated static let refreshID = "com.halit.adiuvaretapp.briefing.refresh"
 
     @ObservationIgnored let store = BriefingStore.standard()
     @ObservationIgnored let attempts = BriefingAttemptLog.standard()

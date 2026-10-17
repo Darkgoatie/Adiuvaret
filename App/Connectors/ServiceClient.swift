@@ -4,7 +4,7 @@ import ToolKit
 
 /// Tokens for the connected services. They live in the Keychain, only on this device, and are never written to logs, settings or chats.
 enum SecretStore {
-    private static let service = "com.halit.adiuvaret.connectors"
+    private static let service = "com.halit.adiuvaretapp.connectors"
 
     private static func query(_ id: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: id]

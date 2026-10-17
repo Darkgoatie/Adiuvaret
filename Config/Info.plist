@@ -4,15 +4,15 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.halit.adiuvaret.download.gemma-3-1b-it-4bit</string>
-		<string>com.halit.adiuvaret.download.qwen3-1-7b-4bit</string>
-		<string>com.halit.adiuvaret.download.smollm3-3b-4bit</string>
-		<string>com.halit.adiuvaret.download.llama-3-2-3b-instruct-4bit</string>
-		<string>com.halit.adiuvaret.download.qwen3-4b-instruct-2507-4bit</string>
-		<string>com.halit.adiuvaret.download.gemma-3-4b-it-4bit</string>
-		<string>com.halit.adiuvaret.download.gemma-4-e2b-it-4bit</string>
-		<string>com.halit.adiuvaret.download.gemma-4-e4b-it-4bit</string>
-		<string>com.halit.adiuvaret.briefing.refresh</string>
+		<string>com.halit.adiuvaretapp.download.gemma-3-1b-it-4bit</string>
+		<string>com.halit.adiuvaretapp.download.qwen3-1-7b-4bit</string>
+		<string>com.halit.adiuvaretapp.download.smollm3-3b-4bit</string>
+		<string>com.halit.adiuvaretapp.download.llama-3-2-3b-instruct-4bit</string>
+		<string>com.halit.adiuvaretapp.download.qwen3-4b-instruct-2507-4bit</string>
+		<string>com.halit.adiuvaretapp.download.gemma-3-4b-it-4bit</string>
+		<string>com.halit.adiuvaretapp.download.gemma-4-e2b-it-4bit</string>
+		<string>com.halit.adiuvaretapp.download.gemma-4-e4b-it-4bit</string>
+		<string>com.halit.adiuvaretapp.briefing.refresh</string>
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>

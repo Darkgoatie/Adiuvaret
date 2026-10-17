@@ -11,7 +11,7 @@ public struct RemoteFile: Codable, Sendable, Equatable, Hashable {
 public enum DownloadPlan {
     /// Weights, configuration and tokenizer files. Nothing else is fetched.
     public static let suffixes = [".safetensors", ".json", ".jinja"]
-    public static let bundlePrefix = "com.halit.adiuvaret"
+    public static let bundlePrefix = "com.halit.adiuvaretapp"
 
     public static func isValidRepository(_ id: String) -> Bool {
         id.wholeMatch(of: /[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][A-Za-z0-9._-]*/) != nil

@@ -56,9 +56,9 @@ import Foundation
         #expect(Set(ids).count == ModelCatalog.all.count)
         for m in ModelCatalog.all {
             #expect(DownloadPlan.isValidRepository(m.id), "\(m.id)")
-            #expect(DownloadPlan.taskIdentifier(for: m.id).hasPrefix("com.halit.adiuvaret.download."))
+            #expect(DownloadPlan.taskIdentifier(for: m.id).hasPrefix("com.halit.adiuvaretapp.download."))
         }
-        #expect(DownloadPlan.taskIdentifier(for: "mlx-community/Qwen3-4B-Instruct-2507-4bit") == "com.halit.adiuvaret.download.qwen3-4b-instruct-2507-4bit")
+        #expect(DownloadPlan.taskIdentifier(for: "mlx-community/Qwen3-4B-Instruct-2507-4bit") == "com.halit.adiuvaretapp.download.qwen3-4b-instruct-2507-4bit")
         #expect(DownloadPlan.folderName(for: "mlx-community/gemma-3-1b-it-4bit") == "mlx-community--gemma-3-1b-it-4bit")
     }
 
