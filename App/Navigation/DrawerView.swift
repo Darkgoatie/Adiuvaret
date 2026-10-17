@@ -73,14 +73,17 @@ struct DrawerView: View {
     private func row(_ c: ChatSummary) -> some View {
         let active = c.id == activeID
         return HStack(spacing: Spacing.s) {
-            Capsule()
-                .fill(active ? DS.Colors.accent : Color.clear)
-                .frame(width: 3, height: 18)
+            Group {
+                if active { EffectBackground(cornerRadius: 1.5, flat: DS.Colors.accent) } else { Color.clear }
+            }
+            .frame(width: 3, height: 18)
             Text(verbatim: c.title).font(DS.Typography.body).foregroundStyle(DS.Colors.textPrimary).lineLimit(1)
             Spacer(minLength: 0)
         }
         .frame(minHeight: Self.rowHeight, alignment: .leading)
-        .background(DS.Colors.accent.opacity(active && flash ? 0.18 : 0), in: RoundedRectangle(cornerRadius: Radius.s))
+        .background {
+            if active && flash { EffectBackground(cornerRadius: Radius.s, flat: DS.Colors.accent).opacity(0.18) }
+        }
         .contentShape(Rectangle())
         .accessibilityAddTraits(active ? .isSelected : [])
     }

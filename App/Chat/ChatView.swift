@@ -369,7 +369,7 @@ struct Composer: View {
                     .accessibilityIdentifier("composer.field")
                 Button(action: isGenerating ? stop : send) {
                     Image(systemName: isGenerating ? "stop.fill" : "arrow.up").imageScale(.large).fontWeight(.semibold).frame(width: 44, height: 44)
-                        .foregroundStyle(DS.Colors.onAccent).background { EffectBackground(cornerRadius: Radius.m, flat: DS.Colors.accent, active: isGenerating || canSend) }
+                        .foregroundStyle(DS.Colors.onAccent).background { EffectBackground(cornerRadius: Radius.m, flat: DS.Colors.accent) }
                 }
                 .disabled(!isGenerating && !canSend)
                 .opacity(!isGenerating && !canSend ? 0.4 : 1)
