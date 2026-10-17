@@ -57,7 +57,7 @@ targets:
         embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret
+        PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaretapp
         DEVELOPMENT_TEAM: P6LL282795
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: Config/Adiuvaret.entitlements
@@ -93,7 +93,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaret.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.halit.adiuvaretapp.widgets
         DEVELOPMENT_TEAM: P6LL282795
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "0.3.0"

@@ -44,7 +44,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.halit.adiuvaret</string>
+			<string>com.halit.adiuvaretapp</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>adiuvaret</string>

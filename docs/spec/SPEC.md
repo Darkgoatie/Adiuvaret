@@ -13,7 +13,7 @@ Local server tier, Mac companion, MCP client, HTTP connector builder, shell/file
 - Dependencies flow down; AdiuvaretCore depends on nothing; PolicyEngine depends on no provider.
 - Builds and signing run in the WSL2 QEMU macOS VM (~/ultimate-macOS-KVM, SSH via hostfwd localhost:2222), per user 2026-10-07. Repo: github.com/Darkgoatie/Adiuvaret (private).
 - Risk: the VM is x86_64. Apple Intelligence and FoundationModels need Apple silicon, so FM cannot run in its simulator; FM spikes must run on the iPhone via USB passthrough (usbipd) into the VM, or the plan changes.
-- Test device: iPhone 18 Pro, Apple Intelligence available. Bundle ID com.halit.adiuvaret, same team as the other apps.
+- Test device: iPhone 18 Pro, Apple Intelligence available. Bundle ID com.halit.adiuvaretapp (the first record, com.halit.adiuvaret, was abandoned), same team as the other apps.
 
 ## Glossary
 - Tier: 0 Apple FM, 1 MLX, 2 reserved (local server), 3 cloud.
