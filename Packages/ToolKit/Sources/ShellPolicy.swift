@@ -24,6 +24,9 @@ public struct ShellPlan: Equatable, Sendable {
     public let hosts: [String]
     /// Set when the line must not run. The text says why, in a sentence the assistant can pass on.
     public let refusal: String?
+    /// True when the assistant's command walks into folders or uses wildcards, so it could reach files it never names.
+    /// The runner refuses such a command while the workspace holds credential files.
+    public let broad: Bool
     public var allowed: Bool { refusal == nil }
 }
 
@@ -55,7 +58,7 @@ public enum ShellPolicy {
         for n in ["mkdir", "touch", "cp", "mv", "tee", "chmod", "gzip", "gunzip"] { t[n] = Spec(cls: .write) }
         t["tar"] = Spec(cls: .read)
         t["sed"] = Spec(cls: .read, patternFirst: true)
-        for n in ["curl", "scp", "sftp", "ssh"] { t[n] = Spec(cls: .network) }
+        t["curl"] = Spec(cls: .network)
         for n in ["rm", "rmdir"] { t[n] = Spec(cls: .delete) }
         return t
     }()
@@ -66,86 +69,6 @@ public enum ShellPolicy {
                                                   "env", "nohup", "command", "builtin", "time", "timeout", "nice", "watch", "script"]
     private static let scripting: Set<String> = ["awk", "perl", "python", "python3", "node", "ruby", "lua", "tclsh", "php"]
     private static let navigation: Set<String> = ["cd", "pushd", "popd", "chdir"]
-
-    /// ssh, scp and sftp are checked option by option: a known list of flags, `-o` only for a few harmless names, and `-i` or `-F`
-    /// files must be inside the workspace. Anything else (ProxyCommand, LocalCommand, tunnels, jump hosts) is refused.
-    private static let remoteFlags: [String: (plain: Set<Character>, valued: Set<Character>)] = [
-        "ssh": (Set("46CqvTnNtxa"), Set("ilpcmFEo")),
-        "scp": (Set("46BCpqrTv3"), Set("cFilioP")),
-        "sftp": (Set("46aCpqrv"), Set("cFiloP")),
-    ]
-    private static let remoteOptionNames: Set<String> = ["stricthostkeychecking", "batchmode", "connecttimeout", "serveraliveinterval",
-                                                         "serveralivecountmax", "port", "user", "userknownhostsfile", "identityfile",
-                                                         "compression", "addressfamily"]
-    private static let remotePathOptions: Set<String> = ["userknownhostsfile", "identityfile"]
-
-    private static func remoteValueProblem(_ letter: Character, _ value: String, workspace: String) -> String? {
-        if "iFE".contains(letter) {
-            if value.hasPrefix("-") { return "a file name is needed after -\(letter)" }
-            if globOutside(value) != nil { return "\(value) could reach the folder above the workspace; name the files instead" }
-            if let bad = outsidePath(value, workspace: workspace) { return "\(bad) is outside the workspace" }
-            return nil
-        }
-        if letter == "o" {
-            let v = value.trimmingCharacters(in: .whitespaces)
-            let cut = v.firstIndex(where: { $0 == "=" || $0 == " " }) ?? v.endIndex
-            let name = String(v[..<cut]).lowercased()
-            let rest = cut < v.endIndex ? String(v[v.index(after: cut)...]).trimmingCharacters(in: .whitespaces) : ""
-            if !remoteOptionNames.contains(name) { return "the ssh option \(name) is not available" }
-            if remotePathOptions.contains(name) {
-                if globOutside(rest) != nil { return "\(rest) could reach the folder above the workspace; name the files instead" }
-                if let bad = outsidePath(rest, workspace: workspace) { return "\(bad) is outside the workspace" }
-            }
-        }
-        return nil
-    }
-
-    /// Returns a refusal, or the hosts the command would contact.
-    private static func remotePlan(_ name: String, _ args: [String], workspace: String) -> (refusal: String?, hosts: [String]) {
-        guard let flags = remoteFlags[name] else { return (nil, []) }
-        var operands: [String] = []
-        var i = 0
-        while i < args.count {
-            let a = args[i]
-            if a == "--" {
-                if name == "ssh" { return ("-- is not available for ssh", []) }
-                operands += args[(i + 1)...]; break
-            }
-            if !a.hasPrefix("-") || a.count <= 1 || (name == "ssh" && !operands.isEmpty) { operands.append(a); i += 1; continue }
-            let letters = Array(a.dropFirst())
-            var j = 0
-            while j < letters.count {
-                let l = letters[j]
-                if flags.plain.contains(l) { j += 1; continue }
-                guard flags.valued.contains(l) else { return ("the option -\(l) is not available for \(name)", []) }
-                let value: String
-                if j + 1 < letters.count { value = String(letters[(j + 1)...]) }
-                else if i + 1 < args.count { i += 1; value = args[i] }
-                else { return ("the option -\(l) needs a value", []) }
-                if let why = remoteValueProblem(l, value, workspace: workspace) { return (why, []) }
-                break
-            }
-            i += 1
-        }
-        var hosts: [String] = []
-        if name == "ssh" {
-            guard let first = operands.first else { return ("name a host to connect to", []) }
-            if operands.count > 1, operands[1].hasPrefix("-") { return ("options go before the host name", []) }
-            if let h = hostName(first) { hosts.append(h) }
-            return (nil, hosts)
-        }
-        guard !operands.isEmpty else { return ("name a file or host", []) }
-        if name == "sftp" { return (nil, hostName(operands[0]).map { [$0] } ?? []) }
-        for a in operands {
-            if a.contains("://") { if let h = hostName(a) { hosts.append(h) } }
-            else if isRemoteSpec(a) { if let h = hostName(String(a[..<a.firstIndex(of: ":")!])) { hosts.append(h) } }
-            else {
-                if globOutside(a) != nil { return ("\(a) could reach the folder above the workspace; name the files instead", []) }
-                if let bad = outsidePath(a, workspace: workspace) { return ("\(bad) is outside the workspace", []) }
-            }
-        }
-        return (nil, hosts)
-    }
 
     private static func hostName(_ s: String) -> String? {
         var t = s
@@ -282,6 +205,52 @@ public enum ShellPolicy {
         return spec.fileOpts.contains("-" + String(last))
     }
 
+    // MARK: Credential files
+
+    private static let secretDirs: Set<String> = [".ssh", ".gnupg", ".aws", ".kube"]
+    private static let secretNames: Set<String> = [".env", ".netrc", ".npmrc", ".pgpass", ".git-credentials", "known_hosts"]
+    private static let secretPrefixes = ["id_rsa", "id_dsa", "id_ecdsa", "id_ed25519"]
+    private static let secretExtensions = [".pem", ".key", ".p12", ".pfx", ".p8", ".ppk", ".kdbx", ".keystore", ".jks"]
+
+    /// True when a path names a credentials file or folder. The assistant never reads, lists or writes these.
+    public static func isSecretPath(_ word: String) -> Bool {
+        let value = word.hasPrefix("--") && word.contains("=") ? String(word[word.index(after: word.firstIndex(of: "=")!)...]) : word
+        for part in value.split(separator: "/") {
+            let c = part.lowercased()
+            if secretDirs.contains(c) || secretNames.contains(c) { return true }
+            if secretPrefixes.contains(where: { c.hasPrefix($0) }) { return true }
+            if secretExtensions.contains(where: { c.hasSuffix($0) }) { return true }
+        }
+        return false
+    }
+
+    /// The paths in a listing of the workspace that look like credentials.
+    public static func secretFiles(in paths: [String]) -> [String] { paths.filter(isSecretPath) }
+
+    /// True when the command walks into folders by itself, so it could reach a credentials file it never names.
+    static func isRecursive(_ name: String, _ args: [String]) -> Bool {
+        if name == "find" || name == "du" || name == "tar" { return true }
+        let clusters = args.filter { $0.hasPrefix("-") && !$0.hasPrefix("--") }.map { $0.dropFirst() }
+        let longs = args.filter { $0.hasPrefix("--") }
+        switch name {
+        case "grep", "egrep", "fgrep":
+            if clusters.contains(where: { $0.contains("r") || $0.contains("R") }) || longs.contains("--recursive") || longs.contains("--dereference-recursive") { return true }
+            return longs.contains(where: { $0.hasPrefix("--directories=recurse") })
+        case "ls", "cp", "diff", "gzip", "chmod", "rm", "mv":
+            return clusters.contains(where: { $0.contains("r") || $0.contains("R") }) || longs.contains("--recursive")
+        default:
+            return false
+        }
+    }
+
+    /// The runner's check before a broad assistant command runs. Nil means it may run.
+    public static func broadRefusal(_ plan: ShellPlan, workspacePaths: [String]) -> String? {
+        guard plan.broad else { return nil }
+        let secrets = secretFiles(in: workspacePaths)
+        guard !secrets.isEmpty else { return nil }
+        return "the workspace holds credential files (\(secrets.prefix(2).joined(separator: ", "))), so commands with wildcards or recursion are not available; name the files instead"
+    }
+
     /// A word whose path part starts with a dot and holds a glob character, such as `.*`, can expand to `..`.
     private static func globOutside(_ w: String) -> String? {
         if w.hasPrefix("-") && !w.contains("=") { return nil }
@@ -293,7 +262,8 @@ public enum ShellPolicy {
     // MARK: Plan
 
     public static func plan(_ line: String, workspace: String, audience: ShellAudience = .assistant) -> ShellPlan {
-        func refuse(_ why: String) -> ShellPlan { ShellPlan(commands: [], cls: .read, hosts: [], refusal: why) }
+        func refuse(_ why: String) -> ShellPlan { ShellPlan(commands: [], cls: .read, hosts: [], refusal: why, broad: false) }
+        var broad = false
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return refuse("the command is empty") }
         if trimmed.count > maxLine { return refuse("the command is longer than \(maxLine) characters") }
@@ -316,6 +286,7 @@ public enum ShellPolicy {
                 } else if o == "2>&1" {
                     break
                 } else {
+                    if cur.words.isEmpty { return refuse("a command must come before \(o)") }
                     guard i + 1 < tokens.count, case .word(let target) = tokens[i + 1] else { return refuse("a file name is missing after \(o)") }
                     cur.redirects.append((o, target)); i += 1
                 }
@@ -344,14 +315,15 @@ public enum ShellPolicy {
                 return refuse("\(name) is not available in this shell")
             }
             if let why = unsafeOptions(name, args) { return refuse(why) }
+            if audience == .assistant {
+                let named = (spec!.free ? [] : args) + seg.redirects.map(\.target)
+                if let secret = named.first(where: isSecretPath) { return refuse("\(secret) holds credentials and the assistant cannot use it") }
+                if isRecursive(name, args) { broad = true }
+            }
 
             var cls = spec!.cls
             cls = max(cls, refine(name, args))
-            if remoteFlags[name] != nil {
-                let remote = remotePlan(name, args, workspace: workspace)
-                if let why = remote.refusal { return refuse(why) }
-                hosts += remote.hosts
-            } else if !spec!.free {
+            if !spec!.free {
                 var sawPattern = !spec!.patternFirst
                 var skipNext = false
                 for a in args {
@@ -361,6 +333,7 @@ public enum ShellPolicy {
                     if spec!.valueOpts.contains(a) { skipNext = true; continue }
                     if !sawPattern, !a.hasPrefix("-") { sawPattern = true; continue }
                     if let bad = globOutside(a) { return refuse("\(bad) could reach the folder above the workspace; name the files instead") }
+                    if audience == .assistant, a.contains(where: { "*?[".contains($0) }) { broad = true }
                     if name == "curl", let bad = curlOutside(a, workspace: workspace) { return refuse("\(bad) is outside the workspace") }
                     if a.contains("://") { continue }
                     if let bad = outsidePath(a, workspace: workspace) { return refuse("\(bad) is outside the workspace") }
@@ -384,7 +357,7 @@ public enum ShellPolicy {
         }
         var seen = Set<String>()
         let uniqueHosts = hosts.filter { seen.insert($0).inserted }
-        return ShellPlan(commands: commands, cls: highest, hosts: uniqueHosts, refusal: nil)
+        return ShellPlan(commands: commands, cls: highest, hosts: uniqueHosts, refusal: nil, broad: broad)
     }
 
     // MARK: Per-command rules
@@ -458,12 +431,6 @@ public enum ShellPolicy {
         default:
             return .read
         }
-    }
-
-    private static func isRemoteSpec(_ a: String) -> Bool {
-        guard let colon = a.firstIndex(of: ":") else { return false }
-        if let slash = a.firstIndex(of: "/"), slash < colon { return false }
-        return !a.hasPrefix("-")
     }
 
     private static func curlOutside(_ a: String, workspace: String) -> String? {
