@@ -45,7 +45,7 @@ import Testing
     }
 
     @Test func categoriesKeepOrder() {
-        let hand = ["Calendar", "Reminders", "Web", "Notes", "Saved", "Contacts", "Shortcuts", "Email", "GitHub", "Chats", "Notion", "Skills", "API", "Tools", "Scripts"]
+        let hand = ["Calendar", "Reminders", "Web", "Notes", "Saved", "Contacts", "Shortcuts", "Email", "GitHub", "Chats", "Notion", "Skills", "API", "Tools", "Scripts", "Shell"]
         #expect(Array(catalog.categories.prefix(hand.count)) == hand)
         #expect(Array(catalog.categories.dropFirst(hand.count)) == ConnectorRegistry.manifests.map(\.category))
     }

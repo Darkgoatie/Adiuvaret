@@ -157,5 +157,10 @@ public extension ToolCatalog {
             description: "Runs a short JavaScript snippet with no network or file access to parse, convert, count or calculate on text the assistant already has, and returns the printed result.",
             keywords: ["script", "javascript", "regex", "parse json", "convert csv", "transform"],
             examples: ["Run a script to sum these numbers", "Convert this JSON to CSV with a script", "Write JavaScript that counts the words in this text"]),
+        CatalogEntry(
+            id: "runShell", title: "Run a shell command", category: "Shell",
+            description: "Runs a command such as ls, cat, grep, sort, cp, mv, mkdir, tar, sed or curl inside the assistant's own workspace folder, to list, read, search, copy, organise or download files and to process text, and returns what it printed.",
+            keywords: ["shell", "terminal", "command", "command line", "bash", "grep", "list files", "workspace", "tar", "gzip", "curl"],
+            examples: ["List the files in my workspace folder", "Use the shell to count the lines in notes.txt", "Download this file with curl into the workspace", "Make a folder called reports and move the csv files into it", "Search my workspace files for the word invoice"]),
     ] + ConnectorRegistry.manifests.flatMap(\.catalogEntries))
 }
