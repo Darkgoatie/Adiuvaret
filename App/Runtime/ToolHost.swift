@@ -43,6 +43,7 @@ final class ToolHost {
                                          "findFreeTime": FreeTimeExecutor(),
                                          "callAPI": CallAPIExecutor(), "callAPIWrite": CallAPIExecutor(), "approveAPIHost": ApproveAPIHostExecutor(),
                                          "saveSkill": SaveSkillExecutor(reporter: bridge), "runScript": RunScriptExecutor(),
+                                         "runShell": RunShellExecutor(), "runShellWrite": RunShellExecutor(), "runShellNetwork": RunShellExecutor(), "runShellDelete": RunShellExecutor(),
                                          "createEvent": CreateEventExecutor(reporter: bridge),
                                          "moveEvent": MoveEventExecutor(reporter: bridge, handles: handles),
                                          "deleteEvent": DeleteEventExecutor(reporter: bridge, handles: handles),
@@ -88,6 +89,7 @@ final class ToolHost {
             "callAPI": LiveCallAPITool(gate: gate, ctx: ctx, reporter: bridge),
             "saveSkill": LiveSaveSkillTool(gate: gate, ctx: ctx, reporter: bridge),
             "runScript": LiveRunScriptTool(gate: gate, ctx: ctx, reporter: bridge),
+            "runShell": LiveRunShellTool(gate: gate, ctx: ctx, reporter: bridge),
             "skill_use": LiveSkillUseTool(gate: gate, ctx: ctx, reporter: bridge)]
         all.merge(makeConnectorTools(gate: gate, ctx: ctx, reporter: bridge)) { a, _ in a }
         built = all
@@ -139,6 +141,11 @@ final class ToolHost {
                     DetailRow(String(localized: "Tools"), skill.tools.isEmpty ? String(localized: "None") : skill.tools.joined(separator: ", ")),
                     DetailRow(String(localized: "Instructions"), String(skill.instructions.prefix(500))),
                     DetailRow(String(localized: "Note"), String(localized: "Tokens are not stored in a skill. Delete it any time in Advanced, Skills."))]
+        case "runShellWrite", "runShellNetwork", "runShellDelete":
+            let line = (args["command"] as? String) ?? ""
+            let plan = ShellPolicy.plan(line, workspace: ShellRunner.workspacePath)
+            title = String(localized: String.LocalizationValue(ShellCommandBuilder.cardTitle(for: plan.cls)))
+            rows = ShellCommandBuilder.cardRows(command: line, plan: plan).map { DetailRow(String(localized: String.LocalizationValue($0.label)), $0.value) }
         case "approveAPIHost":
             title = String(localized: "Allow calls to this host?")
             rows = [DetailRow(String(localized: "Host"), (args["host"] as? String) ?? ""),

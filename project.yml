@@ -6,6 +6,8 @@ options:
 packages:
   AdiuvaretPackages:
     path: Packages
+  ShellLibs:
+    path: ShellLibs
   MLXLM:
     url: https://github.com/ml-explore/mlx-swift-lm
     minorVersion: 3.32.3
@@ -43,6 +45,8 @@ targets:
         product: SkillKit
       - package: AdiuvaretPackages
         product: Evals
+      - package: ShellLibs
+        product: ShellLibs
       - package: MLXLM
         product: MLXLLM
       - package: MLXLM

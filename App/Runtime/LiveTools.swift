@@ -117,12 +117,16 @@ enum LiveDescriptors {
     /// Stores a taught skill. Always asks, so a skill is never saved from text the assistant read.
     static let saveSkill = ToolDescriptor(name: "saveSkill", summary: "Saves a taught skill.", permission: .irreversible, outputSensitivity: .personal)
     static let runScript = ToolDescriptor(name: "runScript", summary: "Runs a sandboxed script.", permission: .readOnly, outputSensitivity: .personal)
+    static let runShell = ToolDescriptor(name: "runShell", summary: "Runs a reading command in the Shell folder.", permission: .readOnly, outputSensitivity: .personal)
+    static let runShellWrite = ToolDescriptor(name: "runShellWrite", summary: "Runs a command that changes files in the Shell folder.", permission: .irreversible, outputSensitivity: .personal)
+    static let runShellNetwork = ToolDescriptor(name: "runShellNetwork", summary: "Runs a command that uses the internet.", permission: .irreversible, outputSensitivity: .personal)
+    static let runShellDelete = ToolDescriptor(name: "runShellDelete", summary: "Runs a command that deletes files in the Shell folder.", permission: .irreversible, outputSensitivity: .personal)
     static let skillUse = ToolDescriptor(name: "skill_use", summary: "Finds and reads saved skills.", permission: .readOnly, outputSensitivity: .personal)
     static let all: [ToolDescriptor] = [readCalendar, findFreeTime, createEvent, moveEvent, deleteEvent, createReminder, listReminders,
                       searchWeb, openWebsite, lookAtPage, actOnPage, openOtherSite, actOnPageRisky,
                       searchNotes, readNote, writeNote, findContact, runShortcut, draftEmail,
                       listGitHubIssues, listGitHubRepos, listGitHubCommits, searchNotion, searchPastChats, skillUse,
-                      saveItem, findSavedItems, callAPI, callAPIWrite, approveAPIHost, saveSkill, runScript] + manifest
+                      saveItem, findSavedItems, callAPI, callAPIWrite, approveAPIHost, saveSkill, runScript, runShell, runShellWrite, runShellNetwork, runShellDelete] + manifest
 }
 
 enum CalendarRange {

@@ -36,7 +36,11 @@ public enum ConnectorCatalog {
         Connector(id: "notion", title: "Notion", symbol: "doc.richtext",
                   reads: "Titles of pages and databases your integration was shared with.",
                   changes: "Nothing. Read only.",
-                  network: "Requests go to api.notion.com with your own token. Only your search words leave the iPhone.", defaultOn: false)
+                  network: "Requests go to api.notion.com with your own token. Only your search words leave the iPhone.", defaultOn: false),
+        Connector(id: "shell", title: "Shell", symbol: "terminal",
+                  reads: "Files in the assistant's own Shell folder only. Never your other files, and never key or password files.",
+                  changes: "Creates, edits and deletes files in that folder. Anything that changes files, uses the internet or deletes asks you first.",
+                  network: "Only when a command such as curl runs, and only after you approve it. The card shows the address.", defaultOn: false)
     ]
 
     /// Hand-wired connectors first, then every manifest in the registry.
@@ -48,7 +52,7 @@ public enum ConnectorCatalog {
     public static let categoryOwner: [String: String] = nativeOwners.merging(ConnectorRegistry.manifests.map { ($0.category, $0.id) }) { a, _ in a }
 
     private static let nativeOwners: [String: String] = [
-        "Notes": "notes", "Contacts": "contacts", "Shortcuts": "shortcuts", "Email": "mail", "GitHub": "github", "Notion": "notion",
+        "Notes": "notes", "Contacts": "contacts", "Shortcuts": "shortcuts", "Email": "mail", "GitHub": "github", "Notion": "notion", "Shell": "shell",
     ]
 
     /// The catalog with every tool of a switched-off connector removed, so the router can neither pick nor describe it.

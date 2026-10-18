@@ -14,6 +14,9 @@ struct ActivityView: View {
         "saveSkill": String(localized: "Save a skill"),
         "callAPIWrite": String(localized: "API call that changes data"),
         "approveAPIHost": String(localized: "Allow a new API host"),
+        "runShellWrite": String(localized: "Shell command that changes files"),
+        "runShellNetwork": String(localized: "Shell command that uses the internet"),
+        "runShellDelete": String(localized: "Shell command that deletes files"),
         "actOnPageRisky": String(localized: "Page action that needed approval"),
     ]
 

@@ -81,4 +81,15 @@ import Foundation
         #expect(ShellCommandBuilder.relativePaths([ws + "/a.txt", ws + "/notes/b.md", "/etc/x", ws + "x"], workspace: ws) == ["a.txt", "notes/b.md"])
         #expect(ShellCommandBuilder.relativePaths([ws + "/.env"], workspace: ws + "/") == [".env"])
     }
+
+    @Test func theShellConnectorIsOffUntilTheUserSwitchesItOn() throws {
+        let suite = "shell-connector-\(UUID().uuidString)"
+        let d = try #require(UserDefaults(suiteName: suite))
+        defer { d.removePersistentDomain(forName: suite) }
+        #expect(!ConnectorCatalog.isOn("shell", defaults: d))
+        #expect(!ConnectorCatalog.visible(.standard, defaults: d).entries.contains { $0.id == "runShell" })
+        ConnectorCatalog.setOn(true, "shell", defaults: d)
+        #expect(ConnectorCatalog.visible(.standard, defaults: d).entries.contains { $0.id == "runShell" })
+        #expect(ConnectorCatalog.categoryOwner["Shell"] == "shell")
+    }
 }
